@@ -1,5 +1,5 @@
 #!/bin/sh
-# Baut die App: artifact.html (für Claude) und docs/ (installierbare Web-App für GitHub Pages)
+# Baut die App: docs/index.html (installierbare Web-App für GitHub Pages) und artifact.html (Claude-Version, nicht im Repository)
 cd "$(dirname "$0")"
 JS=$(cat src/data.js src/audio.js src/app.js)
 { cat src/shell.html; printf '<script>\n%s\n</script>\n' "$JS"; } > artifact.html
