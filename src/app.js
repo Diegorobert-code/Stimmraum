@@ -107,50 +107,95 @@ function modeSwitch() {
     h("button", { role: "tab", "aria-selected": S.mode === "kids", onclick: () => setMode("kids") }, "Kinder"));
 }
 
+/* ---------- Cover-Art: jede Stufe hat ihr eigenes Farbcover ---------- */
+const PALS = [
+  ["#ff375f", "#ff9f0a"], ["#5e5ce6", "#bf5af2"], ["#0a84ff", "#30d158"], ["#ff2d92", "#5e5ce6"],
+  ["#ff9f0a", "#ffd60a"], ["#bf5af2", "#ff375f"], ["#30d158", "#64d2ff"], ["#ff453a", "#bf5af2"],
+  ["#64d2ff", "#5e5ce6"], ["#ffd60a", "#ff375f"], ["#32d74b", "#0a84ff"], ["#ff6482", "#ffb340"]
+];
+const WAVE = '<svg class="cover-wave" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 12.5 4 25 30 T 50 30 T 75 30 T 100 30 T 125 30 T 150 30 T 175 30 T 200 30" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/><path d="M0 34 Q 16 14 33 34 T 66 34 T 100 34 T 133 34 T 166 34 T 200 34" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/></svg>';
+function palFor(l) {
+  const off = l.course === "kids" ? 3 : l.course === "styles" ? 6 : l.course === "warm" ? 9 : 0;
+  return PALS[(off + (l.stage || 0)) % PALS.length];
+}
+function coverArt(l, cls = "") {
+  const [a, b] = palFor(l);
+  const st = COURSES[l.course]?.stages[l.stage];
+  const label = l.course === "styles" ? (st?.title || "") : l.course === "warm" ? "Aufwärmen" : "Stufe " + ((l.stage || 0) + 1);
+  return h("div", { class: "cover " + cls, style: `--c1:${a};--c2:${b}` },
+    h("span", { class: "cover-k" }, label),
+    h("span", { class: "cover-t" }, l.title),
+    h("span", { html: WAVE }));
+}
+const PLAY = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z" fill="currentColor"/></svg>';
+const playBtn = (label, fn, cls = "") => h("button", { class: "btn play " + cls, onclick: fn }, h("span", { html: PLAY }), label);
+
+function shelf(title, items, more) {
+  return h("section", { class: "shelf" },
+    h("div", { class: "shelf-head" }, h("h2", { class: "h3" }, title), more || null),
+    h("div", { class: "shelf-row" }, ...items));
+}
+function tile(l) {
+  const ok = isUnlocked(l), sc = S.done[l.id];
+  return h("button", { class: "tile" + (ok ? "" : " locked"), disabled: !ok, onclick: () => openLesson(l), "aria-label": l.title + (ok ? "" : " (gesperrt)") },
+    coverArt(l),
+    h("span", { class: "tile-t" }, l.title),
+    h("span", { class: "tile-m" }, sc != null ? starRow(stars(sc)) : ok ? `${l.min} Min. · ${l.steps.length} Schritte` : "Gesperrt"));
+}
+
 function viewHome() {
   const course = S.mode === "kids" ? "kids" : "adult";
   const nl = nextLesson(course), list = allLessons(course);
   const doneN = list.filter(l => S.done[l.id]).length;
   const d = new Date(), tip = TIPS_DAILY[(d.getDate() + d.getMonth()) % TIPS_DAILY.length];
-  const greet = d.getHours() < 11 ? "Guten Morgen" : d.getHours() < 18 ? "Grüezi" : "Guten Abend";
   const kidName = S.prof.kids.name;
+  const startI = nl ? list.findIndex(l => l.id === nl.id) : 0;
+  const upcoming = list.slice(Math.max(0, startI - 1), startI + 8);
+  const r = rangeOf(profFor(course));
 
   app.append(
-    h("header", { class: "hero" },
-      h("p", { class: "eyebrow" }, d.toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" })),
-      h("h1", {}, course === "kids" ? (kidName ? `Singzeit mit ${kidName}` : "Singzeit für Kinder") : greet + "! Zeit zum Singen."),
+    h("header", { class: "top" },
+      h("div", {}, h("p", { class: "eyebrow" }, d.toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long" })),
+        h("h1", {}, course === "kids" ? (kidName ? `Singzeit mit ${kidName}` : "Singzeit") : "Heute")),
       modeSwitch()),
+    nl ? lessonHero(nl) : h("section", { class: "feature done" },
+      coverArt({ ...list[list.length - 1] }, "big"),
+      h("div", { class: "feature-body" },
+        h("p", { class: "eyebrow" }, "Kurs abgeschlossen"),
+        h("h2", {}, course === "kids" ? "Urkunde: Kleine Sängerin, kleiner Sänger" : "Alle Lektionen geschafft"),
+        h("p", { class: "muted" }, course === "kids" ? "Ihr habt alle zwölf Singspiele gemeistert. Bravo!" : "Wiederhole Lektionen mit weniger als drei Sternen oder probiere die Stilrichtungen aus."),
+        h("div", { class: "row" }, playBtn("Zum Kurs", () => go("kurs"))))),
     h("section", { class: "stats" },
       stat(streak(), streak() === 1 ? "Tag in Folge" : "Tage in Folge"),
       stat(doneN + "/" + list.length, "Lektionen"),
-      stat(nn(rangeOf(profFor(course)).low) + "–" + nn(rangeOf(profFor(course)).high), "Tonumfang")),
-    nl ? lessonHero(nl) : h("section", { class: "card done-card" },
-      h("p", { class: "eyebrow" }, "Kurs abgeschlossen"),
-      h("h2", {}, course === "kids" ? "Urkunde: Kleine Sängerin, kleiner Sänger" : "Du hast alle Lektionen geschafft"),
-      h("p", {}, course === "kids" ? "Ihr habt alle zwölf Singspiele gemeistert. Bravo! Wiederholt eure Lieblingslieder so oft ihr wollt." : "Wiederhole Lektionen mit weniger als drei Sternen oder probiere die Stilrichtungen aus."),
-      h("button", { class: "btn", onclick: () => go("kurs") }, "Zum Kurs")),
-    h("section", { class: "quick" },
-      h("h2", { class: "h3" }, "Schnell üben"),
+      stat(nn(r.low) + "–" + nn(r.high), "Tonumfang")),
+    shelf(course === "kids" ? "Eure Singspiele" : "Dein Weg", upcoming.map(tile), h("button", { class: "link-btn", onclick: () => go("kurs") }, "Alle")),
+    h("section", { class: "shelf" },
+      h("div", { class: "shelf-head" }, h("h2", { class: "h3" }, "Schnell üben")),
       h("div", { class: "quick-grid" },
-        quick("Einsingen", "5 Minuten Aufwärmen", () => openLesson(warmupLesson(course))),
-        quick("Stimmgerät", "Ton live sehen", () => { go("werkzeuge"); setTimeout(() => openTool("tuner"), 0); }),
-        quick("Töne treffen", "10 Runden Ohrtraining", () => { go("werkzeuge"); setTimeout(() => openTool("ear"), 0); }),
-        quick("Atmen", "Atem-Trainer", () => { go("werkzeuge"); setTimeout(() => openTool("breath"), 0); }))),
+        quick("Einsingen", "5 Minuten", 9, () => openLesson(warmupLesson(course))),
+        quick("Stimmgerät", "Ton live sehen", 1, () => { go("werkzeuge"); setTimeout(() => openTool("tuner"), 0); }),
+        quick("Töne treffen", "10 Runden", 4, () => { go("werkzeuge"); setTimeout(() => openTool("ear"), 0); }),
+        quick("Atmen", "Atem-Trainer", 6, () => { go("werkzeuge"); setTimeout(() => openTool("breath"), 0); }))),
+    course === "adult" ? shelf("Stilrichtungen", allLessons("styles").filter((l, i, a) => a.findIndex(x => x.stage === l.stage) === i).map(tile)) : null,
     h("aside", { class: "tip" }, h("p", { class: "eyebrow" }, "Tipp des Tages"), h("p", {}, tip))
   );
 }
 const stat = (v, l) => h("div", { class: "stat" }, h("strong", {}, String(v)), h("span", {}, l));
-const quick = (t, s, fn) => h("button", { class: "quick-btn", onclick: fn }, h("strong", {}, t), h("span", {}, s));
+const quick = (t, s, pi, fn) => { const [a, b] = PALS[pi % PALS.length]; return h("button", { class: "quick-btn", style: `--c1:${a};--c2:${b}`, onclick: fn }, h("strong", {}, t), h("span", {}, s)); };
 
 function lessonHero(l) {
   const st = COURSES[l.course].stages[l.stage];
-  return h("section", { class: "card next" },
-    h("p", { class: "eyebrow" }, `Heute · Stufe ${l.stage + 1}: ${st.title}`),
-    h("h2", {}, l.title),
-    h("p", {}, l.goal),
-    h("div", { class: "row" },
-      h("button", { class: "btn big", onclick: () => openLesson(l) }, "Lektion starten"),
-      h("span", { class: "meta" }, `${l.min} Min. · ${l.steps.length} Schritte`)));
+  const [a, b] = palFor(l);
+  return h("section", { class: "feature", style: `--c1:${a};--c2:${b}` },
+    coverArt(l, "big"),
+    h("div", { class: "feature-body" },
+      h("p", { class: "eyebrow" }, `Als Nächstes · ${l.course === "styles" ? st.title : "Stufe " + (l.stage + 1) + ": " + st.title}`),
+      h("h2", {}, l.title),
+      h("p", { class: "muted" }, l.goal),
+      h("div", { class: "row" },
+        playBtn("Lektion starten", () => openLesson(l), "big"),
+        h("span", { class: "meta" }, `${l.min} Min. · ${l.steps.length} Schritte`))));
 }
 
 function warmupLesson(course) {
@@ -169,21 +214,18 @@ let courseTab = null;
 function viewCourse() {
   courseTab = courseTab || (S.mode === "kids" ? "kids" : "adult");
   const c = COURSES[courseTab];
+  const list = allLessons(courseTab), doneN = list.filter(l => S.done[l.id]).length;
   app.append(
-    h("header", { class: "page-head" }, h("h1", {}, "Kurs"),
-      h("div", { class: "seg three", role: "tablist" },
-        ...["adult", "kids", "styles"].map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, COURSES[k].name)))),
+    h("header", { class: "top" }, h("div", {}, h("p", { class: "eyebrow" }, `${doneN} von ${list.length} erledigt`), h("h1", {}, "Kurs"))),
+    h("div", { class: "seg three", role: "tablist" },
+      ...["adult", "kids", "styles"].map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, COURSES[k].name))),
     h("p", { class: "lead" }, c.blurb),
-    ...c.stages.map((st, si) => h("section", { class: "stage" },
-      h("div", { class: "stage-head" },
-        h("span", { class: "stage-no" }, courseTab === "styles" ? st.title.slice(0, 2) : String(si + 1)),
-        h("div", {}, h("h2", { class: "h3" }, (courseTab === "styles" ? "" : "Stufe " + (si + 1) + ": ") + st.title), h("p", { class: "muted" }, st.intro))),
-      h("ol", { class: "lessons" }, ...st.lessons.map(l0 => {
-        const l = { ...l0, stage: si, course: courseTab }, ok = isUnlocked(l), sc = S.done[l.id];
-        return h("li", {}, h("button", { class: "lesson-row" + (ok ? "" : " locked"), disabled: !ok, onclick: () => openLesson(l) },
-          h("span", { class: "l-title" }, l.title, h("small", {}, l.goal)),
-          h("span", { class: "l-meta" }, sc != null ? starRow(stars(sc)) : ok ? `${l.min} Min.` : "gesperrt")));
-      }))))
+    ...c.stages.map((st, si) => h("section", { class: "shelf" },
+      h("div", { class: "shelf-head col" },
+        h("p", { class: "eyebrow" }, courseTab === "styles" ? "Stil" : "Stufe " + (si + 1)),
+        h("h2", { class: "h3" }, st.title),
+        h("p", { class: "muted small" }, st.intro)),
+      h("div", { class: "shelf-row" }, ...st.lessons.map(l0 => tile({ ...l0, stage: si, course: courseTab })))))
   );
 }
 
@@ -193,7 +235,8 @@ function viewCourse() {
 let player = null;
 function openLesson(l) {
   runCleanup();
-  const ov = h("div", { class: "player", role: "dialog", "aria-modal": "true", "aria-label": l.title });
+  const [c1, c2] = palFor(l);
+  const ov = h("div", { class: "player", role: "dialog", "aria-modal": "true", "aria-label": l.title, style: `--c1:${c1};--c2:${c2}` });
   document.body.append(ov); document.body.classList.add("noscroll");
   let wake = null; try { navigator.wakeLock?.request("screen").then(w => wake = w).catch(() => {}); } catch (e) {}
   player = { l, i: 0, scores: {}, ov, close() { stopAll(); ov.remove(); document.body.classList.remove("noscroll"); try { wake?.release(); } catch (e) {} player = null; render(); } };
@@ -214,7 +257,7 @@ function showStep() {
       h("div", { class: "p-prog" }, ...l.steps.map((_, k) => h("span", { class: k < i ? "done" : k === i ? "cur" : "" }))),
       h("span", { class: "p-count" }, `${i + 1}/${l.steps.length}`)),
     h("div", { class: "p-scroll" },
-      h("p", { class: "eyebrow" }, l.title),
+      h("div", { class: "now" }, coverArt(l, "mini"), h("div", {}, h("p", { class: "eyebrow" }, "Lektion"), h("p", { class: "now-t" }, l.title))),
       h("h2", {}, step.title || ""),
       step.text && step.type !== "info" ? h("p", { class: "p-text" }, step.text) : null,
       body)
@@ -573,7 +616,7 @@ function exerciseWidget(body, cfg) {
     btnRow.innerHTML = "";
     if (running) { btnRow.append(cancelBtn); return; }
     if (Engine.live !== false) {
-      btnRow.append(h("button", { class: "btn big", onclick: runLive }, lastResult ? "Nochmal singen" : cfg.glide ? "Start" : "Anhören und singen"));
+      btnRow.append(playBtn(lastResult ? "Nochmal singen" : cfg.glide ? "Start" : "Anhören und singen", runLive, "big"));
     } else {
       if (!cfg.glide) btnRow.append(h("button", { class: "btn", onclick: playOnly }, "Vorspielen"));
       btnRow.append(h("button", { class: "btn big", onclick: runRecord }, lastResult ? "Neu aufnehmen" : "Aufnehmen"));
