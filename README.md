@@ -2,7 +2,7 @@
 
 Tägliche Gesangsschule im Browser, mit Erwachsenenkurs, Kinderkurs, Stilrichtungen und Live-Tonhöhenerkennung über das Mikrofon.
 
-**App öffnen:** https://diegorobert-code.github.io/stimmraum/
+**App öffnen:** https://diegorobert-code.github.io/Stimmraum/
 
 Auf dem Handy: Seite öffnen, dann «Teilen» → «Zum Home-Bildschirm» (iPhone) oder Menü → «App installieren» (Android).
 
