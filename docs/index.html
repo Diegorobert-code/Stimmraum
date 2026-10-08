@@ -217,10 +217,50 @@ textarea.input { width: 100%; resize: vertical; }
 .res-list a { font-weight: 650; }
 .res-list span { font-size: .88rem; color: var(--muted); }
 
+/* Aria (KI) */
+.ai-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 1rem; background: conic-gradient(from 200deg, #ff375f, #bf5af2, #5e5ce6, #64d2ff, #ff9f0a, #ff375f); box-shadow: 0 4px 14px rgba(191,90,242,.35); }
+.ai-av.big { width: 48px; height: 48px; font-size: 1.35rem; }
+.aria-card { border-radius: 20px; padding: 18px; display: grid; gap: 12px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 120% at 100% 0%, rgba(191,90,242,.20), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(255,55,95,.16), transparent 55%), var(--surface); }
+.aria-head { display: flex; gap: 12px; align-items: center; }
+.aria-card .ai-out, .ask .ai-out { background: var(--bg); }
+.ai-out.plan { line-height: 1.55; }
+.step-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.spk { display: inline-grid; place-items: center; }
+.spk.on, .mic.on { background: var(--accent); color: var(--accent-ink); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); } }
+.chat { display: grid; gap: 14px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+.msg p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.me { justify-content: flex-end; }
+.msg.me p { background: var(--accent); color: var(--accent-ink); padding: 10px 14px; border-radius: 20px 20px 6px 20px; max-width: 82%; }
+.msg-c { display: grid; gap: 8px; background: var(--surface); padding: 12px 14px; border-radius: 6px 20px 20px 20px; min-width: 0; max-width: calc(100% - 44px); }
+.msg-tools { display: flex; gap: 8px; }
+.msg-tools:empty { display: none; }
+.typing:empty, .typing[hidden] { display: none; }
+.lesson-card { display: flex; gap: 12px; align-items: center; background: var(--bg); border-radius: 14px; padding: 10px; flex-wrap: wrap; }
+.lc-body { display: grid; flex: 1; min-width: 120px; }
+.sugg { display: flex; gap: 8px; overflow-x: auto; margin-inline: -18px; padding-inline: 18px; scrollbar-width: none; }
+.sugg::-webkit-scrollbar { display: none; }
+.chip-btn { flex: none; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: 500 .9rem var(--f-body); cursor: pointer; }
+.composer { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; align-items: flex-end; background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 26px; padding: 6px; border: 0.5px solid var(--line-strong); z-index: 5; }
+.composer .input { flex: 1; min-height: 40px; border-radius: 20px; padding: 9px 14px; resize: none; background: transparent; line-height: 1.35; }
+.composer .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; }
+.composer .send { width: 40px; min-height: 40px; height: 40px; padding: 0; justify-content: center; font-size: 1.2rem; }
+.composer.off { display: none; }
+.setup:empty { display: none; }
+.take { display: grid; gap: 6px; }
+.take audio { width: 100%; max-width: 100%; }
+.spark { width: 100%; height: 96px; display: block; }
+.progress { gap: 8px; }
+.mine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+.mine { display: grid; gap: 2px; justify-items: start; }
+.ai-setup ol { font-size: .95rem; }
+
 /* Navigation */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: 0.5px solid var(--line-strong); display: flex; justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabbar-in { display: grid; grid-template-columns: repeat(5, 1fr); max-width: 760px; width: 100%; }
-.tabbar button { border: 0; background: none; color: var(--muted); font: 600 .68rem var(--f-body); padding: 7px 2px 8px; display: grid; justify-items: center; gap: 2px; cursor: pointer; min-height: 54px; }
+.tabbar-in { display: grid; grid-template-columns: repeat(6, 1fr); max-width: 760px; width: 100%; }
+.tabbar button { border: 0; background: none; color: var(--muted); font: 600 .64rem var(--f-body); padding: 7px 0 8px; min-width: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; min-height: 54px; }
 .tabbar svg { width: 25px; height: 25px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabbar button[aria-current="page"] { color: var(--accent); }
 
@@ -238,6 +278,7 @@ textarea.input { width: 100%; resize: vertical; }
 <nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-in">
   <button data-v="heute"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Heute</button>
   <button data-v="kurs"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"/><path d="M9 8h6M9 12h6"/></svg>Kurs</button>
+  <button data-v="coach"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Aria</button>
   <button data-v="werkzeuge"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Werkzeuge</button>
   <button data-v="wissen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Wissen</button>
   <button data-v="profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profil</button>
@@ -985,6 +1026,437 @@ function analyzeHiss(track) {
   return best;
 }
 /* ==========================================================================
+   KI: Claude als Gesangslehrerin «Aria». Zwei Wege:
+   1. im Claude-Viewer über window.claude ("sample"), ohne Schlüssel
+   2. auf der eigenen Website mit dem eigenen Anthropic-Schlüssel,
+      der nur im Browser dieses Geräts gespeichert wird
+   ========================================================================== */
+const AI_STORE = "stimmraum-ai";
+const AI_MODELS = {
+  "claude-opus-5-5": "Opus 5.5 (beste Qualität)",
+  "claude-sonnet-5-5": "Sonnet 5.5 (schneller, günstiger)",
+  "claude-haiku-5-5": "Haiku 5.5 (am schnellsten, am günstigsten)"
+};
+const FENCE = "```";
+
+const AI = {
+  cfg: { key: "", model: "claude-opus-5-5", speak: false },
+  sample: undefined,
+  load() { try { Object.assign(this.cfg, JSON.parse(localStorage.getItem(AI_STORE) || "{}")); } catch (e) {} },
+  store() { try { localStorage.setItem(AI_STORE, JSON.stringify(this.cfg)); } catch (e) {} },
+  async provider() {
+    if (this.cfg.key) return "key";
+    if (this.sample === undefined) {
+      try { this.sample = window.claude?.use ? await window.claude.use("sample") : null; } catch (e) { this.sample = null; }
+    }
+    return this.sample ? "sample" : null;
+  },
+  /* system: Text, messages: [{role, content}], onText: laufend der bisherige Text */
+  async ask({ system, messages, max = 4000, onText, effort = "low" }) {
+    const p = await this.provider();
+    if (!p) throw aiErr("no_ai", "Die KI ist noch nicht eingerichtet. Trage im Profil deinen Schlüssel ein.");
+    if (p === "sample") {
+      const convo = messages.map(m => (m.role === "user" ? "Schülerin/Schüler: " : "Aria: ") + m.content).join("\n\n");
+      const prompt = `${system}\n\n---\n${messages.length > 1 ? "Bisheriges Gespräch:\n" + convo + "\n\nAntworte jetzt als Aria auf die letzte Nachricht." : messages[0].content}`;
+      let text = "";
+      try {
+        const res = await this.sample(prompt, { onText: ({ text: t }) => { text = t; onText?.(t); }, cache: false });
+        if (!text && typeof res === "string") text = res;
+        if (!text && res?.text) text = res.text;
+      } catch (e) {
+        throw aiErr(e.code, e.code === "not_granted" ? "Die KI ist im Claude-Viewer nicht freigegeben." : e.code === "rate_limited" ? "Gerade zu viele Anfragen. Versuche es gleich noch einmal." : "Das hat nicht geklappt. Versuche es noch einmal.");
+      }
+      return text;
+    }
+    return this.direct({ system, messages, max, onText, effort }, true);
+  },
+  async direct({ system, messages, max, onText, effort }, withFallback) {
+    const model = this.cfg.model in AI_MODELS ? this.cfg.model : "claude-opus-5-5";
+    const body = { model, max_tokens: max, system, messages, stream: true };
+    if (model !== "claude-haiku-5-5") body.output_config = { effort };
+    const headers = {
+      "content-type": "application/json",
+      "x-api-key": this.cfg.key.trim(),
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    };
+    if (withFallback && model === "claude-opus-5-5") { headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; body.fallbacks = "default"; }
+    let res;
+    try { res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify(body) }); }
+    catch (e) { throw aiErr("network", "Keine Verbindung zur KI. Bist du online?"); }
+    if (!res.ok) {
+      let msg = ""; try { msg = (await res.json())?.error?.message || ""; } catch (e) {}
+      if (res.status === 400 && withFallback && /fallback|beta/i.test(msg)) return this.direct({ system, messages, max, onText, effort }, false);
+      throw aiErr("http_" + res.status,
+        res.status === 401 ? "Der Schlüssel wird nicht akzeptiert. Prüfe ihn im Profil." :
+        res.status === 403 ? "Dieser Schlüssel darf das nicht. Prüfe die Berechtigungen in der Anthropic Console." :
+        res.status === 429 ? "Gerade zu viele Anfragen. Warte einen Moment." :
+        res.status === 529 || res.status >= 500 ? "Die KI ist gerade überlastet. Versuche es gleich noch einmal." :
+        /credit|balance/i.test(msg) ? "Dein Guthaben bei Anthropic ist aufgebraucht. Lade es in der Console auf." :
+        "Die KI hat die Anfrage abgelehnt" + (msg ? ": " + msg : "."));
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "", text = "", stop = null;
+    const handle = chunk => {
+      const data = chunk.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("");
+      if (!data) return;
+      let ev; try { ev = JSON.parse(data); } catch (e) { return; }
+      if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { text += ev.delta.text; onText?.(text); }
+      else if (ev.type === "message_delta") stop = ev.delta?.stop_reason || stop;
+      else if (ev.type === "error") throw aiErr(ev.error?.type || "stream", ev.error?.type === "overloaded_error" ? "Die KI ist gerade überlastet. Versuche es gleich noch einmal." : "Die Antwort wurde unterbrochen.");
+    };
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true }).replace(/\r/g, "");
+      let i;
+      while ((i = buf.indexOf("\n\n")) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+    }
+    if (buf.trim()) handle(buf);
+    if (stop === "refusal" && !text) throw aiErr("refusal", "Dazu kann ich leider nichts sagen.");
+    if (!text) throw aiErr("empty", "Die KI hat keine Antwort geschickt. Versuche es noch einmal.");
+    return text;
+  }
+};
+function aiErr(code, message) { const e = new Error(message); e.code = code; return e; }
+AI.load();
+
+/* ---------- Sprache: Vorlesen und Diktieren ---------- */
+const Voice = {
+  canSpeak: "speechSynthesis" in window,
+  canListen: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+  current: null,
+  clean(t) { return t.replace(new RegExp(FENCE + "[\\s\\S]*?(" + FENCE + "|$)", "g"), "").replace(/[*#_`>]/g, "").replace(/^- /gm, "").replace(/«|»/g, "").trim(); },
+  speak(text, onEnd) {
+    if (!this.canSpeak) return;
+    this.stop();
+    const u = new SpeechSynthesisUtterance(this.clean(text));
+    const vs = speechSynthesis.getVoices();
+    const v = vs.find(x => /^de[-_]CH/i.test(x.lang)) || vs.find(x => /^de/i.test(x.lang) && /female|anna|petra|helena|katja|google/i.test(x.name)) || vs.find(x => /^de/i.test(x.lang));
+    if (v) u.voice = v;
+    u.lang = v?.lang || "de-DE";
+    u.rate = document.body.dataset.mode === "kids" ? 0.95 : 1.02;
+    u.onend = u.onerror = () => { if (this.current === u) this.current = null; onEnd?.(); };
+    this.current = u;
+    speechSynthesis.speak(u);
+  },
+  stop() { if (this.canSpeak) { this.current = null; speechSynthesis.cancel(); } },
+  listen(onText, onEnd) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const r = new SR();
+    r.lang = "de-CH"; r.interimResults = true; r.continuous = false;
+    let ended = false;
+    const end = err => { if (ended) return; ended = true; onEnd?.(err); };
+    r.onresult = e => onText([...e.results].map(x => x[0].transcript).join(""));
+    r.onerror = e => end(e.error);
+    r.onend = () => end();
+    try { r.start(); } catch (e) { end("start"); }
+    return () => { try { r.stop(); } catch (e) {} };
+  }
+};
+if (Voice.canSpeak) try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) {}
+
+/* Lautsprecher-Knopf, liest getText() vor oder stoppt */
+const SPK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+function speakBtn(getText, label = "Vorlesen") {
+  if (!Voice.canSpeak) return null;
+  const b = h("button", { class: "icon-btn spk", "aria-label": label, title: label, html: SPK });
+  b.onclick = () => {
+    if (b.classList.contains("on")) { Voice.stop(); b.classList.remove("on"); return; }
+    document.querySelectorAll(".spk.on").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    Voice.speak(getText(), () => b.classList.remove("on"));
+  };
+  return b;
+}
+/* ==========================================================================
+   Aria, die KI-Gesangslehrerin: Chat (auch per Sprache), Tagesplan,
+   eigene Lektionen nach Mass, Fortschritt
+   ========================================================================== */
+const CHAT_STORE = "stimmraum-chat", PLAN_STORE = "stimmraum-plan";
+let chatSeed = null, chatBusy = false;
+const lsGet = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || "null") ?? d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+/* ---------- Was Aria über dich weiss ---------- */
+function ariaContext() {
+  const kid = S.mode === "kids", course = kid ? "kids" : "adult";
+  const p = profFor(course), r = rangeOf(p);
+  const list = allLessons(course), nl = nextLesson(course);
+  const recent = S.hist.filter(x => x.m === course).slice(-12).map(x => `${x.d} · ${x.l} / ${x.ex}: ${x.sc} Punkte. ${x.s}`).join("\n");
+  const rs = S.ranges.filter(x => x.who === course);
+  return [
+    `Modus: ${kid ? `Kinderkurs, ein Elternteil singt mit seinem Kind${S.prof.kids.name ? " (das Kind heisst " + S.prof.kids.name + ")" : ""}` : "Erwachsenenkurs"}`,
+    `Stimmlage: ${VOICES[p.voice].label}, Tonumfang ${noteName(r.low)} bis ${noteName(r.high)}${p.low == null ? " (Standardwert, noch nicht gemessen)" : " (gemessen)"}${rs.length > 1 ? `, erste Messung war ${noteName(rs[0].lo)} bis ${noteName(rs[0].hi)}` : ""}`,
+    `Kurs: ${list.filter(l => S.done[l.id]).length} von ${list.length} Lektionen erledigt. Nächste Lektion: ${nl ? `«${nl.title}» (${nl.goal})` : "Kurs abgeschlossen"}`,
+    `Lektionen im Kurs: ${list.map((l, i) => `${i + 1}. ${l.title}${S.done[l.id] != null ? " (" + S.done[l.id] + " Punkte)" : ""}`).join("; ")}`,
+    `Stilrichtungen in der App: ${COURSES.styles.stages.map(s => s.title).join(", ")}`,
+    `Übungstage insgesamt: ${S.days.length}, Serie: ${streak()} Tage in Folge. Heute ist ${new Date().toLocaleDateString("de-CH", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
+    S.custom.length ? `Lektionen, die du (Aria) schon erstellt hast: ${S.custom.map(l => "«" + l.title + "»").join(", ")}` : "",
+    recent ? "Letzte Übungsergebnisse (Tonhöhen-Messung der App):\n" + recent : "Noch keine gemessenen Übungsergebnisse."
+  ].filter(Boolean).join("\n");
+}
+
+function ariaSystem({ short = false, lesson = false } = {}) {
+  const kid = S.mode === "kids";
+  return `Du bist Aria, eine erfahrene, warmherzige und humorvolle Gesangslehrerin in der Übungs-App «Stimmraum». Du unterrichtest klassische Stimmbildung, Pop, Musical, Jazz, Rock, Soul und Volkslied.
+Sprache: Deutsch in Schweizer Schreibweise (immer «ss», nie «ß»), du duzt. Deine Antworten werden oft laut vorgelesen: schreibe gesprochen, klar und ${short ? "knapp" : "kurz (meist 2 bis 7 Sätze)"}, keine Überschriften, kein Fettdruck, höchstens einfache Listen mit «- ».
+Du kannst die Stimme nicht direkt hören. Die App misst aber die Tonhöhe beim Singen und schickt dir die Ergebnisse. Nutze sie und frage nach, wie es sich angefühlt hat.
+Gesundheit: Bei Schmerzen, Heiserkeit über zwei Wochen oder Stimmverlust empfiehlst du eine HNO-Ärztin oder Logopädin. Keine Diagnosen. Nie gegen Schmerz ansingen.
+${kid ? `Gerade ist der Kindermodus aktiv. Oft spricht das Kind selbst mit dir. Sei spielerisch, ermutigend und bildhaft (Tiere, Geschichten, Fantasie), mit kurzen, einfachen Sätzen. Keine Fachbegriffe ohne Bild. Übungen für Kinder sind kurz, leise bis mittellaut und höchstens 8 Minuten lang.\n` : ""}
+Was du über die Person weisst:
+${ariaContext()}
+${lesson ? `
+Lektionen erstellen: Wenn jemand eine Übung, ein Training, ein Einsingen, ein Lied-Coaching oder einen Plan zum Mitsingen möchte (oder es klar hilft), baust du eine Lektion, die die App sofort abspielt und mit dem Mikrofon auswertet. Schreib davor ein bis zwei Sätze, was die Lektion bringt. Hänge sie GANZ AM ENDE an, genau so:
+${FENCE}lektion
+{"title":"Kurzer Titel","goal":"Ein Satz zum Ziel","min":8,"steps":[ ... ]}
+${FENCE}
+Schritt-Typen (gültiges JSON, Texte auf Deutsch):
+{"type":"info","title":"…","text":"Anleitung","bullets":["…"]}  Erklärung, Körperübung oder Liedtext
+{"type":"breath","title":"…","text":"…","pattern":[4,2,6,0],"rounds":3}  Atmung: Sekunden ein, halten, aus, halten
+{"type":"hiss","title":"…","text":"…","goal":15}  Zischen auf «sss», Ziel in Sekunden
+{"type":"sustain","title":"…","text":"…","note":"3","secs":5,"syl":"mmm","dyn":false}  langen Ton halten (dyn true = leise-laut-leise)
+{"type":"match","title":"…","text":"…","notes":"1 2 3 4 5 4 3 2 1:2","syl":"ma","bpm":80,"keys":[0,2]}  Tonfolge: App spielt vor, dann nachsingen
+{"type":"glide","title":"…","text":"…","secs":8}  Sirene, Gleiten, Lippenflattern
+{"type":"free","title":"…","text":"…","secs":120}  freies Singen mit Timer, zum Beispiel ein Lied
+Noten: Stufen der Dur-Tonleiter relativ zum bequemen Grundton der Person (1 = Grundton, 8 = Oktave, bis 12). "_5" = eine Oktave tiefer, "^2" = eine Oktave höher, "b3" einen Halbton tiefer, "#4" einen Halbton höher, ":2" = zwei Schläge lang. Bleib zwischen "_5" und "10". syl: eine Silbe für alle Töne oder je Ton eine, durch Leerzeichen getrennt. keys: Wiederholungen versetzt um so viele Halbtöne (0 bis 5). bpm 50 bis 120.
+Eine Lektion hat 3 bis 7 Schritte, davon mindestens zwei Singübungen (sustain, match oder glide), und baut von leicht zu schwer auf. Nutze für bekannte Lieder keine geschützten Liedtexte, sondern beschreibe die Stelle oder nimm Silben.` : ""}`;
+}
+
+/* ---------- Lektionen aus der KI-Antwort ---------- */
+const STEP_TYPES = ["info", "breath", "hiss", "sustain", "match", "glide", "free"];
+function sanitizeLesson(o) {
+  if (!o || !Array.isArray(o.steps)) return null;
+  const str = (v, n) => String(v ?? "").trim().slice(0, n);
+  const num = (v, a, b, d) => { v = +v; return Number.isFinite(v) ? clamp(v, a, b) : d; };
+  const okNotes = n => { try { const p = parseNotes(String(n)); return p.length > 0 && p.length <= 40 && p.every(x => Number.isFinite(x.semi) && x.semi >= -12 && x.semi <= 21 && x.beats > 0 && x.beats <= 8); } catch (e) { return false; } };
+  const steps = o.steps.slice(0, 10).map(st => {
+    const t = st?.type; if (!STEP_TYPES.includes(t)) return null;
+    const b = { type: t, title: str(st.title, 80) || "Übung", text: str(st.text, 1200) };
+    if (t === "info") { if (!b.text) return null; if (Array.isArray(st.bullets)) b.bullets = st.bullets.slice(0, 10).map(x => str(x, 240)).filter(Boolean); }
+    if (t === "breath") { const pt = (Array.isArray(st.pattern) ? st.pattern : []).slice(0, 4).map(x => Math.round(num(x, 0, 12, 0))); while (pt.length < 4) pt.push(0); if (!pt[0]) pt[0] = 4; if (!pt[2]) pt[2] = 6; b.pattern = pt; b.rounds = Math.round(num(st.rounds, 1, 10, 3)); }
+    if (t === "hiss") b.goal = Math.round(num(st.goal, 5, 60, 15));
+    if (t === "sustain") { const n = String(st.note ?? "3").trim().split(/\s+/)[0]; if (!okNotes(n)) return null; b.note = n; b.secs = num(st.secs, 2, 15, 5); b.syl = str(st.syl || "a", 12); if (st.dyn === true) b.dyn = true; if (st.vib === true) b.vib = true; }
+    if (t === "match") { if (!okNotes(st.notes)) return null; b.notes = String(st.notes).trim(); b.syl = str(st.syl || "la", 120); b.bpm = Math.round(num(st.bpm, 40, 160, 80)); if (Array.isArray(st.keys) && st.keys.length) b.keys = st.keys.slice(0, 5).map(k => Math.round(num(k, -5, 7, 0))); }
+    if (t === "glide") b.secs = num(st.secs, 3, 15, 8);
+    if (t === "free") b.secs = Math.round(num(st.secs, 20, 600, 120));
+    return b;
+  }).filter(Boolean);
+  if (!steps.length) return null;
+  return { id: "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), title: str(o.title, 60) || "Lektion von Aria", goal: str(o.goal, 240), min: Math.round(num(o.min, 2, 45, 8)), steps, links: [], mode: S.mode, made: todayStr() };
+}
+function splitReply(text) {
+  const i = text.indexOf(FENCE);
+  if (i < 0) return { text, building: false, raw: null };
+  const rest = text.slice(i + FENCE.length), j = rest.indexOf(FENCE);
+  const body = (j < 0 ? rest : rest.slice(0, j)).replace(/^[a-zäöü]*\s*\n?/i, "");
+  return { text: (text.slice(0, i) + (j < 0 ? "" : rest.slice(j + FENCE.length))).trim(), building: j < 0, raw: j < 0 ? null : body };
+}
+function lessonFromReply(text) {
+  const { raw } = splitReply(text);
+  if (!raw) return null;
+  try { return sanitizeLesson(JSON.parse(raw)); }
+  catch (e) { const m = raw.match(/\{[\s\S]*\}/); try { return m ? sanitizeLesson(JSON.parse(m[0])) : null; } catch (e2) { return null; } }
+}
+function saveCustom(l) {
+  if (!S.custom.find(x => x.id === l.id)) { S.custom.push(l); save(); }
+  return findLesson(l.id);
+}
+function lessonCard(l) {
+  const saved = () => !!S.custom.find(x => x.id === l.id);
+  const lbl = h("span", {}, saved() ? "Starten" : "Speichern und starten");
+  return h("div", { class: "lesson-card" },
+    coverArt({ ...l, course: "custom" }, "mini"),
+    h("div", { class: "lc-body" }, h("strong", {}, l.title), h("span", { class: "muted small" }, `${l.min} Min. · ${l.steps.length} Schritte${saved() ? " · gespeichert" : ""}`)),
+    h("button", { class: "btn play", onclick: () => openLesson(saveCustom(l)) }, h("span", { html: PLAY }), lbl));
+}
+
+/* ---------- Chat ---------- */
+const SUGGEST = {
+  adult: ["Was soll ich heute üben?", "Bau mir ein Einsingen für 10 Minuten", "Wie komme ich höher, ohne zu pressen?", "Hilf mir, ein Lied einzustudieren", "Warum kratzt es nach dem Singen?", "Erklär mir die Kopfstimme"],
+  kids: ["Erzähl uns eine Sing-Geschichte", "Mach ein Singspiel für uns", "Wie singe ich wie ein Vogel?", "Ein lustiges Aufwärmspiel, bitte", "Warum ist meine Stimme manchmal kratzig?"]
+};
+function viewCoach() {
+  const kid = S.mode === "kids", key = kid ? "kids" : "adult";
+  const all = lsGet(CHAT_STORE, {}); const msgs = all[key] = Array.isArray(all[key]) ? all[key] : [];
+  const persist = () => { all[key] = msgs.slice(-40); lsSet(CHAT_STORE, all); };
+  const list = h("div", { class: "chat" });
+  const setup = h("div", { class: "setup" });
+  const q = h("textarea", { id: "chat-q", class: "input", rows: 1, placeholder: kid ? "Schreib oder sprich mit Aria …" : "Frag Aria etwas oder bitte um eine Übung …", "aria-label": "Nachricht an Aria" });
+  const sendB = h("button", { class: "btn send", "aria-label": "Senden" }, "↑");
+  const micB = Voice.canListen ? h("button", { class: "icon-btn mic", "aria-label": "Sprechen", title: "Sprechen", html: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>' }) : null;
+  const sugg = h("div", { class: "sugg" }, ...SUGGEST[key].map(t => h("button", { class: "chip-btn", onclick: () => send(t) }, t)));
+  const composer = h("div", { class: "composer" }, micB, q, sendB);
+
+  function bubble(m) {
+    if (m.role === "user") return h("div", { class: "msg me" }, h("p", {}, m.content));
+    const sp = splitReply(m.content);
+    const l = m.lesson || null;
+    return h("div", { class: "msg ai" },
+      h("div", { class: "ai-av", "aria-hidden": "true" }, "✦"),
+      h("div", { class: "msg-c" }, h("p", {}, sp.text || (m.lesson ? "Hier ist deine Lektion." : m.content)),
+        l ? lessonCard(l) : null,
+        h("div", { class: "msg-tools" }, speakBtn(() => sp.text))));
+  }
+  function draw() {
+    list.innerHTML = "";
+    if (!msgs.length) list.append(h("div", { class: "msg ai" }, h("div", { class: "ai-av", "aria-hidden": "true" }, "✦"),
+      h("div", { class: "msg-c" }, h("p", {}, kid
+        ? `Hallo${S.prof.kids.name ? " " + S.prof.kids.name : ""}! Ich bin Aria, deine Sing-Freundin. Wollen wir zusammen ein Singspiel machen? Du kannst mir auch einfach etwas erzählen.`
+        : "Hallo, ich bin Aria, deine Gesangslehrerin. Ich kenne deinen Kursstand und deine letzten Messwerte. Frag mich alles rund ums Singen, oder sag mir, was du üben willst, dann baue ich dir eine Lektion, die du gleich mit dem Mikrofon singen kannst."))));
+    msgs.forEach(m => list.append(bubble(m)));
+  }
+  const autosize = () => { q.style.height = "auto"; q.style.height = Math.min(q.scrollHeight, 160) + "px"; };
+  q.addEventListener("input", autosize);
+  q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(q.value); } });
+  sendB.onclick = () => send(q.value);
+  let stopListen = null;
+  if (micB) micB.onclick = () => {
+    if (stopListen) { stopListen(); return; }
+    Voice.stop();
+    const before = q.value ? q.value.trimEnd() + " " : "";
+    micB.classList.add("on");
+    stopListen = Voice.listen(t => { q.value = before + t; autosize(); }, err => {
+      micB.classList.remove("on"); stopListen = null;
+      if (err && err !== "no-speech" && err !== "aborted") toastIn(list, err === "not-allowed" ? "Spracheingabe ist hier nicht erlaubt. Tippe die Frage ein." : "Spracheingabe hat nicht geklappt.");
+      else if (q.value.trim() && !err) send(q.value);
+    });
+  };
+  cleanup.push(() => { stopListen?.(); Voice.stop(); });
+
+  async function send(text) {
+    text = String(text || "").trim();
+    if (!text || chatBusy) return;
+    if (!(await AI.provider())) { setup.scrollIntoView({ behavior: "smooth" }); return; }
+    Voice.stop();
+    q.value = ""; autosize();
+    msgs.push({ role: "user", content: text });
+    draw();
+    const live = h("p", {}, ""), wait = h("p", { class: "muted small typing" }, "Aria denkt nach …");
+    const tmp = h("div", { class: "msg ai" }, h("div", { class: "ai-av", "aria-hidden": "true" }, "✦"), h("div", { class: "msg-c" }, live, wait));
+    list.append(tmp); tmp.scrollIntoView({ block: "end", behavior: "smooth" });
+    chatBusy = true; sendB.disabled = true;
+    try {
+      let hist = msgs.slice(-20).map(({ role, content }) => ({ role, content }));
+      while (hist.length && hist[0].role !== "user") hist.shift();
+      const out = await AI.ask({ system: ariaSystem({ lesson: true }), messages: hist, max: 8000, onText: t => {
+        const sp = splitReply(t); live.textContent = sp.text;
+        wait.textContent = sp.building ? "Aria baut deine Lektion …" : ""; wait.hidden = !sp.building;
+      } });
+      const m = { role: "assistant", content: out };
+      const l = lessonFromReply(out); if (l) m.lesson = l;
+      msgs.push(m); persist();
+      if (tmp.isConnected) { tmp.replaceWith(bubble(m)); list.lastChild.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+      if (AI.cfg.speak) Voice.speak(splitReply(out).text);
+    } catch (e) {
+      msgs.pop(); persist();
+      if (tmp.isConnected) { tmp.remove(); draw(); toastIn(list, e.message); q.value = text; autosize(); }
+    }
+    chatBusy = false; sendB.disabled = false;
+  }
+
+  app.append(
+    h("header", { class: "top" },
+      h("div", {}, h("p", { class: "eyebrow" }, "Deine KI-Gesangslehrerin"), h("h1", {}, "Aria")),
+      h("div", { class: "row" }, modeSwitch(), msgs.length ? h("button", { class: "link-btn", onclick: () => { msgs.length = 0; persist(); render(); } }, "Neu") : null)),
+    setup, list, sugg, composer);
+  draw();
+  AI.provider().then(p => {
+    if (p) {
+      if (chatSeed) { const s0 = chatSeed; chatSeed = null; send(s0); }
+      return;
+    }
+    composer.classList.add("off"); sugg.hidden = true;
+    setup.append(aiSetupCard(true));
+  });
+  setTimeout(() => list.lastChild?.scrollIntoView({ block: "end" }), 0);
+}
+function toastIn(list, text) { list.append(h("p", { class: "notice" }, text)); list.lastChild.scrollIntoView({ block: "nearest" }); }
+
+/* ---------- Einrichtung (Schlüssel) ---------- */
+function aiSetupCard(intro) {
+  const inp = h("input", { id: "ai-key", class: "input", type: "password", autocomplete: "off", spellcheck: "false", placeholder: "sk-ant-…", value: AI.cfg.key ? "••••••••••••" + AI.cfg.key.slice(-4) : "" });
+  const out = h("p", { class: "muted small", "aria-live": "polite" }, "");
+  const test = async () => {
+    out.textContent = "Teste die Verbindung …";
+    try { const t = await AI.ask({ system: "Antworte auf Deutsch in Schweizer Schreibweise, in einem kurzen Satz.", messages: [{ role: "user", content: "Sag hallo als Gesangslehrerin Aria." }], max: 1500 }); out.textContent = "Funktioniert: " + t; }
+    catch (e) { out.textContent = e.message; }
+  };
+  const saveB = h("button", { class: "btn", onclick: () => {
+    const v = inp.value.trim();
+    if (!v || v.startsWith("•")) { out.textContent = "Bitte füge zuerst deinen Schlüssel ein."; return; }
+    if (!/^sk-ant-/.test(v)) { out.textContent = "Das sieht nicht wie ein Anthropic-Schlüssel aus (er beginnt mit «sk-ant-»)."; return; }
+    AI.cfg.key = v; AI.store(); inp.value = "••••••••••••" + v.slice(-4);
+    test().then(() => { if (intro) setTimeout(render, 1600); });
+  } }, "Speichern und testen");
+  const delB = h("button", { class: "btn ghost", onclick: () => { AI.cfg.key = ""; AI.store(); render(); } }, "Schlüssel entfernen");
+  return h("section", { class: "card form ai-setup" },
+    h("h2", { class: "h3" }, intro ? "Aria freischalten" : "KI-Gesangslehrerin"),
+    intro ? h("p", {}, "Aria gibt dir persönliches Feedback zu deinen Übungen, baut dir Lektionen nach Mass, plant deinen Übungstag und beantwortet jede Frage, auch per Sprache.") : null,
+    h("ol", { class: "rules small" },
+      h("li", {}, "Öffne ", h("a", { href: "https://console.anthropic.com/settings/keys", target: "_blank", rel: "noopener" }, "console.anthropic.com"), ", erstelle ein Konto und lade ein kleines Guthaben (ab 5 Dollar)."),
+      h("li", {}, "Unter «API Keys» auf «Create Key» tippen und den Schlüssel kopieren."),
+      h("li", {}, "Hier einfügen und speichern.")),
+    h("label", { class: "lbl", for: "ai-key" }, "Anthropic-Schlüssel"), inp,
+    h("div", { class: "row" }, saveB, AI.cfg.key ? h("button", { class: "btn ghost", onclick: test }, "Testen") : null, AI.cfg.key ? delB : null),
+    out,
+    h("p", { class: "muted small" }, "Der Schlüssel bleibt nur auf diesem Gerät gespeichert und geht direkt an Anthropic. Eine Frage kostet meist weniger als ein paar Rappen. Tipp: Setze in der Console ein Monatslimit. Für ein zweites Handy trägst du dort denselben oder einen eigenen Schlüssel ein."));
+}
+
+/* ---------- Startseite: Aria und Tagesplan ---------- */
+function ariaHome(course) {
+  const box = h("section", { class: "aria-card" });
+  AI.provider().then(p => {
+    box.append(h("div", { class: "aria-head" }, h("div", { class: "ai-av big", "aria-hidden": "true" }, "✦"),
+      h("div", {}, h("p", { class: "eyebrow" }, "KI-Gesangslehrerin"), h("h2", { class: "h3" }, course === "kids" ? "Aria, eure Sing-Freundin" : "Aria"))));
+    if (!p) {
+      box.append(h("p", {}, "Persönliches Feedback, Lektionen nach Mass und Antworten auf alles rund ums Singen, auch per Sprache."),
+        h("div", { class: "row" }, h("button", { class: "btn", onclick: () => go("coach") }, "Aria einrichten")));
+      return;
+    }
+    const plans = lsGet(PLAN_STORE, {}), cached = plans[course]?.d === todayStr() ? plans[course].text : "";
+    const out = h("div", { class: "ai-out plan" }, cached);
+    const b = h("button", { class: "btn" }, cached ? "Neuer Plan" : "Mein Plan für heute");
+    b.onclick = async () => {
+      b.disabled = true; out.textContent = "Aria plant deinen Tag …";
+      try {
+        const t = await AI.ask({ system: ariaSystem({ short: true }), max: 3000, onText: x => out.textContent = x,
+          messages: [{ role: "user", content: `Erstelle ${course === "kids" ? "unseren" : "meinen"} Übungsplan für heute. Zuerst ein kurzer, persönlicher Satz zur Motivation, dann 3 bis 5 Zeilen, jede beginnt mit «- » und nennt einen konkreten Punkt aus der App mit Minutenangabe, insgesamt ${course === "kids" ? "8 bis 12" : "12 bis 20"} Minuten. Baue die nächste Lektion ein und stütze dich auf die letzten Ergebnisse. Sonst nichts.` }] });
+        out.textContent = t; plans[course] = { d: todayStr(), text: t }; lsSet(PLAN_STORE, plans);
+        b.textContent = "Neuer Plan";
+        if (AI.cfg.speak) Voice.speak(t);
+      } catch (e) { out.textContent = e.message; }
+      b.disabled = false;
+    };
+    box.append(out, h("div", { class: "row" }, b, h("button", { class: "btn ghost", onclick: () => go("coach") }, "Mit Aria reden"), speakBtn(() => out.textContent)));
+  });
+  return box;
+}
+
+/* ---------- Fortschritt ---------- */
+function progressCard(course) {
+  const hs = S.hist.filter(x => x.m === course && Number.isFinite(x.sc));
+  const by = {}; hs.forEach(x => (by[x.d] = by[x.d] || []).push(x.sc));
+  const days = Object.keys(by).sort().slice(-21);
+  const rs = S.ranges.filter(x => x.who === course);
+  if (days.length < 2 && rs.length < 2) return null;
+  const parts = [];
+  if (days.length >= 2) {
+    const pts = days.map(d => Math.round(mean(by[d])));
+    const W = 320, H = 96, P = 8, X = i => P + i * (W - 2 * P) / (days.length - 1), Y = v => H - P - v / 100 * (H - 2 * P);
+    const line = pts.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ");
+    const svg = `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Punkte pro Übungstag"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs><path d="${line} L${X(days.length - 1)} ${H} L${X(0)} ${H} Z" fill="url(#sg)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>${pts.map((v, i) => `<circle cx="${X(i)}" cy="${Y(v)}" r="3.5" fill="var(--accent)"/>`).join("")}</svg>`;
+    const d = pts[pts.length - 1] - pts[0];
+    const fd = s => new Date(s + "T12:00").toLocaleDateString("de-CH", { day: "numeric", month: "short" });
+    parts.push(h("div", { html: svg }), h("p", { class: "muted small" }, `Durchschnittliche Punkte pro Übungstag, zuletzt ${pts[pts.length - 1]}. ${d > 0 ? `Plus ${d} seit dem ${fd(days[0])}.` : d < 0 ? `Seit dem ${fd(days[0])} ${-d} weniger, dranbleiben.` : "Stabil."}`));
+  }
+  if (rs.length >= 2) {
+    const a = rs[0], b = rs[rs.length - 1], gain = (b.hi - b.lo) - (a.hi - a.lo);
+    parts.push(h("p", { class: "small" }, `Tonumfang: anfangs ${nn(a.lo)} bis ${nn(a.hi)}, jetzt ${nn(b.lo)} bis ${nn(b.hi)}${gain > 0 ? `, ${gain} Halbtöne mehr` : ""}.`));
+  }
+  return h("section", { class: "card progress" }, h("div", { class: "shelf-head" }, h("h2", { class: "h3" }, "Fortschritt"), h("span", { class: "muted small" }, `${days.length} Tage gemessen`)), ...parts);
+}
+/* ==========================================================================
    App: Zustand, Navigation, Lektions-Player, Werkzeuge
    ========================================================================== */
 
@@ -1001,7 +1473,7 @@ const STORE_KEY = "stimmraum-v1";
 const defaults = () => ({
   mode: "adult",
   prof: { adult: { voice: "tm", low: null, high: null }, kids: { voice: "kid", low: null, high: null, name: "" } },
-  done: {}, days: [], guide: false, sol: false, unlock: false, ranges: []
+  done: {}, days: [], guide: false, sol: false, unlock: false, ranges: [], custom: [], hist: []
 });
 let S = defaults();
 try { const raw = localStorage.getItem(STORE_KEY); if (raw) S = Object.assign(defaults(), JSON.parse(raw)); } catch (e) {}
@@ -1022,10 +1494,13 @@ function streak() {
 }
 
 /* ---------- Kursstruktur ---------- */
-function allLessons(course) { return COURSES[course].stages.flatMap((st, si) => st.lessons.map(l => ({ ...l, stage: si, course }))); }
-function findLesson(id) { for (const c of Object.keys(COURSES)) { const l = allLessons(c).find(x => x.id === id); if (l) return l; } }
+function allLessons(course) {
+  if (course === "custom") return S.custom.map(l => ({ ...l, stage: 0, course }));
+  return COURSES[course].stages.flatMap((st, si) => st.lessons.map(l => ({ ...l, stage: si, course })));
+}
+function findLesson(id) { for (const c of [...Object.keys(COURSES), "custom"]) { const l = allLessons(c).find(x => x.id === id); if (l) return l; } }
 function isUnlocked(l) {
-  if (S.unlock || l.course === "styles") return true;
+  if (S.unlock || l.course === "styles" || l.course === "custom" || l.course === "warm") return true;
   const list = allLessons(l.course), i = list.findIndex(x => x.id === l.id);
   return i === 0 || !!S.done[list[i - 1].id];
 }
@@ -1033,6 +1508,9 @@ function nextLesson(course) { return allLessons(course).find(l => !S.done[l.id])
 const stars = sc => sc >= 85 ? 3 : sc >= 70 ? 2 : sc >= 1 ? 1 : 0;
 
 /* ---------- DOM-Helfer ---------- */
+// leere Einträge (null, false) beim Einfügen überspringen, statt «null» anzuzeigen
+const _append = Element.prototype.append;
+Element.prototype.append = function (...k) { return _append.apply(this, k.filter(x => x != null && x !== false)); };
 const $ = (s, el = document) => el.querySelector(s);
 function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
@@ -1081,7 +1559,7 @@ function render() {
   document.body.dataset.mode = S.mode === "kids" ? "kids" : "adult";
   document.querySelectorAll(".tabbar button").forEach(b => b.setAttribute("aria-current", b.dataset.v === view ? "page" : "false"));
   app.innerHTML = "";
-  ({ heute: viewHome, kurs: viewCourse, werkzeuge: viewTools, wissen: viewKnow, profil: viewSettings })[view]();
+  ({ heute: viewHome, kurs: viewCourse, coach: viewCoach, werkzeuge: viewTools, wissen: viewKnow, profil: viewSettings })[view]();
 }
 
 document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.v)));
@@ -1101,13 +1579,14 @@ const PALS = [
 ];
 const WAVE = '<svg class="cover-wave" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 12.5 4 25 30 T 50 30 T 75 30 T 100 30 T 125 30 T 150 30 T 175 30 T 200 30" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/><path d="M0 34 Q 16 14 33 34 T 66 34 T 100 34 T 133 34 T 166 34 T 200 34" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/></svg>';
 function palFor(l) {
+  if (l.course === "custom") { let n = 0; for (const c of l.id || "") n = (n * 31 + c.charCodeAt(0)) >>> 0; return PALS[n % PALS.length]; }
   const off = l.course === "kids" ? 3 : l.course === "styles" ? 6 : l.course === "warm" ? 9 : 0;
   return PALS[(off + (l.stage || 0)) % PALS.length];
 }
 function coverArt(l, cls = "") {
   const [a, b] = palFor(l);
   const st = COURSES[l.course]?.stages[l.stage];
-  const label = l.course === "styles" ? (st?.title || "") : l.course === "warm" ? "Aufwärmen" : "Stufe " + ((l.stage || 0) + 1);
+  const label = l.course === "styles" ? (st?.title || "") : l.course === "warm" ? "Aufwärmen" : l.course === "custom" ? "Von Aria" : "Stufe " + ((l.stage || 0) + 1);
   return h("div", { class: "cover " + cls, style: `--c1:${a};--c2:${b}` },
     h("span", { class: "cover-k" }, label),
     h("span", { class: "cover-t" }, l.title),
@@ -1138,6 +1617,7 @@ function viewHome() {
   const startI = nl ? list.findIndex(l => l.id === nl.id) : 0;
   const upcoming = list.slice(Math.max(0, startI - 1), startI + 8);
   const r = rangeOf(profFor(course));
+  const mine = allLessons("custom").filter(l => (l.mode === "kids") === (course === "kids")).reverse();
 
   app.append(
     h("header", { class: "top" },
@@ -1155,7 +1635,10 @@ function viewHome() {
       stat(streak(), streak() === 1 ? "Tag in Folge" : "Tage in Folge"),
       stat(doneN + "/" + list.length, "Lektionen"),
       stat(nn(r.low) + "–" + nn(r.high), "Tonumfang")),
+    ariaHome(course),
     shelf(course === "kids" ? "Eure Singspiele" : "Dein Weg", upcoming.map(tile), h("button", { class: "link-btn", onclick: () => go("kurs") }, "Alle")),
+    mine.length ? shelf("Von Aria für dich", mine.map(tile), h("button", { class: "link-btn", onclick: () => { courseTab = "custom"; go("kurs"); } }, "Alle")) : null,
+    progressCard(course),
     h("section", { class: "shelf" },
       h("div", { class: "shelf-head" }, h("h2", { class: "h3" }, "Schnell üben")),
       h("div", { class: "quick-grid" },
@@ -1199,12 +1682,25 @@ function warmupLesson(course) {
 let courseTab = null;
 function viewCourse() {
   courseTab = courseTab || (S.mode === "kids" ? "kids" : "adult");
+  const tabs = ["adult", "kids", "styles", "custom"];
+  const head = (eb) => [
+    h("header", { class: "top" }, h("div", {}, h("p", { class: "eyebrow" }, eb), h("h1", {}, "Kurs"))),
+    h("div", { class: "seg three", role: "tablist" },
+      ...tabs.map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, k === "custom" ? "Meine" : COURSES[k].name)))];
+  if (courseTab === "custom") {
+    const mine = allLessons("custom").reverse();
+    app.append(...head(`${mine.length} eigene Lektionen`),
+      h("p", { class: "lead" }, "Lektionen, die Aria für dich gebaut hat. Sag ihr im Chat, was du üben möchtest, zum Beispiel «hohe Töne ohne Druck» oder «Einsingen für ein Lied»."),
+      h("div", { class: "row" }, h("button", { class: "btn", onclick: () => go("coach") }, "✦ Neue Lektion bei Aria bestellen")),
+      mine.length ? h("div", { class: "mine-grid" }, ...mine.map(l => h("div", { class: "mine" }, tile(l),
+        h("button", { class: "link-btn small", onclick: () => { S.custom = S.custom.filter(x => x.id !== l.id); delete S.done[l.id]; save(); render(); } }, "Löschen")))) :
+        h("p", { class: "muted" }, "Noch keine eigenen Lektionen."));
+    return;
+  }
   const c = COURSES[courseTab];
   const list = allLessons(courseTab), doneN = list.filter(l => S.done[l.id]).length;
   app.append(
-    h("header", { class: "top" }, h("div", {}, h("p", { class: "eyebrow" }, `${doneN} von ${list.length} erledigt`), h("h1", {}, "Kurs"))),
-    h("div", { class: "seg three", role: "tablist" },
-      ...["adult", "kids", "styles"].map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, COURSES[k].name))),
+    ...head(`${doneN} von ${list.length} erledigt`),
     h("p", { class: "lead" }, c.blurb),
     ...c.stages.map((st, si) => h("section", { class: "shelf" },
       h("div", { class: "shelf-head col" },
@@ -1229,7 +1725,7 @@ function openLesson(l) {
   showStep();
 }
 let stepCleanup = [];
-function stopAll() { stepCleanup.forEach(f => { try { f(); } catch (e) {} }); stepCleanup = []; }
+function stopAll() { Voice.stop(); stepCleanup.forEach(f => { try { f(); } catch (e) {} }); stepCleanup = []; }
 
 function showStep() {
   stopAll();
@@ -1244,7 +1740,8 @@ function showStep() {
       h("span", { class: "p-count" }, `${i + 1}/${l.steps.length}`)),
     h("div", { class: "p-scroll" },
       h("div", { class: "now" }, coverArt(l, "mini"), h("div", {}, h("p", { class: "eyebrow" }, "Lektion"), h("p", { class: "now-t" }, l.title))),
-      h("h2", {}, step.title || ""),
+      h("div", { class: "step-head" }, h("h2", {}, step.title || ""),
+        speakBtn(() => [step.title, step.text, ...(step.bullets || [])].filter(Boolean).join(". "), "Anleitung vorlesen")),
       step.text && step.type !== "info" ? h("p", { class: "p-text" }, step.text) : null,
       body)
   );
@@ -1262,7 +1759,7 @@ function finishLesson() {
   const sc = vals.length ? Math.round(mean(vals)) : 100;
   markDay();
   if (l.course !== "warm") { S.done[l.id] = Math.max(S.done[l.id] ?? 0, sc); save(); }
-  const nl = l.course !== "warm" ? nextLesson(l.course) : null;
+  const nl = COURSES[l.course] ? nextLesson(l.course) : null;
   ov.innerHTML = "";
   ov.append(h("div", { class: "p-scroll finish" },
     h("p", { class: "eyebrow" }, "Geschafft"),
@@ -1313,6 +1810,7 @@ const STEP_RENDER = {
     const done = sec => {
       running = false; best = Math.max(best, sec);
       const sc = Math.round(clamp(sec / step.goal, 0, 1) * 100);
+      logResult({ step }, { kind: "hiss", score: sc, secs: sec });
       res.innerHTML = "";
       res.append(scoreRing(sc), h("ul", { class: "tips" },
         h("li", {}, sec >= step.goal ? `Stark: ${sec.toFixed(1).replace(".", ",")} Sekunden. Ziel erreicht.` : `${sec.toFixed(1).replace(".", ",")} Sekunden. Noch ${Math.ceil(step.goal - sec)} bis zum Ziel.`),
@@ -1510,7 +2008,27 @@ function exerciseWidget(body, cfg) {
     if (mode === "live" && !full) { ctx2.strokeStyle = col("--accent"); ctx2.lineWidth = 2 * dpr; ctx2.beginPath(); ctx2.moveTo(X(viewT), 0); ctx2.lineTo(X(viewT), H); ctx2.stroke(); }
   }
 
-  let lastResult = null;
+  let lastResult = null, rec = null, takeUrl = null;
+  // Selbst-Anhören: die Stimme während der Übung mitschneiden
+  function startTake() {
+    rec = null;
+    if (!window.MediaRecorder || !Engine.stream) return;
+    try {
+      const chunks = [], mr = new MediaRecorder(Engine.stream);
+      const done = new Promise(res => { mr.onstop = () => res(chunks.length ? URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || "audio/webm" })) : null); });
+      mr.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
+      mr.start(); rec = { mr, done };
+    } catch (e) { rec = null; }
+  }
+  function setTake(url) { if (takeUrl) URL.revokeObjectURL(takeUrl); takeUrl = url; }
+  stepCleanup.push(() => { try { rec?.mr.state !== "inactive" && rec?.mr.stop(); } catch (e) {} setTake(null); });
+  function showTake() {
+    if (!takeUrl || !fb.isConnected) return;
+    const a = h("audio", { controls: true, src: takeUrl, preload: "auto" });
+    const box = h("div", { class: "take" }, h("p", { class: "eyebrow" }, "Deine Aufnahme anhören"), a);
+    const head = $(".fb-head", fb);
+    head ? head.after(box) : fb.prepend(box);
+  }
   function playListen(t0) {
     if (cfg.kind === "match") listenSpans.forEach(s => Engine.tone(s.midi, s.t0, s.t1 - s.t0, 0.5));
     if (cfg.kind === "sustain") cfg.playRef(listenSpans[0].t0);
@@ -1534,6 +2052,7 @@ function exerciseWidget(body, cfg) {
     const ok = await Mic.ensure();
     if (!ok) { setButtons(); return; }
     fb.innerHTML = ""; lastResult = null; track = []; mode = "live";
+    startTake();
     const t0 = Engine.now() + 0.8;
     const endT = cfg.glide ? t0 + cfg.secs : buildTimeline(t0, true);
     if (cfg.glide) { targets = []; listenSpans = []; }
@@ -1555,7 +2074,9 @@ function exerciseWidget(body, cfg) {
     function finish() {
       if (!running) return;
       running = false; off(); cancelAnimationFrame(raf); mode = "done"; status.textContent = "";
+      const r0 = rec; rec = null;
       evaluate(true);
+      if (r0) { r0.done.then(u => { setTake(u); showTake(); }); try { r0.mr.stop(); } catch (e) {} }
     }
     cancelBtn.onclick = finish;
   }
@@ -1568,6 +2089,7 @@ function exerciseWidget(body, cfg) {
     status.textContent = "Ich werte deine Aufnahme aus …";
     try {
       const r = await Engine.analyzeFile(file);
+      setTake(URL.createObjectURL(file));
       buildTimeline(0, false);
       track = r.track; mode = "done";
       if (cfg.kind === "match") { // Ziele an Aufnahmezeit anpassen (nur für Anzeige)
@@ -1576,7 +2098,7 @@ function exerciseWidget(body, cfg) {
       }
       if (cfg.kind === "sustain") { const v = track.filter(f => f.midi != null); if (v.length) targets = [{ ...targets[0], t0: v[0].t, t1: v[v.length - 1].t }]; }
       status.textContent = "";
-      evaluate(false);
+      evaluate(false); showTake();
     } catch (e) { status.textContent = "Diese Aufnahme konnte ich nicht lesen. Bitte nimm sie im Format M4A, MP3 oder WAV auf."; }
   }
 
@@ -1592,6 +2114,7 @@ function exerciseWidget(body, cfg) {
     if (cfg.kind === "match") r = analyzeMatch(targets, track, isLive);
     else r = cfg.analyze(targets, track);
     r.live = isLive; lastResult = r;
+    logResult(cfg, r);
     draw(true);
     renderFeedback(fb, r, cfg, () => { fb.innerHTML = ""; lastResult = null; track = []; draw(true); setButtons(); }, cfg.next);
     setButtons();
@@ -1694,36 +2217,49 @@ function summaryLine(r) {
   if (r.kind === "match") return `${r.notes.filter(n => n.score >= 0.6).length} von ${r.notes.length} Tönen getroffen.`;
   if (r.kind === "sustain") return r.n < 10 ? "Kaum Ton erkannt." : `${Math.round(r.hit * 100)} % der Zeit im Ziel (±50 Cent).`;
   if (r.kind === "glide") return r.empty ? "Kein Ton erkannt." : `Umfang ${Math.round(r.range)} Halbtöne.`;
+  if (r.kind === "hiss") return `${r.secs.toFixed(1)} Sekunden Atemlänge.`;
   return "";
 }
 
-/* ---------- KI-Gesangslehrer (Claude, falls verfügbar) ---------- */
+/* ---------- Verlauf für Fortschritt und KI ---------- */
+function logResult(cfg, r) {
+  S.hist.push({ d: todayStr(), m: S.mode === "kids" ? "kids" : "adult", l: player?.l.title || "Werkzeug", ex: cfg.step?.title || cfg.title || "", k: r.kind, sc: Math.round(r.score), s: summaryLine(r) });
+  if (S.hist.length > 400) S.hist = S.hist.slice(-400);
+  save();
+}
+
+/* ---------- KI-Feedback nach einer Übung ---------- */
 const Coach = {
-  fn: undefined,
-  async get() {
-    if (this.fn !== undefined) return this.fn;
-    try { this.fn = window.claude?.use ? await window.claude.use("sample") : null; } catch (e) { this.fn = null; }
-    return this.fn;
-  },
   async attach(box, r, cfg, tips) {
-    const s = await this.get(); if (!s || !box.isConnected) return;
+    const p = await AI.provider(); if (!box.isConnected) return;
+    if (!p) { box.append(h("button", { class: "link-btn small", onclick: () => { player?.close(); go("coach"); } }, "Persönliches KI-Feedback von Aria freischalten")); return; }
     const out = h("div", { class: "ai-out" });
-    const btn = h("button", { class: "btn soft" }, "KI-Gesangslehrer fragen");
+    const tools = h("div", { class: "row" });
+    const btn = h("button", { class: "btn soft" }, "✦ Aria fragen");
     btn.onclick = async () => {
-      btn.disabled = true; out.textContent = "Denkt nach …";
+      btn.disabled = true; out.textContent = "Aria hört sich deine Werte an …"; tools.innerHTML = "";
       const data = JSON.parse(JSON.stringify(r, (k, v) => k === "seg" || k === "v" ? undefined : typeof v === "number" ? Math.round(v * 100) / 100 : v));
-      const prompt = `Du bist eine erfahrene, warmherzige Gesangslehrerin. Schreibe auf Deutsch (Schweizer Schreibweise, «ss» statt «ß»), duze, 3 bis 5 kurze Sätze, keine Aufzählungszeichen, kein Markdown.
+      const kid = document.body.dataset.mode === "kids";
+      const prev = S.hist.filter(x => x.ex === (cfg.step?.title || "")).slice(-6, -1).map(x => x.sc);
+      try {
+        const text = await AI.ask({
+          system: ariaSystem({ short: true }),
+          messages: [{ role: "user", content: `Ich habe gerade diese Übung gesungen. Gib mir eine persönliche Rückmeldung in 3 bis 5 kurzen Sätzen, ohne Aufzählungszeichen und ohne Markdown: was gut war, was ich konkret anders machen soll (Körper, Atem, Vokal, Vorstellung) und einen nächsten Schritt. Wiederhole nicht einfach die Tipps unten.${kid ? " Wir sind im Kindermodus, sprich das Kind spielerisch an." : ""}
 Übung: «${cfg.step?.title || ""}» (${cfg.kind}) ${cfg.step?.text || ""}
-Silbe: ${cfg.step?.syl || "-"}. Kinderkurs: ${document.body.dataset.mode === "kids" ? "ja, sprich das Kind und den Elternteil spielerisch an" : "nein"}.
+Silbe: ${cfg.step?.syl || "-"}
 Messdaten (Cent-Abweichungen, negativ = zu tief; score 0-100; sd = Schwankung; drift = Veränderung zum Ende):
 ${JSON.stringify(data).slice(0, 3500)}
-Bereits angezeigte Tipps: ${tips.join(" ")}
-Gib eine persönliche Einschätzung und einen konkreten nächsten Übungsschritt, ohne die Tipps zu wiederholen.`;
-      try { await s(prompt, { onText: ({ text }) => { out.textContent = text; } }); }
-      catch (e) { out.textContent = e.code === "not_granted" ? "Der KI-Lehrer ist nicht freigegeben." : e.code === "rate_limited" ? "Gerade zu viele Anfragen. Versuche es gleich noch einmal." : "Das hat nicht geklappt."; }
-      btn.disabled = false;
+Frühere Punkte bei dieser Übung: ${prev.length ? prev.join(", ") : "keine"}
+Bereits angezeigte Tipps: ${tips.join(" ")}` }],
+          max: 2500, onText: t => out.textContent = t
+        });
+        out.textContent = text;
+        tools.append(speakBtn(() => out.textContent), h("button", { class: "link-btn small", onclick: () => { chatSeed = `Zur Übung «${cfg.step?.title || ""}»: ${text}\n\nWie kann ich das gezielt üben?`; player?.close(); go("coach"); } }, "Im Chat weiterfragen"));
+        if (AI.cfg.speak) Voice.speak(text);
+      } catch (e) { out.textContent = e.message; }
+      btn.disabled = false; btn.textContent = "✦ Nochmal fragen";
     };
-    box.append(btn, out);
+    box.append(btn, out, tools);
   }
 };
 
@@ -1968,21 +2504,10 @@ function viewKnow() {
     ask,
     ...RESOURCES.map(g => h("section", { class: "res" }, h("h2", { class: "h3" }, g.group),
       h("ul", { class: "res-list" }, ...g.items.map(([t, u, d]) => h("li", {}, h("a", { href: u, target: "_blank", rel: "noopener" }, t), h("span", {}, d)))))));
-  Coach.get().then(s => {
-    if (!s) return;
-    ask.hidden = false;
-    const q = h("textarea", { id: "ask-q", rows: 3, class: "input", placeholder: "Zum Beispiel: Warum kratzt es nach dem Singen im Hals?" });
-    const out = h("div", { class: "ai-out" });
-    const b = h("button", { class: "btn" }, "Fragen");
-    b.onclick = async () => {
-      if (!q.value.trim()) return;
-      b.disabled = true; out.textContent = "Denkt nach …";
-      try { await s(`Du bist eine erfahrene Gesangslehrerin. Antworte auf Deutsch (Schweizer Schreibweise, «ss» statt «ß»), duze, kurz und konkret, höchstens 150 Wörter, ohne Markdown. Bei gesundheitlichen Beschwerden empfiehl eine HNO-Ärztin oder Logopädin.\nFrage: ${q.value.trim()}`, { onText: ({ text }) => out.textContent = text, cache: false }); }
-      catch (e) { out.textContent = e.code === "not_granted" ? "Die KI-Frage ist nicht freigegeben." : "Das hat nicht geklappt. Versuche es später noch einmal."; }
-      b.disabled = false;
-    };
-    ask.append(h("h2", { class: "h3" }, "Frag die KI-Gesangslehrerin"), h("label", { class: "lbl", for: "ask-q" }, "Deine Frage"), q, h("div", { class: "row" }, b), out);
-  });
+  ask.hidden = false;
+  ask.append(h("div", { class: "aria-head" }, h("div", { class: "ai-av big", "aria-hidden": "true" }, "✦"), h("div", {}, h("p", { class: "eyebrow" }, "Noch Fragen?"), h("h2", { class: "h3" }, "Frag Aria"))),
+    h("p", {}, "Deine KI-Gesangslehrerin erklärt dir alles rund um Stimme, Technik und Stile, per Text oder Sprache."),
+    h("div", { class: "row" }, h("button", { class: "btn", onclick: () => go("coach") }, "Zu Aria")));
 }
 
 /* ==========================================================================
@@ -2006,6 +2531,7 @@ function viewSettings() {
       h("label", { class: "lbl", for: "kid-name" }, "Name des Kindes (optional)"),
       h("input", { id: "kid-name", class: "input", value: S.prof.kids.name || "", oninput: e => { S.prof.kids.name = e.target.value.slice(0, 30); save(); } }),
       h("p", { class: "muted" }, "Tonumfang: " + rng(S.prof.kids) + ". Im Kindermodus misst das Werkzeug den Umfang des Kindes.")),
+    aiSettings(),
     h("section", { class: "card form" },
       h("h2", { class: "h3" }, "Üben"),
       toggle("guide", "Begleitton beim Singen (am besten mit Kopfhörern)", "t-guide"),
@@ -2016,6 +2542,17 @@ function viewSettings() {
       h("p", { class: "muted" }, `${Object.keys(S.done).length} Lektionen erledigt · ${S.days.length} Übungstage. Gespeichert nur auf diesem Gerät.`),
       h("button", { class: "btn ghost", onclick: () => confirmBox.hidden = false }, "Fortschritt zurücksetzen"), confirmBox),
     h("p", { class: "muted small center" }, "Stimmraum · Tonhöhenerkennung mit dem YIN-Verfahren (offener Algorithmus), alles läuft direkt auf deinem Gerät."));
+}
+
+function aiSettings() {
+  const card = aiSetupCard(false);
+  const model = h("select", { id: "ai-model", class: "select", onchange: e => { AI.cfg.model = e.target.value; AI.store(); } },
+    ...Object.entries(AI_MODELS).map(([k, v]) => h("option", { value: k, selected: AI.cfg.model === k }, v)));
+  card.append(
+    h("label", { class: "lbl", for: "ai-model" }, "KI-Modell"), model,
+    Voice.canSpeak ? h("label", { class: "switch", for: "ai-speak" }, h("input", { id: "ai-speak", type: "checkbox", checked: !!AI.cfg.speak, onchange: e => { AI.cfg.speak = e.target.checked; AI.store(); } }), h("span", {}, "Antworten von Aria automatisch vorlesen")) : null);
+  AI.provider().then(p => { if (p === "sample") card.insertBefore(h("p", { class: "notice" }, "Im Claude-Viewer ist Aria schon aktiv, ganz ohne Schlüssel. Den Schlüssel brauchst du nur in der installierten App."), card.children[1]); });
+  return card;
 }
 
 /* ---------- Start ---------- */

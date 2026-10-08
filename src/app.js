@@ -15,7 +15,7 @@ const STORE_KEY = "stimmraum-v1";
 const defaults = () => ({
   mode: "adult",
   prof: { adult: { voice: "tm", low: null, high: null }, kids: { voice: "kid", low: null, high: null, name: "" } },
-  done: {}, days: [], guide: false, sol: false, unlock: false, ranges: []
+  done: {}, days: [], guide: false, sol: false, unlock: false, ranges: [], custom: [], hist: []
 });
 let S = defaults();
 try { const raw = localStorage.getItem(STORE_KEY); if (raw) S = Object.assign(defaults(), JSON.parse(raw)); } catch (e) {}
@@ -36,10 +36,13 @@ function streak() {
 }
 
 /* ---------- Kursstruktur ---------- */
-function allLessons(course) { return COURSES[course].stages.flatMap((st, si) => st.lessons.map(l => ({ ...l, stage: si, course }))); }
-function findLesson(id) { for (const c of Object.keys(COURSES)) { const l = allLessons(c).find(x => x.id === id); if (l) return l; } }
+function allLessons(course) {
+  if (course === "custom") return S.custom.map(l => ({ ...l, stage: 0, course }));
+  return COURSES[course].stages.flatMap((st, si) => st.lessons.map(l => ({ ...l, stage: si, course })));
+}
+function findLesson(id) { for (const c of [...Object.keys(COURSES), "custom"]) { const l = allLessons(c).find(x => x.id === id); if (l) return l; } }
 function isUnlocked(l) {
-  if (S.unlock || l.course === "styles") return true;
+  if (S.unlock || l.course === "styles" || l.course === "custom" || l.course === "warm") return true;
   const list = allLessons(l.course), i = list.findIndex(x => x.id === l.id);
   return i === 0 || !!S.done[list[i - 1].id];
 }
@@ -47,6 +50,9 @@ function nextLesson(course) { return allLessons(course).find(l => !S.done[l.id])
 const stars = sc => sc >= 85 ? 3 : sc >= 70 ? 2 : sc >= 1 ? 1 : 0;
 
 /* ---------- DOM-Helfer ---------- */
+// leere Einträge (null, false) beim Einfügen überspringen, statt «null» anzuzeigen
+const _append = Element.prototype.append;
+Element.prototype.append = function (...k) { return _append.apply(this, k.filter(x => x != null && x !== false)); };
 const $ = (s, el = document) => el.querySelector(s);
 function h(tag, attrs = {}, ...kids) {
   const el = document.createElement(tag);
@@ -95,7 +101,7 @@ function render() {
   document.body.dataset.mode = S.mode === "kids" ? "kids" : "adult";
   document.querySelectorAll(".tabbar button").forEach(b => b.setAttribute("aria-current", b.dataset.v === view ? "page" : "false"));
   app.innerHTML = "";
-  ({ heute: viewHome, kurs: viewCourse, werkzeuge: viewTools, wissen: viewKnow, profil: viewSettings })[view]();
+  ({ heute: viewHome, kurs: viewCourse, coach: viewCoach, werkzeuge: viewTools, wissen: viewKnow, profil: viewSettings })[view]();
 }
 
 document.querySelectorAll(".tabbar button").forEach(b => b.addEventListener("click", () => go(b.dataset.v)));
@@ -115,13 +121,14 @@ const PALS = [
 ];
 const WAVE = '<svg class="cover-wave" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 Q 12.5 4 25 30 T 50 30 T 75 30 T 100 30 T 125 30 T 150 30 T 175 30 T 200 30" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3"/><path d="M0 34 Q 16 14 33 34 T 66 34 T 100 34 T 133 34 T 166 34 T 200 34" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/></svg>';
 function palFor(l) {
+  if (l.course === "custom") { let n = 0; for (const c of l.id || "") n = (n * 31 + c.charCodeAt(0)) >>> 0; return PALS[n % PALS.length]; }
   const off = l.course === "kids" ? 3 : l.course === "styles" ? 6 : l.course === "warm" ? 9 : 0;
   return PALS[(off + (l.stage || 0)) % PALS.length];
 }
 function coverArt(l, cls = "") {
   const [a, b] = palFor(l);
   const st = COURSES[l.course]?.stages[l.stage];
-  const label = l.course === "styles" ? (st?.title || "") : l.course === "warm" ? "Aufwärmen" : "Stufe " + ((l.stage || 0) + 1);
+  const label = l.course === "styles" ? (st?.title || "") : l.course === "warm" ? "Aufwärmen" : l.course === "custom" ? "Von Aria" : "Stufe " + ((l.stage || 0) + 1);
   return h("div", { class: "cover " + cls, style: `--c1:${a};--c2:${b}` },
     h("span", { class: "cover-k" }, label),
     h("span", { class: "cover-t" }, l.title),
@@ -152,6 +159,7 @@ function viewHome() {
   const startI = nl ? list.findIndex(l => l.id === nl.id) : 0;
   const upcoming = list.slice(Math.max(0, startI - 1), startI + 8);
   const r = rangeOf(profFor(course));
+  const mine = allLessons("custom").filter(l => (l.mode === "kids") === (course === "kids")).reverse();
 
   app.append(
     h("header", { class: "top" },
@@ -169,7 +177,10 @@ function viewHome() {
       stat(streak(), streak() === 1 ? "Tag in Folge" : "Tage in Folge"),
       stat(doneN + "/" + list.length, "Lektionen"),
       stat(nn(r.low) + "–" + nn(r.high), "Tonumfang")),
+    ariaHome(course),
     shelf(course === "kids" ? "Eure Singspiele" : "Dein Weg", upcoming.map(tile), h("button", { class: "link-btn", onclick: () => go("kurs") }, "Alle")),
+    mine.length ? shelf("Von Aria für dich", mine.map(tile), h("button", { class: "link-btn", onclick: () => { courseTab = "custom"; go("kurs"); } }, "Alle")) : null,
+    progressCard(course),
     h("section", { class: "shelf" },
       h("div", { class: "shelf-head" }, h("h2", { class: "h3" }, "Schnell üben")),
       h("div", { class: "quick-grid" },
@@ -213,12 +224,25 @@ function warmupLesson(course) {
 let courseTab = null;
 function viewCourse() {
   courseTab = courseTab || (S.mode === "kids" ? "kids" : "adult");
+  const tabs = ["adult", "kids", "styles", "custom"];
+  const head = (eb) => [
+    h("header", { class: "top" }, h("div", {}, h("p", { class: "eyebrow" }, eb), h("h1", {}, "Kurs"))),
+    h("div", { class: "seg three", role: "tablist" },
+      ...tabs.map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, k === "custom" ? "Meine" : COURSES[k].name)))];
+  if (courseTab === "custom") {
+    const mine = allLessons("custom").reverse();
+    app.append(...head(`${mine.length} eigene Lektionen`),
+      h("p", { class: "lead" }, "Lektionen, die Aria für dich gebaut hat. Sag ihr im Chat, was du üben möchtest, zum Beispiel «hohe Töne ohne Druck» oder «Einsingen für ein Lied»."),
+      h("div", { class: "row" }, h("button", { class: "btn", onclick: () => go("coach") }, "✦ Neue Lektion bei Aria bestellen")),
+      mine.length ? h("div", { class: "mine-grid" }, ...mine.map(l => h("div", { class: "mine" }, tile(l),
+        h("button", { class: "link-btn small", onclick: () => { S.custom = S.custom.filter(x => x.id !== l.id); delete S.done[l.id]; save(); render(); } }, "Löschen")))) :
+        h("p", { class: "muted" }, "Noch keine eigenen Lektionen."));
+    return;
+  }
   const c = COURSES[courseTab];
   const list = allLessons(courseTab), doneN = list.filter(l => S.done[l.id]).length;
   app.append(
-    h("header", { class: "top" }, h("div", {}, h("p", { class: "eyebrow" }, `${doneN} von ${list.length} erledigt`), h("h1", {}, "Kurs"))),
-    h("div", { class: "seg three", role: "tablist" },
-      ...["adult", "kids", "styles"].map(k => h("button", { role: "tab", "aria-selected": courseTab === k, onclick: () => { courseTab = k; render(); } }, COURSES[k].name))),
+    ...head(`${doneN} von ${list.length} erledigt`),
     h("p", { class: "lead" }, c.blurb),
     ...c.stages.map((st, si) => h("section", { class: "shelf" },
       h("div", { class: "shelf-head col" },
@@ -243,7 +267,7 @@ function openLesson(l) {
   showStep();
 }
 let stepCleanup = [];
-function stopAll() { stepCleanup.forEach(f => { try { f(); } catch (e) {} }); stepCleanup = []; }
+function stopAll() { Voice.stop(); stepCleanup.forEach(f => { try { f(); } catch (e) {} }); stepCleanup = []; }
 
 function showStep() {
   stopAll();
@@ -258,7 +282,8 @@ function showStep() {
       h("span", { class: "p-count" }, `${i + 1}/${l.steps.length}`)),
     h("div", { class: "p-scroll" },
       h("div", { class: "now" }, coverArt(l, "mini"), h("div", {}, h("p", { class: "eyebrow" }, "Lektion"), h("p", { class: "now-t" }, l.title))),
-      h("h2", {}, step.title || ""),
+      h("div", { class: "step-head" }, h("h2", {}, step.title || ""),
+        speakBtn(() => [step.title, step.text, ...(step.bullets || [])].filter(Boolean).join(". "), "Anleitung vorlesen")),
       step.text && step.type !== "info" ? h("p", { class: "p-text" }, step.text) : null,
       body)
   );
@@ -276,7 +301,7 @@ function finishLesson() {
   const sc = vals.length ? Math.round(mean(vals)) : 100;
   markDay();
   if (l.course !== "warm") { S.done[l.id] = Math.max(S.done[l.id] ?? 0, sc); save(); }
-  const nl = l.course !== "warm" ? nextLesson(l.course) : null;
+  const nl = COURSES[l.course] ? nextLesson(l.course) : null;
   ov.innerHTML = "";
   ov.append(h("div", { class: "p-scroll finish" },
     h("p", { class: "eyebrow" }, "Geschafft"),
@@ -327,6 +352,7 @@ const STEP_RENDER = {
     const done = sec => {
       running = false; best = Math.max(best, sec);
       const sc = Math.round(clamp(sec / step.goal, 0, 1) * 100);
+      logResult({ step }, { kind: "hiss", score: sc, secs: sec });
       res.innerHTML = "";
       res.append(scoreRing(sc), h("ul", { class: "tips" },
         h("li", {}, sec >= step.goal ? `Stark: ${sec.toFixed(1).replace(".", ",")} Sekunden. Ziel erreicht.` : `${sec.toFixed(1).replace(".", ",")} Sekunden. Noch ${Math.ceil(step.goal - sec)} bis zum Ziel.`),
@@ -524,7 +550,27 @@ function exerciseWidget(body, cfg) {
     if (mode === "live" && !full) { ctx2.strokeStyle = col("--accent"); ctx2.lineWidth = 2 * dpr; ctx2.beginPath(); ctx2.moveTo(X(viewT), 0); ctx2.lineTo(X(viewT), H); ctx2.stroke(); }
   }
 
-  let lastResult = null;
+  let lastResult = null, rec = null, takeUrl = null;
+  // Selbst-Anhören: die Stimme während der Übung mitschneiden
+  function startTake() {
+    rec = null;
+    if (!window.MediaRecorder || !Engine.stream) return;
+    try {
+      const chunks = [], mr = new MediaRecorder(Engine.stream);
+      const done = new Promise(res => { mr.onstop = () => res(chunks.length ? URL.createObjectURL(new Blob(chunks, { type: mr.mimeType || "audio/webm" })) : null); });
+      mr.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
+      mr.start(); rec = { mr, done };
+    } catch (e) { rec = null; }
+  }
+  function setTake(url) { if (takeUrl) URL.revokeObjectURL(takeUrl); takeUrl = url; }
+  stepCleanup.push(() => { try { rec?.mr.state !== "inactive" && rec?.mr.stop(); } catch (e) {} setTake(null); });
+  function showTake() {
+    if (!takeUrl || !fb.isConnected) return;
+    const a = h("audio", { controls: true, src: takeUrl, preload: "auto" });
+    const box = h("div", { class: "take" }, h("p", { class: "eyebrow" }, "Deine Aufnahme anhören"), a);
+    const head = $(".fb-head", fb);
+    head ? head.after(box) : fb.prepend(box);
+  }
   function playListen(t0) {
     if (cfg.kind === "match") listenSpans.forEach(s => Engine.tone(s.midi, s.t0, s.t1 - s.t0, 0.5));
     if (cfg.kind === "sustain") cfg.playRef(listenSpans[0].t0);
@@ -548,6 +594,7 @@ function exerciseWidget(body, cfg) {
     const ok = await Mic.ensure();
     if (!ok) { setButtons(); return; }
     fb.innerHTML = ""; lastResult = null; track = []; mode = "live";
+    startTake();
     const t0 = Engine.now() + 0.8;
     const endT = cfg.glide ? t0 + cfg.secs : buildTimeline(t0, true);
     if (cfg.glide) { targets = []; listenSpans = []; }
@@ -569,7 +616,9 @@ function exerciseWidget(body, cfg) {
     function finish() {
       if (!running) return;
       running = false; off(); cancelAnimationFrame(raf); mode = "done"; status.textContent = "";
+      const r0 = rec; rec = null;
       evaluate(true);
+      if (r0) { r0.done.then(u => { setTake(u); showTake(); }); try { r0.mr.stop(); } catch (e) {} }
     }
     cancelBtn.onclick = finish;
   }
@@ -582,6 +631,7 @@ function exerciseWidget(body, cfg) {
     status.textContent = "Ich werte deine Aufnahme aus …";
     try {
       const r = await Engine.analyzeFile(file);
+      setTake(URL.createObjectURL(file));
       buildTimeline(0, false);
       track = r.track; mode = "done";
       if (cfg.kind === "match") { // Ziele an Aufnahmezeit anpassen (nur für Anzeige)
@@ -590,7 +640,7 @@ function exerciseWidget(body, cfg) {
       }
       if (cfg.kind === "sustain") { const v = track.filter(f => f.midi != null); if (v.length) targets = [{ ...targets[0], t0: v[0].t, t1: v[v.length - 1].t }]; }
       status.textContent = "";
-      evaluate(false);
+      evaluate(false); showTake();
     } catch (e) { status.textContent = "Diese Aufnahme konnte ich nicht lesen. Bitte nimm sie im Format M4A, MP3 oder WAV auf."; }
   }
 
@@ -606,6 +656,7 @@ function exerciseWidget(body, cfg) {
     if (cfg.kind === "match") r = analyzeMatch(targets, track, isLive);
     else r = cfg.analyze(targets, track);
     r.live = isLive; lastResult = r;
+    logResult(cfg, r);
     draw(true);
     renderFeedback(fb, r, cfg, () => { fb.innerHTML = ""; lastResult = null; track = []; draw(true); setButtons(); }, cfg.next);
     setButtons();
@@ -708,36 +759,49 @@ function summaryLine(r) {
   if (r.kind === "match") return `${r.notes.filter(n => n.score >= 0.6).length} von ${r.notes.length} Tönen getroffen.`;
   if (r.kind === "sustain") return r.n < 10 ? "Kaum Ton erkannt." : `${Math.round(r.hit * 100)} % der Zeit im Ziel (±50 Cent).`;
   if (r.kind === "glide") return r.empty ? "Kein Ton erkannt." : `Umfang ${Math.round(r.range)} Halbtöne.`;
+  if (r.kind === "hiss") return `${r.secs.toFixed(1)} Sekunden Atemlänge.`;
   return "";
 }
 
-/* ---------- KI-Gesangslehrer (Claude, falls verfügbar) ---------- */
+/* ---------- Verlauf für Fortschritt und KI ---------- */
+function logResult(cfg, r) {
+  S.hist.push({ d: todayStr(), m: S.mode === "kids" ? "kids" : "adult", l: player?.l.title || "Werkzeug", ex: cfg.step?.title || cfg.title || "", k: r.kind, sc: Math.round(r.score), s: summaryLine(r) });
+  if (S.hist.length > 400) S.hist = S.hist.slice(-400);
+  save();
+}
+
+/* ---------- KI-Feedback nach einer Übung ---------- */
 const Coach = {
-  fn: undefined,
-  async get() {
-    if (this.fn !== undefined) return this.fn;
-    try { this.fn = window.claude?.use ? await window.claude.use("sample") : null; } catch (e) { this.fn = null; }
-    return this.fn;
-  },
   async attach(box, r, cfg, tips) {
-    const s = await this.get(); if (!s || !box.isConnected) return;
+    const p = await AI.provider(); if (!box.isConnected) return;
+    if (!p) { box.append(h("button", { class: "link-btn small", onclick: () => { player?.close(); go("coach"); } }, "Persönliches KI-Feedback von Aria freischalten")); return; }
     const out = h("div", { class: "ai-out" });
-    const btn = h("button", { class: "btn soft" }, "KI-Gesangslehrer fragen");
+    const tools = h("div", { class: "row" });
+    const btn = h("button", { class: "btn soft" }, "✦ Aria fragen");
     btn.onclick = async () => {
-      btn.disabled = true; out.textContent = "Denkt nach …";
+      btn.disabled = true; out.textContent = "Aria hört sich deine Werte an …"; tools.innerHTML = "";
       const data = JSON.parse(JSON.stringify(r, (k, v) => k === "seg" || k === "v" ? undefined : typeof v === "number" ? Math.round(v * 100) / 100 : v));
-      const prompt = `Du bist eine erfahrene, warmherzige Gesangslehrerin. Schreibe auf Deutsch (Schweizer Schreibweise, «ss» statt «ß»), duze, 3 bis 5 kurze Sätze, keine Aufzählungszeichen, kein Markdown.
+      const kid = document.body.dataset.mode === "kids";
+      const prev = S.hist.filter(x => x.ex === (cfg.step?.title || "")).slice(-6, -1).map(x => x.sc);
+      try {
+        const text = await AI.ask({
+          system: ariaSystem({ short: true }),
+          messages: [{ role: "user", content: `Ich habe gerade diese Übung gesungen. Gib mir eine persönliche Rückmeldung in 3 bis 5 kurzen Sätzen, ohne Aufzählungszeichen und ohne Markdown: was gut war, was ich konkret anders machen soll (Körper, Atem, Vokal, Vorstellung) und einen nächsten Schritt. Wiederhole nicht einfach die Tipps unten.${kid ? " Wir sind im Kindermodus, sprich das Kind spielerisch an." : ""}
 Übung: «${cfg.step?.title || ""}» (${cfg.kind}) ${cfg.step?.text || ""}
-Silbe: ${cfg.step?.syl || "-"}. Kinderkurs: ${document.body.dataset.mode === "kids" ? "ja, sprich das Kind und den Elternteil spielerisch an" : "nein"}.
+Silbe: ${cfg.step?.syl || "-"}
 Messdaten (Cent-Abweichungen, negativ = zu tief; score 0-100; sd = Schwankung; drift = Veränderung zum Ende):
 ${JSON.stringify(data).slice(0, 3500)}
-Bereits angezeigte Tipps: ${tips.join(" ")}
-Gib eine persönliche Einschätzung und einen konkreten nächsten Übungsschritt, ohne die Tipps zu wiederholen.`;
-      try { await s(prompt, { onText: ({ text }) => { out.textContent = text; } }); }
-      catch (e) { out.textContent = e.code === "not_granted" ? "Der KI-Lehrer ist nicht freigegeben." : e.code === "rate_limited" ? "Gerade zu viele Anfragen. Versuche es gleich noch einmal." : "Das hat nicht geklappt."; }
-      btn.disabled = false;
+Frühere Punkte bei dieser Übung: ${prev.length ? prev.join(", ") : "keine"}
+Bereits angezeigte Tipps: ${tips.join(" ")}` }],
+          max: 2500, onText: t => out.textContent = t
+        });
+        out.textContent = text;
+        tools.append(speakBtn(() => out.textContent), h("button", { class: "link-btn small", onclick: () => { chatSeed = `Zur Übung «${cfg.step?.title || ""}»: ${text}\n\nWie kann ich das gezielt üben?`; player?.close(); go("coach"); } }, "Im Chat weiterfragen"));
+        if (AI.cfg.speak) Voice.speak(text);
+      } catch (e) { out.textContent = e.message; }
+      btn.disabled = false; btn.textContent = "✦ Nochmal fragen";
     };
-    box.append(btn, out);
+    box.append(btn, out, tools);
   }
 };
 
@@ -982,21 +1046,10 @@ function viewKnow() {
     ask,
     ...RESOURCES.map(g => h("section", { class: "res" }, h("h2", { class: "h3" }, g.group),
       h("ul", { class: "res-list" }, ...g.items.map(([t, u, d]) => h("li", {}, h("a", { href: u, target: "_blank", rel: "noopener" }, t), h("span", {}, d)))))));
-  Coach.get().then(s => {
-    if (!s) return;
-    ask.hidden = false;
-    const q = h("textarea", { id: "ask-q", rows: 3, class: "input", placeholder: "Zum Beispiel: Warum kratzt es nach dem Singen im Hals?" });
-    const out = h("div", { class: "ai-out" });
-    const b = h("button", { class: "btn" }, "Fragen");
-    b.onclick = async () => {
-      if (!q.value.trim()) return;
-      b.disabled = true; out.textContent = "Denkt nach …";
-      try { await s(`Du bist eine erfahrene Gesangslehrerin. Antworte auf Deutsch (Schweizer Schreibweise, «ss» statt «ß»), duze, kurz und konkret, höchstens 150 Wörter, ohne Markdown. Bei gesundheitlichen Beschwerden empfiehl eine HNO-Ärztin oder Logopädin.\nFrage: ${q.value.trim()}`, { onText: ({ text }) => out.textContent = text, cache: false }); }
-      catch (e) { out.textContent = e.code === "not_granted" ? "Die KI-Frage ist nicht freigegeben." : "Das hat nicht geklappt. Versuche es später noch einmal."; }
-      b.disabled = false;
-    };
-    ask.append(h("h2", { class: "h3" }, "Frag die KI-Gesangslehrerin"), h("label", { class: "lbl", for: "ask-q" }, "Deine Frage"), q, h("div", { class: "row" }, b), out);
-  });
+  ask.hidden = false;
+  ask.append(h("div", { class: "aria-head" }, h("div", { class: "ai-av big", "aria-hidden": "true" }, "✦"), h("div", {}, h("p", { class: "eyebrow" }, "Noch Fragen?"), h("h2", { class: "h3" }, "Frag Aria"))),
+    h("p", {}, "Deine KI-Gesangslehrerin erklärt dir alles rund um Stimme, Technik und Stile, per Text oder Sprache."),
+    h("div", { class: "row" }, h("button", { class: "btn", onclick: () => go("coach") }, "Zu Aria")));
 }
 
 /* ==========================================================================
@@ -1020,6 +1073,7 @@ function viewSettings() {
       h("label", { class: "lbl", for: "kid-name" }, "Name des Kindes (optional)"),
       h("input", { id: "kid-name", class: "input", value: S.prof.kids.name || "", oninput: e => { S.prof.kids.name = e.target.value.slice(0, 30); save(); } }),
       h("p", { class: "muted" }, "Tonumfang: " + rng(S.prof.kids) + ". Im Kindermodus misst das Werkzeug den Umfang des Kindes.")),
+    aiSettings(),
     h("section", { class: "card form" },
       h("h2", { class: "h3" }, "Üben"),
       toggle("guide", "Begleitton beim Singen (am besten mit Kopfhörern)", "t-guide"),
@@ -1030,6 +1084,17 @@ function viewSettings() {
       h("p", { class: "muted" }, `${Object.keys(S.done).length} Lektionen erledigt · ${S.days.length} Übungstage. Gespeichert nur auf diesem Gerät.`),
       h("button", { class: "btn ghost", onclick: () => confirmBox.hidden = false }, "Fortschritt zurücksetzen"), confirmBox),
     h("p", { class: "muted small center" }, "Stimmraum · Tonhöhenerkennung mit dem YIN-Verfahren (offener Algorithmus), alles läuft direkt auf deinem Gerät."));
+}
+
+function aiSettings() {
+  const card = aiSetupCard(false);
+  const model = h("select", { id: "ai-model", class: "select", onchange: e => { AI.cfg.model = e.target.value; AI.store(); } },
+    ...Object.entries(AI_MODELS).map(([k, v]) => h("option", { value: k, selected: AI.cfg.model === k }, v)));
+  card.append(
+    h("label", { class: "lbl", for: "ai-model" }, "KI-Modell"), model,
+    Voice.canSpeak ? h("label", { class: "switch", for: "ai-speak" }, h("input", { id: "ai-speak", type: "checkbox", checked: !!AI.cfg.speak, onchange: e => { AI.cfg.speak = e.target.checked; AI.store(); } }), h("span", {}, "Antworten von Aria automatisch vorlesen")) : null);
+  AI.provider().then(p => { if (p === "sample") card.insertBefore(h("p", { class: "notice" }, "Im Claude-Viewer ist Aria schon aktiv, ganz ohne Schlüssel. Den Schlüssel brauchst du nur in der installierten App."), card.children[1]); });
+  return card;
 }
 
 /* ---------- Start ---------- */

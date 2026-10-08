@@ -214,10 +214,50 @@ textarea.input { width: 100%; resize: vertical; }
 .res-list a { font-weight: 650; }
 .res-list span { font-size: .88rem; color: var(--muted); }
 
+/* Aria (KI) */
+.ai-av { width: 34px; height: 34px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 1rem; background: conic-gradient(from 200deg, #ff375f, #bf5af2, #5e5ce6, #64d2ff, #ff9f0a, #ff375f); box-shadow: 0 4px 14px rgba(191,90,242,.35); }
+.ai-av.big { width: 48px; height: 48px; font-size: 1.35rem; }
+.aria-card { border-radius: 20px; padding: 18px; display: grid; gap: 12px; position: relative; overflow: hidden;
+  background: radial-gradient(120% 120% at 100% 0%, rgba(191,90,242,.20), transparent 55%), radial-gradient(100% 100% at 0% 100%, rgba(255,55,95,.16), transparent 55%), var(--surface); }
+.aria-head { display: flex; gap: 12px; align-items: center; }
+.aria-card .ai-out, .ask .ai-out { background: var(--bg); }
+.ai-out.plan { line-height: 1.55; }
+.step-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.spk { display: inline-grid; place-items: center; }
+.spk.on, .mic.on { background: var(--accent); color: var(--accent-ink); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); } }
+.chat { display: grid; gap: 14px; }
+.msg { display: flex; gap: 10px; align-items: flex-start; max-width: 100%; }
+.msg p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.me { justify-content: flex-end; }
+.msg.me p { background: var(--accent); color: var(--accent-ink); padding: 10px 14px; border-radius: 20px 20px 6px 20px; max-width: 82%; }
+.msg-c { display: grid; gap: 8px; background: var(--surface); padding: 12px 14px; border-radius: 6px 20px 20px 20px; min-width: 0; max-width: calc(100% - 44px); }
+.msg-tools { display: flex; gap: 8px; }
+.msg-tools:empty { display: none; }
+.typing:empty, .typing[hidden] { display: none; }
+.lesson-card { display: flex; gap: 12px; align-items: center; background: var(--bg); border-radius: 14px; padding: 10px; flex-wrap: wrap; }
+.lc-body { display: grid; flex: 1; min-width: 120px; }
+.sugg { display: flex; gap: 8px; overflow-x: auto; margin-inline: -18px; padding-inline: 18px; scrollbar-width: none; }
+.sugg::-webkit-scrollbar { display: none; }
+.chip-btn { flex: none; border: 1px solid var(--line-strong); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 8px 14px; font: 500 .9rem var(--f-body); cursor: pointer; }
+.composer { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; align-items: flex-end; background: var(--glass); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-radius: 26px; padding: 6px; border: 0.5px solid var(--line-strong); z-index: 5; }
+.composer .input { flex: 1; min-height: 40px; border-radius: 20px; padding: 9px 14px; resize: none; background: transparent; line-height: 1.35; }
+.composer .icon-btn { width: 40px; height: 40px; display: grid; place-items: center; }
+.composer .send { width: 40px; min-height: 40px; height: 40px; padding: 0; justify-content: center; font-size: 1.2rem; }
+.composer.off { display: none; }
+.setup:empty { display: none; }
+.take { display: grid; gap: 6px; }
+.take audio { width: 100%; max-width: 100%; }
+.spark { width: 100%; height: 96px; display: block; }
+.progress { gap: 8px; }
+.mine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+.mine { display: grid; gap: 2px; justify-items: start; }
+.ai-setup ol { font-size: .95rem; }
+
 /* Navigation */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: 0.5px solid var(--line-strong); display: flex; justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.tabbar-in { display: grid; grid-template-columns: repeat(5, 1fr); max-width: 760px; width: 100%; }
-.tabbar button { border: 0; background: none; color: var(--muted); font: 600 .68rem var(--f-body); padding: 7px 2px 8px; display: grid; justify-items: center; gap: 2px; cursor: pointer; min-height: 54px; }
+.tabbar-in { display: grid; grid-template-columns: repeat(6, 1fr); max-width: 760px; width: 100%; }
+.tabbar button { border: 0; background: none; color: var(--muted); font: 600 .64rem var(--f-body); padding: 7px 0 8px; min-width: 0; display: grid; justify-items: center; gap: 2px; cursor: pointer; min-height: 54px; }
 .tabbar svg { width: 25px; height: 25px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabbar button[aria-current="page"] { color: var(--accent); }
 
@@ -235,6 +275,7 @@ textarea.input { width: 100%; resize: vertical; }
 <nav class="tabbar" aria-label="Hauptnavigation"><div class="tabbar-in">
   <button data-v="heute"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Heute</button>
   <button data-v="kurs"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5"/><path d="M9 8h6M9 12h6"/></svg>Kurs</button>
+  <button data-v="coach"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>Aria</button>
   <button data-v="werkzeuge"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Werkzeuge</button>
   <button data-v="wissen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Wissen</button>
   <button data-v="profil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Profil</button>
