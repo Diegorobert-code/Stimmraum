@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#EEF1F6">
+<title>Sense Engine Suche</title>
+<link rel="icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: eine Spalte. Oben die Suchleiste (klebt), darunter die Treffer, unten fest der Aufnahme-Knopf in Daumenhöhe. */
+:root {
+  --bg: #EEF1F6;
+  --surface: #FFFFFF;
+  --ink: #14182B;
+  --muted: #586079;
+  --line: #D3D9E6;
+  --rec: #D93A1E;
+  --rec-ink: #FFFFFF;
+  --mark: #FFDDD3;
+  --mark-ink: #5A1608;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F1220;
+    --surface: #191D30;
+    --ink: #E9ECF5;
+    --muted: #9DA6C0;
+    --line: #2B3250;
+    --rec: #FF6547;
+    --rec-ink: #1A0703;
+    --mark: #5A2417;
+    --mark-ink: #FFE2D9;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.5 var(--font-body);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--rec); outline-offset: 2px; }
+
+.wrap { max-width: 44rem; margin: 0 auto; padding-inline: 16px; }
+
+/* Kopf mit Suchleiste */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg);
+  padding-block: 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.brand h1 { margin: 0; font: 700 1.25rem/1.1 var(--font-display); letter-spacing: -0.01em; }
+.brand .stand { font-size: 0.8125rem; color: var(--muted); text-align: right; }
+.bar {
+  display: flex; align-items: center; gap: 4px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 4px 6px 4px 14px;
+  transition: border-color .15s;
+}
+.bar:focus-within { border-color: var(--ink); }
+body.hoert .bar { border-color: var(--rec); }
+.bar input {
+  flex: 1; min-width: 0;
+  border: 0; outline: 0; background: transparent; color: var(--ink);
+  font: 500 1.0625rem/1.3 var(--font-body);
+  padding: 11px 0;
+}
+.bar input::-webkit-search-cancel-button, .bar input::-webkit-search-decoration { -webkit-appearance: none; display: none; }
+.bar input::placeholder { color: var(--muted); font-weight: 400; }
+.x {
+  flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted);
+  display: grid; place-items: center;
+}
+.x:active { background: var(--bg); color: var(--ink); }
+.status { min-height: 1.4em; margin: 8px 2px 0; font-size: 0.875rem; color: var(--muted); }
+body.hoert .status { color: var(--rec); font-weight: 600; }
+
+/* Inhalt */
+main { padding-block: 16px calc(150px + env(safe-area-inset-bottom, 0px)); }
+.leer h2 { margin: 6px 0 6px; font: 700 1.5rem/1.15 var(--font-display); letter-spacing: -0.015em; text-wrap: balance; }
+.leer p { margin: 0 0 18px; color: var(--muted); max-width: 34rem; }
+.label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 44px; padding: 8px 16px;
+  border: 1.5px solid var(--line); border-radius: 999px;
+  background: var(--surface); font-weight: 500;
+}
+.chip:active { border-color: var(--ink); }
+
+.liste { display: flex; flex-direction: column; gap: 10px; }
+.karte {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.kopf {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 0; background: transparent; text-align: left;
+  padding: 14px 10px 10px 16px; min-height: 56px;
+}
+.kopf .tt { flex: 1; min-width: 0; }
+.kopf .proj { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.kopf .titel { display: block; font: 700 1.125rem/1.2 var(--font-display); overflow-wrap: anywhere; }
+.kopf .pfeil { flex: none; width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); transition: transform .15s; }
+.karte.offen .pfeil { transform: rotate(180deg); }
+.zeilen { margin: 0; padding: 0 16px 14px; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.zeilen li { font-size: 0.9375rem; line-height: 1.45; overflow-wrap: anywhere; padding-left: 12px; border-left: 2px solid var(--line); }
+.zeilen li.treffer { border-left-color: var(--rec); }
+.karte:not(.offen) .zeilen li { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
+.zeilen .zw { list-style: none; border: 0; padding: 6px 0 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 2px; }
+.fuss { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px 12px 16px; }
+.fuss span { font-size: 0.8125rem; color: var(--muted); }
+.kopieren {
+  min-height: 44px; padding: 8px 16px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: transparent; font-weight: 600; font-size: 0.9375rem;
+}
+.kopieren:active { border-color: var(--ink); }
+.nichts { color: var(--muted); padding: 8px 2px; }
+
+/* Schloss */
+.schloss { padding-block: 28px; max-width: 30rem; }
+.schloss h2 { margin: 0 0 8px; font: 700 1.5rem/1.15 var(--font-display); }
+.schloss p { margin: 0 0 16px; color: var(--muted); }
+.schloss form { display: flex; flex-wrap: wrap; gap: 8px; }
+.schloss input {
+  flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 10px 14px;
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit;
+}
+.gross {
+  min-height: 48px; padding: 10px 20px; border: 0; border-radius: 12px;
+  background: var(--ink); color: var(--bg); font-weight: 600;
+}
+.fehler { color: var(--rec); font-weight: 600; margin-top: 12px; }
+
+/* Aufnahme-Knopf */
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 18px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--bg) 62%, transparent);
+  pointer-events: none;
+}
+.mik {
+  pointer-events: auto;
+  position: relative; width: 80px; height: 80px; border-radius: 50%;
+  border: 0; background: var(--rec); color: var(--rec-ink);
+  display: grid; place-items: center;
+  box-shadow: 0 6px 18px rgba(20, 24, 43, .22);
+  transition: transform .12s;
+}
+.mik:active { transform: scale(.95); }
+.mik::before, .mik::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid var(--rec); opacity: 0; pointer-events: none;
+}
+body.hoert .mik::before { animation: ring 1.6s ease-out infinite; }
+body.hoert .mik::after { animation: ring 1.6s ease-out .8s infinite; }
+@keyframes ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.75); opacity: 0; } }
+.mik .stopp { display: none; width: 26px; height: 26px; border-radius: 6px; background: var(--rec-ink); }
+body.hoert .mik svg { display: none; }
+body.hoert .mik .stopp { display: block; }
+.mik-text { pointer-events: none; font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
+body.hoert .mik-text { color: var(--rec); }
+@media (prefers-reduced-motion: reduce) {
+  body.hoert .mik::before, body.hoert .mik::after { animation: none; opacity: .5; transform: scale(1.25); }
+  .mik, .pfeil { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Sense Engine</h1>
+      <span class="stand" id="stand"></span>
+    </div>
+    <div class="bar" id="bar" hidden>
+      <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false"
+             placeholder="Sprich oder tippe, was du suchst" aria-label="Suche in allen Projekten">
+      <button class="x" id="leeren" type="button" aria-label="Suche leeren" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="schloss" id="schloss" hidden>
+    <h2>Deine Notizen sind verschlüsselt</h2>
+    <p>Öffne einmal deinen persönlichen Link aus dem Claude-Chat. Danach merkt sich dieses Gerät den Schlüssel. Du kannst den Schlüssel auch hier einfügen.</p>
+    <form id="schloss-form">
+      <input id="schluessel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" aria-label="Schlüssel">
+      <button class="gross" type="submit">Entsperren</button>
+    </form>
+    <p class="fehler" id="schloss-fehler" hidden></p>
+  </section>
+
+  <section class="leer" id="leer" hidden>
+    <h2>Sag einfach, was du suchst.</h2>
+    <p id="leer-text"></p>
+    <p class="label">Zum Ausprobieren</p>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section id="treffer" hidden>
+    <div class="liste" id="liste"></div>
+  </section>
+</main>
+
+<div class="dock" id="dock" hidden>
+  <button class="mik" id="mik" type="button" aria-pressed="false" aria-label="Sprachsuche starten">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+    <span class="stopp" aria-hidden="true"></span>
+  </button>
+  <span class="mik-text" id="mik-text">Tippen und sprechen</span>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+/* ---------- Text aufbereiten ---------- */
+function norm(s) {
+  return s.toLowerCase().replace(/ß/g, "ss").normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+function tokens(s) { return norm(s).match(/[a-z0-9]+/g) || []; }
+const STOP = new Set(("der die das den dem des ein eine einen einem einer eines und oder aber auch noch nur schon mal doch ja nein nicht kein keine " +
+  "ich du er sie es wir ihr mir mich dir dich uns euch mein meine meinen dein deine unser unsere " +
+  "ist sind war waren bin bist sein hat habe haben hatte hatten wird werden wurde kann koennen konnte soll sollen will wollen moechte muss " +
+  "zu zum zur im in an am auf aus bei mit nach von vom vor fuer ueber unter um durch gegen ohne bis als wie wo was wer wann warum welche welcher welches " +
+  "da dann denn dass ob so sehr hier dort dazu dabei damit davon " +
+  "zeig zeige zeigen such suche suchen finde finden gib sag sage bitte brauche brauch hole hol alles etwas gerade jetzt nochmal " +
+  "besprochen gesagt gemacht geschrieben notiert stand thema sache sachen ding dinge gibt geht").split(" "));
+
+/* ---------- Index ---------- */
+let FILES = [], LINES = [], VOCAB = new Map(), VWORDS = [], BUILT = "";
+function buildIndex(data) {
+  FILES = data.files; BUILT = data.built || "";
+  LINES = []; VOCAB = new Map();
+  const add = (w, id) => { let a = VOCAB.get(w); if (!a) VOCAB.set(w, a = []); if (a[a.length - 1] !== id) a.push(id); };
+  FILES.forEach((f, fi) => {
+    f.kopf = new Set(tokens(f.t + " " + (f.a || []).join(" ") + " " + f.p));
+    f.kopf.forEach(w => add(w, -1 - fi));           // negative ids = Titel der Notiz
+    f.von = LINES.length;
+    f.s.forEach(l => {
+      const id = LINES.length;
+      LINES.push({ f: fi, x: l.x, h: l.h });
+      new Set(tokens(l.x + " " + (l.h || ""))).forEach(w => add(w, id));
+    });
+    f.bis = LINES.length;
+  });
+  VWORDS = [...VOCAB.keys()];
+}
+
+function lev1(a, b) {                               // höchstens ein Tippfehler / Verhörer
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  let i = 0, j = 0, d = 0;
+  while (i < la && j < lb) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++d > 1) return false;
+    if (la > lb) i++; else if (lb > la) j++; else { i++; j++; }
+  }
+  return d + (la - i) + (lb - j) <= 1;
+}
+const expandCache = new Map();
+function expand(t) {                                // welche Wörter im Index passen zu einem gesprochenen Wort
+  if (expandCache.has(t)) return expandCache.get(t);
+  const out = [];
+  for (const w of VWORDS) {
+    let g = 0;
+    if (w === t) g = 1;
+    else if (t.length >= 3 && w.startsWith(t)) g = 0.8;
+    else if (w.length >= 4 && t.startsWith(w) && t.length - w.length <= 3) g = 0.6;
+    else if (t.length >= 4 && w.includes(t)) g = 0.5;
+    else if (t.length >= 5 && w.length >= 5 && t[0] === w[0] && lev1(t, w)) g = 0.5;
+    if (g) out.push([w, g]);
+  }
+  expandCache.set(t, out);
+  return out;
+}
+
+function search(query) {
+  let qt = tokens(query);
+  const inhalt = qt.filter(t => !STOP.has(t) && t.length > 1);
+  if (inhalt.length) qt = inhalt;
+  // getrennt gesprochene Namen zusammensetzen: «human spark» → humanspark
+  const extra = [];
+  for (let i = 0; i + 1 < qt.length; i++) {
+    const j = qt[i] + qt[i + 1];
+    if (VWORDS.some(w => w.startsWith(j))) extra.push(j);
+  }
+  qt = [...new Set(qt.concat(extra))].slice(-12);
+  if (!qt.length) return { files: [], words: new Set() };
+
+  const lineScore = new Map(), fileTitle = new Map(), fileCover = new Map(), words = new Set();
+  qt.forEach((t, ti) => {
+    const perLine = new Map(), perFile = new Map();
+    for (const [w, g] of expand(t)) {
+      words.add(w);
+      for (const id of VOCAB.get(w)) {
+        if (id < 0) { const fi = -1 - id; if ((perFile.get(fi) || 0) < g) perFile.set(fi, g); }
+        else if ((perLine.get(id) || 0) < g) perLine.set(id, g);
+      }
+    }
+    const idf = Math.log(1 + LINES.length / (1 + perLine.size));
+    perLine.forEach((g, id) => {
+      lineScore.set(id, (lineScore.get(id) || 0) + g * idf);
+      const fi = LINES[id].f; let c = fileCover.get(fi); if (!c) fileCover.set(fi, c = new Set()); c.add(ti);
+    });
+    perFile.forEach((g, fi) => {
+      fileTitle.set(fi, (fileTitle.get(fi) || 0) + g * 6);
+      let c = fileCover.get(fi); if (!c) fileCover.set(fi, c = new Set()); c.add(ti);
+    });
+  });
+
+  const perFileLines = new Map();
+  lineScore.forEach((s, id) => { const fi = LINES[id].f; let a = perFileLines.get(fi); if (!a) perFileLines.set(fi, a = []); a.push([id, s]); });
+  const res = [];
+  fileCover.forEach((cover, fi) => {
+    const ls = (perFileLines.get(fi) || []).sort((a, b) => b[1] - a[1]);
+    const top = ls.slice(0, 3).reduce((n, x) => n + x[1], 0);
+    const score = (fileTitle.get(fi) || 0) + top + cover.size * cover.size * 4;
+    res.push({ fi, score, cover: cover.size, lines: ls });
+  });
+  const maxCover = Math.max(0, ...res.map(r => r.cover));
+  const min = qt.length >= 3 ? Math.max(1, maxCover - 1) : maxCover;   // bei langen Sätzen darf ein Wort fehlen
+  return { files: res.filter(r => r.cover >= min).sort((a, b) => b.score - a.score).slice(0, 10), words };
+}
+
+/* ---------- Anzeige ---------- */
+function mark(text, words) {
+  const frag = document.createDocumentFragment();
+  const re = /[A-Za-zÀ-ÿ0-9]+/g; let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (!words.has(norm(m[0]))) continue;
+    if (m.index > last) frag.append(text.slice(last, m.index));
+    const mk = document.createElement("mark"); mk.textContent = m[0]; frag.append(mk);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) frag.append(text.slice(last));
+  return frag;
+}
+const offen = new Set();
+const PFEIL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+function card(r, words) {
+  const f = FILES[r.fi], open = offen.has(r.fi);
+  const el = document.createElement("article"); el.className = "karte" + (open ? " offen" : "");
+  const kopf = document.createElement("button"); kopf.type = "button"; kopf.className = "kopf";
+  kopf.setAttribute("aria-expanded", open ? "true" : "false");
+  const tt = document.createElement("span"); tt.className = "tt";
+  const pr = document.createElement("span"); pr.className = "proj"; pr.textContent = f.p;
+  const ti = document.createElement("span"); ti.className = "titel"; ti.append(mark(f.t, words));
+  tt.append(pr, ti);
+  const pf = document.createElement("span"); pf.className = "pfeil"; pf.innerHTML = PFEIL;
+  kopf.append(tt, pf);
+  kopf.onclick = () => { if (offen.has(r.fi)) offen.delete(r.fi); else offen.add(r.fi); render(); };
+  el.append(kopf);
+
+  const ul = document.createElement("ul"); ul.className = "zeilen";
+  const hit = new Set(r.lines.map(x => x[0]));
+  if (open) {
+    let head = null;
+    for (let id = f.von; id < f.bis; id++) {
+      const l = LINES[id];
+      if (l.h && l.h !== head) { head = l.h; const z = document.createElement("li"); z.className = "zw"; z.textContent = l.h; ul.append(z); }
+      const li = document.createElement("li"); if (hit.has(id)) li.className = "treffer";
+      li.append(mark(l.x, words)); ul.append(li);
+    }
+  } else {
+    const show = r.lines.length ? r.lines.slice(0, 3).map(x => x[0]) : [];
+    if (!show.length && f.d) { const li = document.createElement("li"); li.textContent = f.d; ul.append(li); }
+    show.forEach(id => { const li = document.createElement("li"); li.className = "treffer"; li.append(mark(LINES[id].x, words)); ul.append(li); });
+  }
+  el.append(ul);
+
+  const fuss = document.createElement("div"); fuss.className = "fuss";
+  const n = document.createElement("span");
+  const total = f.bis - f.von;
+  n.textContent = open ? total + (total === 1 ? " Zeile" : " Zeilen") : (r.lines.length > 3 ? "+ " + (r.lines.length - 3) + " weitere Treffer" : "");
+  fuss.append(n);
+  if (open) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "kopieren"; b.textContent = "Kopieren";
+    b.onclick = async () => {
+      const text = f.t + " (" + f.p + ")\n" + LINES.slice(f.von, f.bis).map(l => "- " + l.x).join("\n");
+      try { await navigator.clipboard.writeText(text); b.textContent = "Kopiert"; }
+      catch (e) { b.textContent = "Kopieren nicht möglich"; }
+      setTimeout(() => { b.textContent = "Kopieren"; }, 1800);
+    };
+    fuss.append(b);
+  }
+  if (n.textContent || open) el.append(fuss);
+  return el;
+}
+
+let lastQuery = "";
+function render() {
+  const q = $("q").value.trim();
+  $("leeren").hidden = !$("q").value;
+  if (!q) {
+    $("treffer").hidden = true; $("leer").hidden = false;
+    if (!listening) setStatus("");
+    return;
+  }
+  const { files, words } = search(q);
+  $("leer").hidden = true; $("treffer").hidden = false;
+  const liste = $("liste"); liste.replaceChildren();
+  if (!files.length) {
+    const p = document.createElement("p"); p.className = "nichts";
+    p.textContent = "Dazu finde ich nichts in deinen Notizen. Versuch es mit einem anderen Wort.";
+    liste.append(p);
+  } else files.forEach(r => liste.append(card(r, words)));
+  if (!listening) setStatus(files.length ? files.length + (files.length === 1 ? " Notiz gefunden" : " Notizen gefunden") : "");
+}
+function setQuery(text) {
+  if (text !== lastQuery) { offen.clear(); lastQuery = text; }
+  $("q").value = text; render();
+}
+function setStatus(t) { $("status").textContent = t; }
+
+/* ---------- Sprache ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let listening = false, rec = null, started = false, gotSpeech = false, lastErr = null, stille = 0;
+
+function hear() {
+  rec = new SR();
+  rec.lang = "de-CH"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+  gotSpeech = false; lastErr = null;
+  rec.onstart = () => { started = true; };
+  rec.onresult = e => {
+    let t = ""; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    t = t.trim().replace(/[.?!]+$/, "");
+    if (t) { gotSpeech = true; stille = 0; setQuery(t); }
+  };
+  rec.onerror = e => { lastErr = e.error; };
+  rec.onend = () => {
+    if (!listening) return;
+    if (lastErr === "not-allowed" || lastErr === "service-not-allowed") {
+      stop(started ? "Mikrofon pausiert. Tippe auf den Knopf, um weiterzusprechen."
+                   : "Das Mikrofon ist blockiert. Erlaube es für diese Seite in den Browser-Einstellungen.");
+      return;
+    }
+    if (lastErr === "network") { stop("Die Spracherkennung braucht Internet. Tippen geht trotzdem."); return; }
+    if (lastErr === "audio-capture") { stop("Kein Mikrofon gefunden."); return; }
+    if (!gotSpeech && ++stille >= 3) { stop("Mikrofon aus. Tippe auf den Knopf, um weiterzusprechen."); return; }
+    setTimeout(() => { if (listening) begin(); }, 200);     // nach jeder Sprechpause weiter zuhören
+  };
+  rec.start();
+}
+function begin() {
+  try { hear(); }
+  catch (e) { stop("Das Mikrofon lässt sich nicht starten. Tippe nochmal auf den Knopf."); }
+}
+function start() {
+  listening = true; started = false; stille = 0;
+  document.body.classList.add("hoert");
+  $("mik").setAttribute("aria-pressed", "true"); $("mik").setAttribute("aria-label", "Sprachsuche stoppen");
+  $("mik-text").textContent = "Ich höre zu";
+  setStatus("Ich höre zu …");
+  $("q").blur();
+  begin();
+}
+function stop(msg) {
+  listening = false;
+  document.body.classList.remove("hoert");
+  $("mik").setAttribute("aria-pressed", "false"); $("mik").setAttribute("aria-label", "Sprachsuche starten");
+  $("mik-text").textContent = "Tippen und sprechen";
+  try { rec && rec.abort(); } catch (e) {}
+  rec = null;
+  render();
+  if (msg) setStatus(msg);
+}
+
+/* ---------- Daten laden und entschlüsseln ---------- */
+function b64u(s) {
+  s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "=";
+  const bin = atob(s), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function unlock(keyText) {
+  const raw = b64u(keyText.trim());
+  if (raw.length !== 32) throw new Error("key");
+  const key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+  const resp = await fetch("daten.enc", { cache: "no-cache" });
+  if (!resp.ok) throw new Error("net");
+  const buf = new Uint8Array(await resp.arrayBuffer());
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.slice(0, 12) }, key, buf.slice(12));
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+function ready(data) {
+  buildIndex(data);
+  $("schloss").hidden = true; $("bar").hidden = false; $("leer").hidden = false;
+  const projekte = new Set(FILES.map(f => f.p)).size;
+  $("stand").textContent = BUILT ? "Stand " + BUILT : "";
+  $("leer-text").textContent = "Während du sprichst, suche ich in " + FILES.length + " Notizen aus " + projekte + " Projekten und zeige die Treffer sofort.";
+  const chips = $("chips"); chips.replaceChildren();
+  FILES.slice().sort((a, b) => b.s.length - a.s.length).slice(0, 8).forEach(f => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = f.t;
+    b.onclick = () => { setQuery(f.t); window.scrollTo(0, 0); };
+    chips.append(b);
+  });
+  if (SR) $("dock").hidden = false;
+  else setStatus("Dieser Browser kann keine Spracherkennung. Öffne die Seite in Safari oder Chrome. Tippen geht trotzdem.");
+  render();
+}
+function locked(msg) {
+  $("schloss").hidden = false; $("bar").hidden = true; $("leer").hidden = true; $("treffer").hidden = true; $("dock").hidden = true;
+  $("schloss-fehler").hidden = !msg; $("schloss-fehler").textContent = msg || "";
+}
+async function tryKey(k, fromForm) {
+  try {
+    const data = await unlock(k);
+    store.set("se-key", k.trim());
+    ready(data);
+  } catch (e) {
+    if (e && e.message === "net") locked("Die Daten lassen sich gerade nicht laden. Prüfe die Internetverbindung und lade die Seite neu.");
+    else { store.del("se-key"); locked(fromForm || k ? "Der Schlüssel passt nicht. Öffne nochmal deinen Link aus dem Claude-Chat." : ""); }
+  }
+}
+
+$("q").addEventListener("input", () => { if ($("q").value.trim() !== lastQuery) { offen.clear(); lastQuery = $("q").value.trim(); } render(); });
+$("q").addEventListener("keydown", e => { if (e.key === "Enter") $("q").blur(); });
+$("leeren").onclick = () => { setQuery(""); if (!listening) $("q").focus(); };
+$("mik").onclick = () => { if (listening) stop(); else start(); };
+$("schloss-form").addEventListener("submit", e => { e.preventDefault(); const k = $("schluessel").value; if (k.trim()) tryKey(k, true); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && listening) stop(); });
+
+(function boot() {
+  const m = location.hash.match(/^#k=([A-Za-z0-9_-]+)$/);
+  let k = store.get("se-key");
+  if (m) { k = m[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+  if (k) tryKey(k, false); else locked("");
+})();
+</script>
+</body>
+</html>

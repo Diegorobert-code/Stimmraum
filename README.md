@@ -14,3 +14,13 @@ Alle Lektionen stehen in `src/data.js`. Neue Lektion hinzufügen, dann `bash bui
 - `src/audio.js` – Klang, Mikrofon, Tonhöhenerkennung (YIN) und Auswertung
 - `src/app.js` – Oberfläche
 - `src/shell.html` – Gestaltung
+
+## Sense Engine Suche (Prototyp)
+
+Unter `docs/sense/` liegt die Sprachsuche für Sense Engine: https://diegorobert-code.github.io/Stimmraum/sense/
+
+- `docs/sense/index.html` – die App (Suchleiste, Spracherkennung, Treffer)
+- `docs/sense/daten.enc` – der Such-Index, verschlüsselt (AES-256-GCM). Ohne den persönlichen Schlüssel nicht lesbar.
+- `sense/verschluesseln.mjs` – verschlüsselt einen neuen Index
+
+Der Index im Klartext und der Schlüssel gehören nie in dieses Repository. Sobald es ein eigenes Repository für Sense Engine gibt, zieht dieser Ordner dorthin um.
