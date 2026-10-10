@@ -4,9 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#EEF1F6">
+<meta name="theme-color" content="#07091A">
 <title>Sense Engine Suche</title>
 <link rel="icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sense Engine">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
@@ -185,14 +191,130 @@ body.hoert .mik-text { color: var(--rec); }
   body.hoert .mik::before, body.hoert .mik::after { animation: none; opacity: .5; transform: scale(1.25); }
   .mik, .pfeil { transition: none; }
 }
+
+/* ---------- Nova: Intro wie im Kino ---------- */
+.intro {
+  position: fixed; inset: 0; z-index: 50; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 45%, #1B1446 0%, #07091A 60%, #020309 100%);
+  display: grid; place-items: center; cursor: pointer;
+  transition: opacity .7s ease, visibility 0s linear .7s;
+}
+.intro.weg { opacity: 0; visibility: hidden; pointer-events: none; }
+.intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.intro .buehne { position: relative; display: grid; place-items: center; text-align: center; }
+.intro .nova-gross { width: min(62vw, 300px); height: auto; opacity: 0; transform: scale(.05);
+  animation: nova-geburt 1.5s cubic-bezier(.2,.9,.25,1.2) .35s forwards; filter: drop-shadow(0 0 40px rgba(255,140,90,.55)); }
+.intro .welle { position: absolute; left: 50%; top: 38%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  border: 2px solid rgba(255,214,150,.9); opacity: 0; animation: welle 1.4s ease-out .55s forwards; }
+.intro .welle.w2 { border-color: rgba(120,200,255,.8); animation-delay: .8s; }
+.intro .blitz { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #FFF6DD, rgba(255,246,221,0) 55%); opacity: 0; animation: blitz .9s ease-out .45s forwards; pointer-events: none; }
+.intro .titel { margin: 26px 0 0; font: 700 clamp(1.9rem, 8vw, 3.4rem)/1 var(--font-display); color: #fff; letter-spacing: .5em;
+  text-transform: uppercase; opacity: 0; filter: blur(12px); animation: titel 1.3s cubic-bezier(.2,.8,.2,1) 1.35s forwards;
+  background: linear-gradient(90deg, #5EE7FF, #FFF7D6 40%, #FFB547 60%, #FF4F7B); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.intro .unter { margin: 14px 0 0; color: #B7BEDB; font-weight: 500; letter-spacing: .08em; opacity: 0; animation: einblenden .8s ease 2.2s forwards; }
+.intro .tipp { position: absolute; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center;
+  font-size: .8125rem; color: #6F7799; opacity: 0; animation: einblenden .6s ease 2.6s forwards; }
+@keyframes nova-geburt { 0% { opacity: 0; transform: scale(.05) rotate(-90deg); } 60% { opacity: 1; transform: scale(1.12) rotate(8deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes welle { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(16); } }
+@keyframes blitz { 0% { opacity: 0; } 25% { opacity: .95; } 100% { opacity: 0; } }
+@keyframes titel { 0% { opacity: 0; letter-spacing: .9em; filter: blur(14px); } 100% { opacity: 1; letter-spacing: .06em; filter: blur(0); } }
+@keyframes einblenden { to { opacity: 1; } }
+
+/* Nova selbst: Kern, Ringe, Funken */
+.nova { overflow: visible; }
+.nova .kern { transform-box: fill-box; transform-origin: center; animation: puls 3.2s ease-in-out infinite; }
+.nova .ring1 { transform-box: view-box; transform-origin: 100px 100px; animation: dreh 9s linear infinite; }
+.nova .ring2 { transform-box: view-box; transform-origin: 100px 100px; animation: dreh 14s linear infinite reverse; }
+.nova .stern { transform-box: fill-box; transform-origin: center; animation: funkel 2.4s ease-in-out infinite; }
+.nova .auge { transform-box: fill-box; transform-origin: center; animation: blinzeln 5s infinite; }
+@keyframes puls { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes dreh { to { transform: rotate(360deg); } }
+@keyframes funkel { 0%,100% { opacity: .9; transform: scale(1) rotate(0); } 50% { opacity: .5; transform: scale(.8) rotate(20deg); } }
+@keyframes blinzeln { 0%,92%,97%,100% { transform: scaleY(1); } 94.5% { transform: scaleY(.1); } }
+
+/* kleine Nova oben neben dem Namen, schwebt */
+.brand h1 { display: flex; align-items: center; gap: 10px; }
+.brand h1 .nova { width: 48px; height: 48px; margin: -6px 0; animation: schweben 4s ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(255,140,90,.45)); }
+.brand h1 .name { background: linear-gradient(90deg, #7B3CFF, #FF4F7B 55%, #FFB547); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@keyframes schweben { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-4px) rotate(4deg); } }
+
+/* Aufnahme-Knopf im Nova-Look */
+.mik {
+  width: 92px; height: 92px;
+  background: radial-gradient(circle at 38% 32%, #FFF7D6 0%, #FFB547 26%, #FF4F7B 62%, #7B3CFF 100%);
+  color: #1A0B22;
+  box-shadow: 0 0 0 6px rgba(123,60,255,.14), 0 10px 34px rgba(255,79,123,.45), 0 0 60px rgba(255,181,71,.35);
+}
+.mik .ringlicht { position: absolute; inset: -9px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, #5EE7FF, #B26BFF, #FF4F7B, #FFB547, #5EE7FF);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: dreh 4s linear infinite; opacity: .9; }
+body.hoert .mik .ringlicht { animation-duration: 1.2s; }
+.mik::before, .mik::after { border-color: #FF4F7B; }
+.mik .stopp { background: #1A0B22; }
+.mik-text { letter-spacing: .02em; }
+@media (prefers-reduced-motion: reduce) {
+  .intro *, .nova *, .brand h1 .nova, .mik .ringlicht { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
+}
 </style>
 </head>
 <body>
 
+<div class="intro" id="intro" aria-hidden="true">
+  <canvas id="sterne"></canvas>
+  <div class="blitz"></div>
+  <div class="welle"></div><div class="welle w2"></div>
+  <div class="buehne">
+    <svg class="nova nova-gross" viewBox="0 0 200 200" role="img" aria-label="Nova">
+  <defs>
+    <radialGradient id="nv-kern-g" cx="42%" cy="38%" r="62%"><stop offset="0" stop-color="#FFF7D6"/><stop offset=".32" stop-color="#FFB547"/><stop offset=".72" stop-color="#FF4F7B"/><stop offset="1" stop-color="#7B3CFF"/></radialGradient>
+    <radialGradient id="nv-halo-g"><stop offset="0" stop-color="#FF8A5B" stop-opacity=".55"/><stop offset="1" stop-color="#7B3CFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="nv-ring-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EE7FF"/><stop offset="1" stop-color="#B26BFF"/></linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#nv-halo-g)"/>
+  <g class="ring1"><ellipse cx="100" cy="100" rx="88" ry="28" fill="none" stroke="url(#nv-ring-g)" stroke-width="3.5" transform="rotate(-22 100 100)"/><circle cx="182" cy="68" r="5" fill="#5EE7FF"/></g>
+  <g class="ring2"><ellipse cx="100" cy="100" rx="76" ry="20" fill="none" stroke="#FFB547" stroke-width="2" opacity=".6" transform="rotate(38 100 100)"/><circle cx="40" cy="62" r="3.5" fill="#FFB547"/></g>
+  <g class="kern">
+    <circle cx="100" cy="100" r="44" fill="url(#nv-kern-g)"/>
+    <ellipse cx="84" cy="80" rx="13" ry="7" transform="rotate(-30 84 80)" fill="#fff" opacity=".55"/>
+    <ellipse class="auge" cx="86" cy="102" rx="5" ry="7" fill="#2A0F2E"/><ellipse class="auge" cx="114" cy="102" rx="5" ry="7" fill="#2A0F2E"/>
+    <circle cx="88" cy="99" r="1.8" fill="#fff"/><circle cx="116" cy="99" r="1.8" fill="#fff"/>
+    <path d="M90 116 Q100 124 110 116" fill="none" stroke="#2A0F2E" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/><ellipse cx="126" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/>
+  </g>
+  <path class="stern" d="M158 26 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#FFF7D6"/>
+  <path class="stern" style="animation-delay:-1.2s" d="M34 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#5EE7FF"/>
+</svg>
+    <h2 class="titel">Sense Engine</h2>
+    <p class="unter">Nova ist wach. Sag, was du suchst.</p>
+  </div>
+  <p class="tipp">Tippen zum Überspringen</p>
+</div>
+
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <h1>Sense Engine</h1>
+      <h1><svg class="nova " viewBox="0 0 200 200" aria-hidden="true">
+  <defs>
+    <radialGradient id="nv-kern-k" cx="42%" cy="38%" r="62%"><stop offset="0" stop-color="#FFF7D6"/><stop offset=".32" stop-color="#FFB547"/><stop offset=".72" stop-color="#FF4F7B"/><stop offset="1" stop-color="#7B3CFF"/></radialGradient>
+    <radialGradient id="nv-halo-k"><stop offset="0" stop-color="#FF8A5B" stop-opacity=".55"/><stop offset="1" stop-color="#7B3CFF" stop-opacity="0"/></radialGradient>
+    <linearGradient id="nv-ring-k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EE7FF"/><stop offset="1" stop-color="#B26BFF"/></linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#nv-halo-k)"/>
+  <g class="ring1"><ellipse cx="100" cy="100" rx="88" ry="28" fill="none" stroke="url(#nv-ring-k)" stroke-width="3.5" transform="rotate(-22 100 100)"/><circle cx="182" cy="68" r="5" fill="#5EE7FF"/></g>
+  <g class="ring2"><ellipse cx="100" cy="100" rx="76" ry="20" fill="none" stroke="#FFB547" stroke-width="2" opacity=".6" transform="rotate(38 100 100)"/><circle cx="40" cy="62" r="3.5" fill="#FFB547"/></g>
+  <g class="kern">
+    <circle cx="100" cy="100" r="44" fill="url(#nv-kern-k)"/>
+    <ellipse cx="84" cy="80" rx="13" ry="7" transform="rotate(-30 84 80)" fill="#fff" opacity=".55"/>
+    <ellipse class="auge" cx="86" cy="102" rx="5" ry="7" fill="#2A0F2E"/><ellipse class="auge" cx="114" cy="102" rx="5" ry="7" fill="#2A0F2E"/>
+    <circle cx="88" cy="99" r="1.8" fill="#fff"/><circle cx="116" cy="99" r="1.8" fill="#fff"/>
+    <path d="M90 116 Q100 124 110 116" fill="none" stroke="#2A0F2E" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="74" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/><ellipse cx="126" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/>
+  </g>
+  <path class="stern" d="M158 26 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#FFF7D6"/>
+  <path class="stern" style="animation-delay:-1.2s" d="M34 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#5EE7FF"/>
+</svg><span class="name">Sense Engine</span></h1>
       <span class="stand" id="stand"></span>
     </div>
     <div class="bar" id="bar" hidden>
@@ -231,6 +353,7 @@ body.hoert .mik-text { color: var(--rec); }
 
 <div class="dock" id="dock" hidden>
   <button class="mik" id="mik" type="button" aria-pressed="false" aria-label="Sprachsuche starten">
+    <span class="ringlicht" aria-hidden="true"></span>
     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
     <span class="stopp" aria-hidden="true"></span>
   </button>
@@ -559,6 +682,37 @@ document.addEventListener("visibilitychange", () => { if (document.hidden && lis
   let k = store.get("se-key");
   if (m) { k = m[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
   if (k) tryKey(k, false); else locked("");
+})();
+/* ---------- Intro: Sternenfeld, Nova erscheint, dann die App ---------- */
+(function intro() {
+  const el = $("intro"), cv = $("sterne");
+  const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let fertig = false, raf = 0;
+  const weg = () => { if (fertig) return; fertig = true; el.classList.add("weg"); setTimeout(() => { cancelAnimationFrame(raf); el.remove(); }, 800); };
+  el.addEventListener("click", weg);
+  setTimeout(weg, still ? 600 : 3600);
+  if (still || !cv.getContext) return;
+  const ctx = cv.getContext("2d"), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let w, h; const fit = () => { w = cv.width = innerWidth * dpr; h = cv.height = innerHeight * dpr; }; fit(); addEventListener("resize", fit);
+  const farben = ["#FFFFFF", "#FFF7D6", "#5EE7FF", "#FFB547", "#FF4F7B", "#B26BFF"];
+  const P = Array.from({ length: 240 }, () => ({ a: Math.random() * Math.PI * 2, r: Math.random() * 0.02, v: 0.004 + Math.random() * 0.018, s: (0.6 + Math.random() * 1.8) * dpr, c: farben[(Math.random() * farben.length) | 0] }));
+  const t0 = performance.now();
+  (function frame(t) {
+    const z = (t - t0) / 1000;
+    ctx.fillStyle = "rgba(4,5,16,.28)"; ctx.fillRect(0, 0, w, h);
+    const cx = w / 2, cy = h * 0.42, R = Math.hypot(w, h) / 2;
+    const schub = z < 0.5 ? 0.2 : z < 1.4 ? 2.6 : 0.9;   // Warp-Sprung, wenn Nova aufleuchtet
+    for (const p of P) {
+      p.r += p.v * schub;
+      if (p.r > 1.1) { p.r = Math.random() * 0.05; p.a = Math.random() * Math.PI * 2; }
+      const d = p.r * p.r * R, x = cx + Math.cos(p.a) * d, y = cy + Math.sin(p.a) * d;
+      const len = Math.max(1, p.v * schub * R * p.r * 0.9);
+      ctx.strokeStyle = p.c; ctx.globalAlpha = Math.min(1, p.r * 1.6); ctx.lineWidth = p.s;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(p.a) * len, y - Math.sin(p.a) * len); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    if (!fertig || z < 5) raf = requestAnimationFrame(frame);
+  })(t0);
 })();
 </script>
 </body>
