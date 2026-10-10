@@ -157,6 +157,10 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
   background: var(--ink); color: var(--bg); font-weight: 600;
 }
 .fehler { color: var(--rec); font-weight: 600; margin-top: 12px; }
+.demo-box { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
+.demo-knopf { min-height: 52px; padding: 12px 26px; border: 0; border-radius: 999px; font-weight: 700; font-size: 1.0625rem; color: #1A0B22;
+  background: linear-gradient(90deg, #5EE7FF, #FFB547 45%, #FF4F7B); box-shadow: 0 8px 28px rgba(255,79,123,.35); }
+.demo-knopf:active { transform: scale(.97); }
 
 /* Aufnahme-Knopf */
 .dock {
@@ -337,6 +341,10 @@ body.hoert .mik .ringlicht { animation-duration: 1.2s; }
       <button class="gross" type="submit">Entsperren</button>
     </form>
     <p class="fehler" id="schloss-fehler" hidden></p>
+    <div class="demo-box">
+      <p>Nur mal reinschauen? Die Demo zeigt Sense Engine mit Beispiel-Notizen, ganz ohne Schlüssel.</p>
+      <button class="demo-knopf" id="demo" type="button">✦ Demo starten</button>
+    </div>
   </section>
 
   <section class="leer" id="leer" hidden>
@@ -677,11 +685,45 @@ $("mik").onclick = () => { if (listening) stop(); else start(); };
 $("schloss-form").addEventListener("submit", e => { e.preventDefault(); const k = $("schluessel").value; if (k.trim()) tryKey(k, true); });
 document.addEventListener("visibilitychange", () => { if (document.hidden && listening) stop(); });
 
+
+/* ---------- Demo: Beispiel-Notizen, damit man Sense Engine ohne Schlüssel zeigen kann ---------- */
+const DEMO = { built: "Demo", files: [
+  { p: "Hungry Belly", t: "Ich hab Hunger", a: ["essen", "restaurant", "kochen"], s: [
+    { x: "Einfach sagen «Ich hab Hunger», und der Agent schlägt drei Möglichkeiten vor: kochen, bestellen oder ausgehen.", h: "Idee" },
+    { x: "Kein Google, keine zehn Apps. Ein Satz reicht, die Antwort kommt sofort." },
+    { x: "Merkt sich, was ich mag: scharf, vegetarisch unter der Woche, Pizza am Freitag." } ] },
+  { p: "Mondschein", t: "Gutenachtgeschichten mit Sunny", a: ["kinder", "schlafen", "nova", "drache"], s: [
+    { x: "Sunny der Igel, Kiki das Licht und Nova der kleine Drache erzählen jeden Abend eine neue Geschichte." },
+    { x: "Das Kind entscheidet mit: Wer hilft? Wohin geht die Reise? Die Geschichte erzählt sich weiter." } ] },
+  { p: "Jackie's Advice", t: "Die KI an der Seite von Müttern", a: ["jackie", "familie", "schule", "amt"], s: [
+    { x: "Sie hört zu, ordnet und zeigt den nächsten Schritt, von der Schule bis zum Amt." },
+    { x: "Zwei Minuten Atempause, wenn alles zu viel wird." } ] },
+  { p: "Nova", t: "Nova lernt von allen Projekten", a: ["nova", "vernetzung", "agent"], s: [
+    { x: "Nova ist in jedem Projekt dabei und kennt alle Notizen. Eine Frage, alle Antworten." },
+    { x: "Neue Idee diktiert? Nova sagt sofort: «Das passt auch zu Hungry Belly.»" } ] },
+  { p: "DR Lab", t: "Die fünf Elemente", a: ["holz", "feuer", "erde", "metall", "wasser"], s: [
+    { x: "Jedes Projekt bekommt ein Element: Holz, Feuer, Erde, Metall oder Wasser." },
+    { x: "Die fünf Elemente sind der Start von allem, der erste Atemzug." } ] },
+  { p: "Praxis", t: "Rolfing und Kinesiologie", a: ["rolfing", "kinesiologie", "termin", "körper"], s: [
+    { x: "Terminerinnerung mit YouTube-Übung für zu Hause." },
+    { x: "Der Körper erzählt die Geschichte, die Hände hören zu." } ] },
+  { p: "HumanSpark", t: "Finger drauf, Körper lesen", a: ["humanspark", "messen", "körper"], s: [
+    { x: "HumanSpark liest den Körper und übersetzt ihn in eine Sprache für die KI." } ] },
+  { p: "TradePing", t: "Ein Ping, wenn es zählt", a: ["trading", "markt", "börse"], s: [
+    { x: "Der Markt läuft, du musst nicht ständig hinschauen." } ] }
+] };
+function demo() {
+  ready(DEMO);
+  $("stand").textContent = "Demo · Beispiel-Notizen";
+  try { history.replaceState(null, "", location.pathname + "?demo"); } catch (e) {}
+}
+$("demo").onclick = demo;
 (function boot() {
   const m = location.hash.match(/^#k=([A-Za-z0-9_-]+)$/);
   let k = store.get("se-key");
   if (m) { k = m[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
-  if (k) tryKey(k, false); else locked("");
+  if (!m && /(^|[?&])demo\b/.test(location.search)) demo();
+  else if (k) tryKey(k, false); else locked("");
 })();
 /* ---------- Intro: Sternenfeld, Nova erscheint, dann die App ---------- */
 (function intro() {
