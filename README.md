@@ -15,11 +15,13 @@ Alle Lektionen stehen in `src/data.js`. Neue Lektion hinzufügen, dann `bash bui
 - `src/app.js` – Oberfläche
 - `src/shell.html` – Gestaltung
 
-## Sense Engine Suche (Prototyp)
+## Sense Engine (Prototyp)
 
-Unter `docs/sense/` liegt die Sprachsuche für Sense Engine: https://diegorobert-code.github.io/Stimmraum/sense/
+Unter `docs/sense/` liegt Sense Engine, Diegos persönliche KI-Zentrale: https://diegorobert-code.github.io/Stimmraum/sense/
 
-- `docs/sense/index.html` – die App (Suchleiste, Spracherkennung, Treffer)
+Drei Reiter: **Zentrale** (Projekte mit Prozent, Meine Apps, HumanSpark «Jetzt messen», Aufgaben per Sprache, KI-Werkzeuge mit echtem Status, Hermes-Verbindung, Freigaben mit Schaltern), **Transkript** (Diktat auf Schweizerdeutsch/Deutsch, Verlauf, «An Hermes» direkt, «An Claude», «An ChatGPT») und **Suche** (verschlüsselte Notizen-Suche, braucht den Schlüssel; `?demo` zeigt Beispiel-Notizen). Nova, der kleine weisse Roboter, sitzt unten rechts und gibt Fragen an Hermes weiter. Zentrale und Transkript gehen ohne Schlüssel. Die Hermes-Adresse und das Passwort teilt sich Sense Engine mit der DR-Lab-Transkript-App (`drlab-hermes-adresse`, `drlab-hermes-passwort` im Browser-Speicher); sie stehen nie im Code. Alles Persönliche bleibt im Browser des Geräts.
+
+- `docs/sense/index.html` – die App (Zentrale, Transkript, Suche, Nova)
 - `docs/sense/daten.enc` – der Such-Index, verschlüsselt (AES-256-GCM). Ohne den persönlichen Schlüssel nicht lesbar.
 - `sense/verschluesseln.mjs` – verschlüsselt einen neuen Index
 - `docs/sense/manifest.webmanifest`, `icon-192.png`, `icon-512.png` – eigenes App-Icon für den Home-Bildschirm
