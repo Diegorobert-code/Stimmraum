@@ -285,7 +285,7 @@ body.hoert #mik, body.diktiert #dmik { background: radial-gradient(circle at 38%
 .mik-text { pointer-events: none; font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
 body.hoert .mik-text { color: var(--rec); }
 
-/* Nova: kleiner weisser Roboter */
+/* Nova: kleiner blauer Roboter */
 .robo.nova-bild { overflow: hidden; display: inline-block; aspect-ratio: 1; object-fit: cover; border-radius: 50%; box-shadow: 0 0 0 2px rgba(94,231,255,.7), 0 0 18px rgba(94,231,255,.35); background: #0D1424; }
 .robo { overflow: visible; }
 .robo .auge { transform-box: fill-box; transform-origin: center; animation: blinzeln 5s infinite; }
@@ -566,10 +566,10 @@ const store = {
 function jget(k, d) { const v = store.get(k); if (v === null) return d; try { return JSON.parse(v); } catch (e) { return v; } }
 function jput(k, v) { store.set(k, JSON.stringify(v)); }
 
-/* ---------- Nova, der kleine weisse Roboter ---------- */
+/* ---------- Nova, der kleine blaue Roboter ---------- */
 let roboN = 0;
 function robo(extra) {
-  /* Novas Gesicht aus dem Film «Otti und Nova» */
+  /* Novas Gesicht aus dem Film «Otti und Nova», Stadt-Szene */
   return '<img class="robo nova-bild ' + (extra || "") + '" src="nova-gesicht.jpg" alt="" aria-hidden="true">';
 }
 document.querySelectorAll("[data-robo]").forEach(el => { el.outerHTML = robo(el.getAttribute("data-robo")); });
@@ -1299,7 +1299,7 @@ const DEMO = { built: "Demo", files: [
     { x: "Kein Google, keine zehn Apps. Ein Satz reicht, die Antwort kommt sofort." },
     { x: "Merkt sich, was ich mag: scharf, vegetarisch unter der Woche, Pizza am Freitag." } ] },
   { p: "Mondschein", t: "Gutenachtgeschichten mit Otti", a: ["kinder", "schlafen", "otti", "igel", "nova", "roboter"], s: [
-    { x: "Otti der Igel und Nova, der kleine weisse Roboter, erzählen jeden Abend eine neue Geschichte." },
+    { x: "Otti der Igel und Nova, der kleine blaue Roboter, erzählen jeden Abend eine neue Geschichte." },
     { x: "Das Kind entscheidet mit: Wer hilft? Wohin geht die Reise? Die Geschichte erzählt sich weiter." } ] },
   { p: "Filme", t: "Otti-Film", a: ["film", "otti", "igel", "kinder"], s: [
     { x: "Der lange Kinderfilm heisst jetzt Otti-Film. Otti ist der Igel mit der gelben Schleife." },
@@ -1308,7 +1308,7 @@ const DEMO = { built: "Demo", files: [
     { x: "Sie hört zu, ordnet und zeigt den nächsten Schritt, von der Schule bis zum Amt." },
     { x: "Zwei Minuten Atempause, wenn alles zu viel wird." } ] },
   { p: "Sense Engine", t: "Nova hilft in der Zentrale", a: ["nova", "roboter", "vernetzung", "agent", "hermes"], s: [
-    { x: "Nova, der kleine weisse Roboter, sitzt unten rechts und gibt Fragen an Hermes weiter." },
+    { x: "Nova, der kleine blaue Roboter, sitzt unten rechts und gibt Fragen an Hermes weiter." },
     { x: "Neue Idee diktiert? Mit einem Tipp geht sie an Hermes, Claude oder ChatGPT." } ] },
   { p: "DR Lab", t: "Die fünf Elemente", a: ["holz", "feuer", "erde", "metall", "wasser"], s: [
     { x: "Jedes Projekt bekommt ein Element: Holz, Feuer, Erde, Metall oder Wasser." },
