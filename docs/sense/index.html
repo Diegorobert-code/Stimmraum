@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#07091A">
-<title>Sense Engine Suche</title>
-<link rel="icon" href="icon.svg">
+<title>Sense Engine</title>
+<link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,34 +17,26 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: eine Spalte. Oben die Suchleiste (klebt), darunter die Treffer, unten fest der Aufnahme-Knopf in Daumenhöhe. */
+/* Layout: Kopf mit Reitern (klebt). Drei Bereiche: Zentrale, Transkript, Suche. Nova (kleiner Roboter) unten rechts. */
 :root {
-  --bg: #EEF1F6;
-  --surface: #FFFFFF;
-  --ink: #14182B;
-  --muted: #586079;
-  --line: #D3D9E6;
-  --rec: #D93A1E;
-  --rec-ink: #FFFFFF;
-  --mark: #FFDDD3;
-  --mark-ink: #5A1608;
+  --bg: #0A0C16;
+  --surface: #141827;
+  --surface-2: #1B2034;
+  --ink: #EEEAE0;
+  --muted: #9AA1B8;
+  --line: #262C44;
+  --gold: #D4A84B;
+  --gold-hell: #F1D08A;
+  --gold-ink: #1A1305;
+  --cyan: #5EE7FF;
+  --ok: #6FD39A;
+  --rec: #FF6547;
+  --rec-ink: #1A0703;
+  --mark: #5A4417;
+  --mark-ink: #FFF0CC;
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-body: "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0F1220;
-    --surface: #191D30;
-    --ink: #E9ECF5;
-    --muted: #9DA6C0;
-    --line: #2B3250;
-    --rec: #FF6547;
-    --rec-ink: #1A0703;
-    --mark: #5A2417;
-    --mark-ink: #FFE2D9;
-    color-scheme: dark;
-  }
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -54,23 +46,142 @@ body {
   color: var(--ink);
   font: 400 16px/1.5 var(--font-body);
   padding-top: env(safe-area-inset-top, 0px);
+  overflow-x: hidden;
 }
 [hidden] { display: none !important; }
 button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 3px solid var(--rec); outline-offset: 2px; }
+input, textarea { font: inherit; }
+a { color: var(--gold-hell); }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 
-.wrap { max-width: 44rem; margin: 0 auto; padding-inline: 16px; }
+.wrap { max-width: 46rem; margin: 0 auto; padding-inline: 16px; }
 
-/* Kopf mit Suchleiste */
+/* Kopf */
 .top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
-  background: var(--bg);
-  padding-block: 14px 10px;
+  background: rgba(10,12,22,.94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  padding-block: 12px 0;
   border-bottom: 1px solid var(--line);
 }
-.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
-.brand h1 { margin: 0; font: 700 1.25rem/1.1 var(--font-display); letter-spacing: -0.01em; }
-.brand .stand { font-size: 0.8125rem; color: var(--muted); text-align: right; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.brand h1 { margin: 0; font: 700 1.25rem/1.1 var(--font-display); letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
+.brand h1 .robo { width: 38px; height: 38px; animation: schweben 4s ease-in-out infinite; }
+.brand h1 .name { background: linear-gradient(90deg, var(--gold-hell), var(--gold) 60%, #B98A2E); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.brand h1 { flex: none; }
+.brand .stand { min-width: 0; font-size: 0.75rem; line-height: 1.25; color: var(--muted); text-align: right; }
+.tabs { display: flex; gap: 4px; }
+.tab {
+  flex: 1; min-height: 46px; border: 0; background: transparent; color: var(--muted);
+  font-weight: 600; font-size: .9375rem; border-bottom: 3px solid transparent; padding: 8px 4px;
+}
+.tab[aria-selected="true"] { color: var(--gold-hell); border-bottom-color: var(--gold); }
+
+main { padding-block: 16px calc(130px + env(safe-area-inset-bottom, 0px)); }
+body.suche-dock main { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
+
+/* Zentrale: Kacheln */
+.kacheln { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 720px) { .kacheln { grid-template-columns: 1fr 1fr; } .kachel.breit { grid-column: 1 / -1; } }
+.kachel {
+  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--line); border-radius: 18px; padding: 16px;
+  min-width: 0;
+}
+.kachel h2 { margin: 0 0 4px; font: 700 1.1875rem/1.2 var(--font-display); color: var(--gold-hell); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kachel h2 .zahl { font: 700 1rem/1 var(--font-body); color: var(--ink); }
+.kachel .hinweis { margin: 0 0 12px; font-size: .8125rem; color: var(--muted); }
+.balken { height: 8px; background: #0C0F1C; border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
+.balken i { display: block; height: 100%; background: linear-gradient(90deg, #A8812F, var(--gold), var(--gold-hell)); border-radius: 99px; }
+.projekt { border-top: 1px solid var(--line); padding: 10px 0; }
+.projekt:first-of-type { border-top: 0; }
+.projekt > button { width: 100%; border: 0; background: transparent; text-align: left; padding: 4px 0; display: block; min-height: 44px; }
+.projekt .zeile { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; margin-bottom: 6px; }
+.projekt .zeile b { color: var(--gold-hell); }
+.projekt .naechst { display: block; margin-top: 6px; font-size: .8125rem; color: var(--muted); }
+.projekt form { display: grid; gap: 8px; margin-top: 8px; }
+.projekt form label { font-size: .8125rem; color: var(--muted); }
+.feld {
+  width: 100%; min-height: 46px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px;
+  background: #0C0F1C; color: var(--ink);
+}
+.feld:focus { border-color: var(--gold); outline: 0; }
+input[type=range] { width: 100%; accent-color: var(--gold); }
+.knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  min-height: 44px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: transparent; font-weight: 600; font-size: .9375rem; color: var(--ink); text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:active { border-color: var(--gold); }
+.btn.gold { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
+.btn.gold:active { background: var(--gold-hell); }
+.btn.klein { min-height: 36px; padding: 4px 10px; font-size: .8125rem; border-radius: 10px; }
+.btn:disabled { opacity: .45; }
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.apps a {
+  min-height: 56px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: #0F1322;
+  color: var(--ink); text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px;
+}
+.apps a::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex: none; }
+.apps a:active { border-color: var(--gold); }
+.messen { display: flex; align-items: center; justify-content: center; min-height: 60px; border-radius: 16px; font-weight: 700; font-size: 1.125rem;
+  background: linear-gradient(90deg, #A8812F, var(--gold), var(--gold-hell)); color: var(--gold-ink); text-decoration: none; }
+.neu-aufgabe { display: flex; gap: 6px; margin-bottom: 10px; }
+.neu-aufgabe .feld { flex: 1; min-width: 0; }
+.rund { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--line); background: transparent; display: grid; place-items: center; color: var(--gold-hell); }
+.rund.an { background: var(--rec); border-color: var(--rec); color: var(--rec-ink); }
+.aufgaben { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.aufgaben li { display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid var(--line); }
+.aufgaben label { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 44px; overflow-wrap: anywhere; }
+.aufgaben input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--gold); flex: none; }
+.aufgaben li.erledigt label span { text-decoration: line-through; color: var(--muted); }
+.weg-x { flex: none; width: 40px; height: 40px; border: 0; background: transparent; color: var(--muted); border-radius: 10px; }
+.leerzeile { color: var(--muted); font-size: .875rem; margin: 4px 0; }
+.werkzeuge { list-style: none; margin: 0; padding: 0; }
+.werkzeuge li { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; border-bottom: 1px solid var(--line); }
+.werkzeuge li:last-child { border-bottom: 0; }
+.werkzeuge .wname { font-weight: 600; }
+.pille { font-size: .75rem; font-weight: 700; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.pille.ok { color: #0B1A10; background: var(--ok); border-color: var(--ok); }
+.pille.halb { color: var(--gold-hell); border-color: var(--gold); }
+.pille.fehl { color: #FFD9D0; border-color: var(--rec); }
+a.pille { text-decoration: none; color: var(--gold-hell); border-color: var(--gold); }
+.hermes-box { display: grid; gap: 8px; }
+.hermes-box small { color: var(--muted); font-size: .8125rem; }
+.antwort { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: #0F1322; border: 1px solid var(--gold); white-space: pre-wrap; overflow-wrap: anywhere; }
+.antwort b { display: block; color: var(--gold-hell); font-size: .8125rem; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 4px; }
+.antwort.fehler { border-color: var(--rec); }
+.zurueck { margin-bottom: 12px; }
+.freigaben { list-style: none; margin: 0; padding: 0; }
+.freigaben li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.freigaben .ftext { min-width: 0; }
+.freigaben .ftext b { display: block; }
+.freigaben .ftext span { display: block; font-size: .8125rem; color: var(--muted); }
+.freigaben .ftext em { font-style: normal; color: var(--gold-hell); font-size: .75rem; font-weight: 700; }
+.schalter { position: relative; flex: none; width: 54px; height: 32px; }
+.schalter input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.schalter span { position: absolute; inset: 0; border-radius: 99px; background: #2A2F45; transition: background .15s; }
+.schalter span::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.schalter input:checked + span { background: var(--gold); }
+.schalter input:checked + span::after { transform: translateX(22px); }
+.schalter input:focus-visible + span { outline: 3px solid var(--gold-hell); outline-offset: 2px; }
+
+/* Transkript */
+.diktat-kopf { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.diktat-kopf .mik { width: 72px; height: 72px; flex: none; }
+.diktat-kopf p { margin: 0; color: var(--muted); font-size: .9375rem; }
+body.diktiert .diktat-kopf p { color: var(--rec); font-weight: 600; }
+.live { min-height: 1.5em; margin: 0 0 8px; color: var(--gold-hell); font-style: italic; overflow-wrap: anywhere; }
+textarea.feld { min-height: 200px; resize: vertical; line-height: 1.5; }
+.senden { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.senden .btn { padding-inline: 6px; }
+.verlauf { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.verlauf li { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 12px; background: #0F1322; }
+.verlauf li > button:first-child { flex: 1; min-width: 0; text-align: left; border: 0; background: transparent; padding: 10px 12px; min-height: 48px; }
+.verlauf .zeit { display: block; font-size: .75rem; color: var(--muted); }
+.verlauf .vorschau { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Suche */
 .bar {
   display: flex; align-items: center; gap: 4px;
   background: var(--surface);
@@ -79,7 +190,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   padding: 4px 6px 4px 14px;
   transition: border-color .15s;
 }
-.bar:focus-within { border-color: var(--ink); }
+.bar:focus-within { border-color: var(--gold); }
 body.hoert .bar { border-color: var(--rec); }
 .bar input {
   flex: 1; min-width: 0;
@@ -95,11 +206,8 @@ body.hoert .bar { border-color: var(--rec); }
   display: grid; place-items: center;
 }
 .x:active { background: var(--bg); color: var(--ink); }
-.status { min-height: 1.4em; margin: 8px 2px 0; font-size: 0.875rem; color: var(--muted); }
+.status { min-height: 1.4em; margin: 8px 2px 12px; font-size: 0.875rem; color: var(--muted); }
 body.hoert .status { color: var(--rec); font-weight: 600; }
-
-/* Inhalt */
-main { padding-block: 16px calc(150px + env(safe-area-inset-bottom, 0px)); }
 .leer h2 { margin: 6px 0 6px; font: 700 1.5rem/1.15 var(--font-display); letter-spacing: -0.015em; text-wrap: balance; }
 .leer p { margin: 0 0 18px; color: var(--muted); max-width: 34rem; }
 .label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
@@ -109,42 +217,31 @@ main { padding-block: 16px calc(150px + env(safe-area-inset-bottom, 0px)); }
   border: 1.5px solid var(--line); border-radius: 999px;
   background: var(--surface); font-weight: 500;
 }
-.chip:active { border-color: var(--ink); }
-
+.chip:active { border-color: var(--gold); }
 .liste { display: flex; flex-direction: column; gap: 10px; }
-.karte {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-}
+.karte { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 .kopf {
   display: flex; align-items: center; gap: 10px; width: 100%;
   border: 0; background: transparent; text-align: left;
   padding: 14px 10px 10px 16px; min-height: 56px;
 }
 .kopf .tt { flex: 1; min-width: 0; }
-.kopf .proj { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.kopf .proj { display: block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--gold); }
 .kopf .titel { display: block; font: 700 1.125rem/1.2 var(--font-display); overflow-wrap: anywhere; }
 .kopf .pfeil { flex: none; width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); transition: transform .15s; }
 .karte.offen .pfeil { transform: rotate(180deg); }
 .zeilen { margin: 0; padding: 0 16px 14px; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .zeilen li { font-size: 0.9375rem; line-height: 1.45; overflow-wrap: anywhere; padding-left: 12px; border-left: 2px solid var(--line); }
-.zeilen li.treffer { border-left-color: var(--rec); }
+.zeilen li.treffer { border-left-color: var(--gold); }
 .karte:not(.offen) .zeilen li { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
 .zeilen .zw { list-style: none; border: 0; padding: 6px 0 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
 mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padding: 0 2px; }
 .fuss { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 12px 12px 16px; }
 .fuss span { font-size: 0.8125rem; color: var(--muted); }
-.kopieren {
-  min-height: 44px; padding: 8px 16px; border-radius: 10px;
-  border: 1.5px solid var(--line); background: transparent; font-weight: 600; font-size: 0.9375rem;
-}
-.kopieren:active { border-color: var(--ink); }
+.kopieren { min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; font-weight: 600; font-size: 0.9375rem; }
+.kopieren:active { border-color: var(--gold); }
 .nichts { color: var(--muted); padding: 8px 2px; }
-
-/* Schloss */
-.schloss { padding-block: 28px; max-width: 30rem; }
+.schloss { padding-block: 12px; max-width: 30rem; }
 .schloss h2 { margin: 0 0 8px; font: 700 1.5rem/1.15 var(--font-display); }
 .schloss p { margin: 0 0 16px; color: var(--muted); }
 .schloss form { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -152,17 +249,14 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
   flex: 1 1 14rem; min-width: 0; min-height: 48px; padding: 10px 14px;
   border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit;
 }
-.gross {
-  min-height: 48px; padding: 10px 20px; border: 0; border-radius: 12px;
-  background: var(--ink); color: var(--bg); font-weight: 600;
-}
-.fehler { color: var(--rec); font-weight: 600; margin-top: 12px; }
+.gross { min-height: 48px; padding: 10px 20px; border: 0; border-radius: 12px; background: var(--gold); color: var(--gold-ink); font-weight: 700; }
+.fehler-text { color: var(--rec); font-weight: 600; margin-top: 12px; }
 .demo-box { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
-.demo-knopf { min-height: 52px; padding: 12px 26px; border: 0; border-radius: 999px; font-weight: 700; font-size: 1.0625rem; color: #1A0B22;
-  background: linear-gradient(90deg, #5EE7FF, #FFB547 45%, #FF4F7B); box-shadow: 0 8px 28px rgba(255,79,123,.35); }
+.demo-knopf { min-height: 52px; padding: 12px 26px; border: 0; border-radius: 999px; font-weight: 700; font-size: 1.0625rem; color: var(--gold-ink);
+  background: linear-gradient(90deg, var(--cyan), var(--gold-hell) 45%, var(--gold)); box-shadow: 0 8px 28px rgba(212,168,75,.3); }
 .demo-knopf:active { transform: scale(.97); }
 
-/* Aufnahme-Knopf */
+/* Aufnahme-Knopf (Suche und Transkript) */
 .dock {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -172,94 +266,90 @@ mark { background: var(--mark); color: var(--mark-ink); border-radius: 3px; padd
 }
 .mik {
   pointer-events: auto;
-  position: relative; width: 80px; height: 80px; border-radius: 50%;
-  border: 0; background: var(--rec); color: var(--rec-ink);
-  display: grid; place-items: center;
-  box-shadow: 0 6px 18px rgba(20, 24, 43, .22);
+  position: relative; width: 84px; height: 84px; border-radius: 50%;
+  border: 0; display: grid; place-items: center;
+  background: radial-gradient(circle at 38% 32%, #FFF7D6 0%, var(--gold-hell) 30%, var(--gold) 65%, #8A6522 100%);
+  color: var(--gold-ink);
+  box-shadow: 0 0 0 6px rgba(212,168,75,.14), 0 10px 34px rgba(212,168,75,.35);
   transition: transform .12s;
 }
 .mik:active { transform: scale(.95); }
-.mik::before, .mik::after {
-  content: ""; position: absolute; inset: 0; border-radius: 50%;
-  border: 2px solid var(--rec); opacity: 0; pointer-events: none;
-}
-body.hoert .mik::before { animation: ring 1.6s ease-out infinite; }
-body.hoert .mik::after { animation: ring 1.6s ease-out .8s infinite; }
+.mik::before, .mik::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--rec); opacity: 0; pointer-events: none; }
+body.hoert #mik::before, body.diktiert #dmik::before { animation: ring 1.6s ease-out infinite; }
+body.hoert #mik::after, body.diktiert #dmik::after { animation: ring 1.6s ease-out .8s infinite; }
 @keyframes ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.75); opacity: 0; } }
-.mik .stopp { display: none; width: 26px; height: 26px; border-radius: 6px; background: var(--rec-ink); }
-body.hoert .mik svg { display: none; }
-body.hoert .mik .stopp { display: block; }
+.mik .stopp { display: none; width: 24px; height: 24px; border-radius: 6px; background: var(--gold-ink); }
+body.hoert #mik svg, body.diktiert #dmik svg { display: none; }
+body.hoert #mik .stopp, body.diktiert #dmik .stopp { display: block; }
+body.hoert #mik, body.diktiert #dmik { background: radial-gradient(circle at 38% 32%, #FFE1D8, var(--rec) 60%, #8E2310); }
 .mik-text { pointer-events: none; font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
 body.hoert .mik-text { color: var(--rec); }
-@media (prefers-reduced-motion: reduce) {
-  body.hoert .mik::before, body.hoert .mik::after { animation: none; opacity: .5; transform: scale(1.25); }
-  .mik, .pfeil { transition: none; }
-}
 
-/* ---------- Nova: Intro wie im Kino ---------- */
+/* Nova: kleiner weisser Roboter */
+.robo.nova-bild { overflow: hidden; display: inline-block; aspect-ratio: 1; object-fit: cover; border-radius: 50%; box-shadow: 0 0 0 2px rgba(94,231,255,.7), 0 0 18px rgba(94,231,255,.35); background: #0D1424; }
+.robo { overflow: visible; }
+.robo .auge { transform-box: fill-box; transform-origin: center; animation: blinzeln 5s infinite; }
+.robo .bauch { animation: glimmen 2.8s ease-in-out infinite; }
+@keyframes blinzeln { 0%,92%,97%,100% { transform: scaleY(1); } 94.5% { transform: scaleY(.1); } }
+@keyframes glimmen { 0%,100% { opacity: .75; } 50% { opacity: 1; } }
+@keyframes schweben { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
+.nova-knopf {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+  width: 68px; height: 68px; border: 0; padding: 0; background: transparent;
+  filter: drop-shadow(0 6px 16px rgba(94,231,255,.35));
+}
+.nova-knopf .robo { width: 100%; height: 100%; animation: schweben 4s ease-in-out infinite; }
+body.suche-dock .nova-knopf { bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
+.blatt-hg { position: fixed; inset: 0; z-index: 44; background: rgba(2,3,10,.55); }
+.blatt {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; max-width: 34rem; margin: 0 auto;
+  background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 20px 20px 0 0;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); max-height: 78vh; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 -10px 40px rgba(0,0,0,.5);
+}
+.blatt-kopf { display: flex; align-items: center; gap: 10px; }
+.blatt-kopf .robo { width: 40px; height: 40px; }
+.blatt-kopf h2 { flex: 1; margin: 0; font: 700 1.125rem/1.2 var(--font-display); color: var(--gold-hell); }
+.blatt-kopf small { display: block; font: 400 .8125rem/1.3 var(--font-body); color: var(--muted); }
+.chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+.blase { padding: 10px 12px; border-radius: 14px; max-width: 88%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9375rem; }
+.blase.nova { background: #0F1322; border: 1px solid var(--line); align-self: flex-start; }
+.blase.ich { background: var(--gold); color: var(--gold-ink); align-self: flex-end; }
+.blase.fehl { border-color: var(--rec); }
+.chat-ein { display: flex; gap: 6px; }
+.chat-ein .feld { flex: 1; min-width: 0; }
+
+/* Intro */
 .intro {
   position: fixed; inset: 0; z-index: 50; overflow: hidden;
-  background: radial-gradient(ellipse at 50% 45%, #1B1446 0%, #07091A 60%, #020309 100%);
+  background: radial-gradient(ellipse at 50% 45%, #18203F 0%, #07091A 60%, #020309 100%);
   display: grid; place-items: center; cursor: pointer;
   transition: opacity .7s ease, visibility 0s linear .7s;
 }
 .intro.weg { opacity: 0; visibility: hidden; pointer-events: none; }
 .intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .intro .buehne { position: relative; display: grid; place-items: center; text-align: center; }
-.intro .nova-gross { width: min(62vw, 300px); height: auto; opacity: 0; transform: scale(.05);
-  animation: nova-geburt 1.5s cubic-bezier(.2,.9,.25,1.2) .35s forwards; filter: drop-shadow(0 0 40px rgba(255,140,90,.55)); }
+.intro .robo-gross { width: min(44vw, 200px); height: auto; opacity: 0; transform: scale(.05);
+  animation: nova-geburt 1.5s cubic-bezier(.2,.9,.25,1.2) .35s forwards; filter: drop-shadow(0 0 36px rgba(94,231,255,.45)); }
 .intro .welle { position: absolute; left: 50%; top: 38%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
-  border: 2px solid rgba(255,214,150,.9); opacity: 0; animation: welle 1.4s ease-out .55s forwards; }
-.intro .welle.w2 { border-color: rgba(120,200,255,.8); animation-delay: .8s; }
-.intro .blitz { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #FFF6DD, rgba(255,246,221,0) 55%); opacity: 0; animation: blitz .9s ease-out .45s forwards; pointer-events: none; }
+  border: 2px solid rgba(241,208,138,.9); opacity: 0; animation: welle 1.4s ease-out .55s forwards; }
+.intro .welle.w2 { border-color: rgba(94,231,255,.8); animation-delay: .8s; }
+.intro .blitz { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #E9FBFF, rgba(233,251,255,0) 55%); opacity: 0; animation: blitz .9s ease-out .45s forwards; pointer-events: none; }
 .intro .titel { margin: 26px 0 0; font: 700 clamp(1.9rem, 8vw, 3.4rem)/1 var(--font-display); color: #fff; letter-spacing: .5em;
   text-transform: uppercase; opacity: 0; filter: blur(12px); animation: titel 1.3s cubic-bezier(.2,.8,.2,1) 1.35s forwards;
-  background: linear-gradient(90deg, #5EE7FF, #FFF7D6 40%, #FFB547 60%, #FF4F7B); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  background: linear-gradient(90deg, var(--cyan), #FFF7D6 40%, var(--gold-hell) 60%, var(--gold)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .intro .unter { margin: 14px 0 0; color: #B7BEDB; font-weight: 500; letter-spacing: .08em; opacity: 0; animation: einblenden .8s ease 2.2s forwards; }
 .intro .tipp { position: absolute; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center;
   font-size: .8125rem; color: #6F7799; opacity: 0; animation: einblenden .6s ease 2.6s forwards; }
-@keyframes nova-geburt { 0% { opacity: 0; transform: scale(.05) rotate(-90deg); } 60% { opacity: 1; transform: scale(1.12) rotate(8deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes nova-geburt { 0% { opacity: 0; transform: scale(.05) translateY(40px); } 60% { opacity: 1; transform: scale(1.1) translateY(-6px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes welle { 0% { opacity: .95; transform: scale(1); } 100% { opacity: 0; transform: scale(16); } }
 @keyframes blitz { 0% { opacity: 0; } 25% { opacity: .95; } 100% { opacity: 0; } }
 @keyframes titel { 0% { opacity: 0; letter-spacing: .9em; filter: blur(14px); } 100% { opacity: 1; letter-spacing: .06em; filter: blur(0); } }
 @keyframes einblenden { to { opacity: 1; } }
-
-/* Nova selbst: Kern, Ringe, Funken */
-.nova { overflow: visible; }
-.nova .kern { transform-box: fill-box; transform-origin: center; animation: puls 3.2s ease-in-out infinite; }
-.nova .ring1 { transform-box: view-box; transform-origin: 100px 100px; animation: dreh 9s linear infinite; }
-.nova .ring2 { transform-box: view-box; transform-origin: 100px 100px; animation: dreh 14s linear infinite reverse; }
-.nova .stern { transform-box: fill-box; transform-origin: center; animation: funkel 2.4s ease-in-out infinite; }
-.nova .auge { transform-box: fill-box; transform-origin: center; animation: blinzeln 5s infinite; }
-@keyframes puls { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-@keyframes dreh { to { transform: rotate(360deg); } }
-@keyframes funkel { 0%,100% { opacity: .9; transform: scale(1) rotate(0); } 50% { opacity: .5; transform: scale(.8) rotate(20deg); } }
-@keyframes blinzeln { 0%,92%,97%,100% { transform: scaleY(1); } 94.5% { transform: scaleY(.1); } }
-
-/* kleine Nova oben neben dem Namen, schwebt */
-.brand h1 { display: flex; align-items: center; gap: 10px; }
-.brand h1 .nova { width: 48px; height: 48px; margin: -6px 0; animation: schweben 4s ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(255,140,90,.45)); }
-.brand h1 .name { background: linear-gradient(90deg, #7B3CFF, #FF4F7B 55%, #FFB547); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-@keyframes schweben { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-4px) rotate(4deg); } }
-
-/* Aufnahme-Knopf im Nova-Look */
-.mik {
-  width: 92px; height: 92px;
-  background: radial-gradient(circle at 38% 32%, #FFF7D6 0%, #FFB547 26%, #FF4F7B 62%, #7B3CFF 100%);
-  color: #1A0B22;
-  box-shadow: 0 0 0 6px rgba(123,60,255,.14), 0 10px 34px rgba(255,79,123,.45), 0 0 60px rgba(255,181,71,.35);
-}
-.mik .ringlicht { position: absolute; inset: -9px; border-radius: 50%; pointer-events: none;
-  background: conic-gradient(from 0deg, #5EE7FF, #B26BFF, #FF4F7B, #FFB547, #5EE7FF);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-          mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
-  animation: dreh 4s linear infinite; opacity: .9; }
-body.hoert .mik .ringlicht { animation-duration: 1.2s; }
-.mik::before, .mik::after { border-color: #FF4F7B; }
-.mik .stopp { background: #1A0B22; }
-.mik-text { letter-spacing: .02em; }
+.toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); z-index: 60;
+  background: var(--gold); color: var(--gold-ink); font-weight: 700; padding: 10px 16px; border-radius: 12px; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
 @media (prefers-reduced-motion: reduce) {
-  .intro *, .nova *, .brand h1 .nova, .mik .ringlicht { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
+  .intro *, .robo *, .robo, .mik, .pfeil { animation-duration: .01s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition: none !important; }
 }
 </style>
 </head>
@@ -270,28 +360,9 @@ body.hoert .mik .ringlicht { animation-duration: 1.2s; }
   <div class="blitz"></div>
   <div class="welle"></div><div class="welle w2"></div>
   <div class="buehne">
-    <svg class="nova nova-gross" viewBox="0 0 200 200" role="img" aria-label="Nova">
-  <defs>
-    <radialGradient id="nv-kern-g" cx="42%" cy="38%" r="62%"><stop offset="0" stop-color="#FFF7D6"/><stop offset=".32" stop-color="#FFB547"/><stop offset=".72" stop-color="#FF4F7B"/><stop offset="1" stop-color="#7B3CFF"/></radialGradient>
-    <radialGradient id="nv-halo-g"><stop offset="0" stop-color="#FF8A5B" stop-opacity=".55"/><stop offset="1" stop-color="#7B3CFF" stop-opacity="0"/></radialGradient>
-    <linearGradient id="nv-ring-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EE7FF"/><stop offset="1" stop-color="#B26BFF"/></linearGradient>
-  </defs>
-  <circle cx="100" cy="100" r="96" fill="url(#nv-halo-g)"/>
-  <g class="ring1"><ellipse cx="100" cy="100" rx="88" ry="28" fill="none" stroke="url(#nv-ring-g)" stroke-width="3.5" transform="rotate(-22 100 100)"/><circle cx="182" cy="68" r="5" fill="#5EE7FF"/></g>
-  <g class="ring2"><ellipse cx="100" cy="100" rx="76" ry="20" fill="none" stroke="#FFB547" stroke-width="2" opacity=".6" transform="rotate(38 100 100)"/><circle cx="40" cy="62" r="3.5" fill="#FFB547"/></g>
-  <g class="kern">
-    <circle cx="100" cy="100" r="44" fill="url(#nv-kern-g)"/>
-    <ellipse cx="84" cy="80" rx="13" ry="7" transform="rotate(-30 84 80)" fill="#fff" opacity=".55"/>
-    <ellipse class="auge" cx="86" cy="102" rx="5" ry="7" fill="#2A0F2E"/><ellipse class="auge" cx="114" cy="102" rx="5" ry="7" fill="#2A0F2E"/>
-    <circle cx="88" cy="99" r="1.8" fill="#fff"/><circle cx="116" cy="99" r="1.8" fill="#fff"/>
-    <path d="M90 116 Q100 124 110 116" fill="none" stroke="#2A0F2E" stroke-width="3" stroke-linecap="round"/>
-    <ellipse cx="74" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/><ellipse cx="126" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/>
-  </g>
-  <path class="stern" d="M158 26 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#FFF7D6"/>
-  <path class="stern" style="animation-delay:-1.2s" d="M34 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#5EE7FF"/>
-</svg>
+    <span data-robo="robo-gross"></span>
     <h2 class="titel">Sense Engine</h2>
-    <p class="unter">Nova ist wach. Sag, was du suchst.</p>
+    <p class="unter">Nova ist wach. Deine Zentrale ist bereit.</p>
   </div>
   <p class="tipp">Tippen zum Überspringen</p>
 </div>
@@ -299,28 +370,125 @@ body.hoert .mik .ringlicht { animation-duration: 1.2s; }
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <h1><svg class="nova " viewBox="0 0 200 200" aria-hidden="true">
-  <defs>
-    <radialGradient id="nv-kern-k" cx="42%" cy="38%" r="62%"><stop offset="0" stop-color="#FFF7D6"/><stop offset=".32" stop-color="#FFB547"/><stop offset=".72" stop-color="#FF4F7B"/><stop offset="1" stop-color="#7B3CFF"/></radialGradient>
-    <radialGradient id="nv-halo-k"><stop offset="0" stop-color="#FF8A5B" stop-opacity=".55"/><stop offset="1" stop-color="#7B3CFF" stop-opacity="0"/></radialGradient>
-    <linearGradient id="nv-ring-k" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EE7FF"/><stop offset="1" stop-color="#B26BFF"/></linearGradient>
-  </defs>
-  <circle cx="100" cy="100" r="96" fill="url(#nv-halo-k)"/>
-  <g class="ring1"><ellipse cx="100" cy="100" rx="88" ry="28" fill="none" stroke="url(#nv-ring-k)" stroke-width="3.5" transform="rotate(-22 100 100)"/><circle cx="182" cy="68" r="5" fill="#5EE7FF"/></g>
-  <g class="ring2"><ellipse cx="100" cy="100" rx="76" ry="20" fill="none" stroke="#FFB547" stroke-width="2" opacity=".6" transform="rotate(38 100 100)"/><circle cx="40" cy="62" r="3.5" fill="#FFB547"/></g>
-  <g class="kern">
-    <circle cx="100" cy="100" r="44" fill="url(#nv-kern-k)"/>
-    <ellipse cx="84" cy="80" rx="13" ry="7" transform="rotate(-30 84 80)" fill="#fff" opacity=".55"/>
-    <ellipse class="auge" cx="86" cy="102" rx="5" ry="7" fill="#2A0F2E"/><ellipse class="auge" cx="114" cy="102" rx="5" ry="7" fill="#2A0F2E"/>
-    <circle cx="88" cy="99" r="1.8" fill="#fff"/><circle cx="116" cy="99" r="1.8" fill="#fff"/>
-    <path d="M90 116 Q100 124 110 116" fill="none" stroke="#2A0F2E" stroke-width="3" stroke-linecap="round"/>
-    <ellipse cx="74" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/><ellipse cx="126" cy="113" rx="6" ry="3.5" fill="#FF8FB0" opacity=".7"/>
-  </g>
-  <path class="stern" d="M158 26 l3 9 9 3 -9 3 -3 9 -3 -9 -9 -3 9 -3z" fill="#FFF7D6"/>
-  <path class="stern" style="animation-delay:-1.2s" d="M34 150 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="#5EE7FF"/>
-</svg><span class="name">Sense Engine</span></h1>
+      <h1><span data-robo=""></span><span class="name">Sense Engine</span></h1>
       <span class="stand" id="stand"></span>
     </div>
+    <nav class="tabs" role="tablist" aria-label="Bereiche">
+      <button class="tab" type="button" role="tab" id="t-zentrale" data-tab="zentrale" aria-controls="tab-zentrale" aria-selected="true">Zentrale</button>
+      <button class="tab" type="button" role="tab" id="t-transkript" data-tab="transkript" aria-controls="tab-transkript" aria-selected="false">Transkript</button>
+      <button class="tab" type="button" role="tab" id="t-suche" data-tab="suche" aria-controls="tab-suche" aria-selected="false">Suche</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ===== Zentrale ===== -->
+  <section id="tab-zentrale" role="tabpanel" aria-labelledby="t-zentrale">
+    <div id="zentrale-start" class="kacheln">
+      <article class="kachel breit">
+        <h2>Projekte <span class="zahl" id="proj-schnitt"></span></h2>
+        <p class="hinweis">Von Hand gepflegt. Tippe auf ein Projekt, um Prozent und nächsten Schritt zu ändern.</p>
+        <div id="projekte"></div>
+      </article>
+
+      <article class="kachel">
+        <h2>Aufgaben &amp; Erinnerungen <span class="zahl" id="auf-zahl"></span></h2>
+        <p class="hinweis">Sprich oder tippe. Bleibt auf diesem Gerät.</p>
+        <form class="neu-aufgabe" id="auf-form">
+          <input class="feld" id="auf-text" type="text" autocomplete="off" placeholder="z. B. Filme für Otti-Film auswählen" aria-label="Neue Aufgabe">
+          <button class="rund" id="auf-mik" type="button" aria-label="Aufgabe sprechen" aria-pressed="false">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          </button>
+          <button class="btn gold" type="submit">Dazu</button>
+        </form>
+        <div class="balken" aria-hidden="true"><i id="auf-balken" style="width:0%"></i></div>
+        <ul class="aufgaben" id="aufgaben"></ul>
+      </article>
+
+      <article class="kachel">
+        <h2>HumanSpark</h2>
+        <p class="hinweis">Finger drauf, Körper lesen. Öffnet die Mess-App.</p>
+        <a class="messen" id="hs-messen" href="https://diegorobert-code.github.io/DR_Lab/humanspark/" target="_blank" rel="noopener">Jetzt messen</a>
+      </article>
+
+      <article class="kachel">
+        <h2>Meine Apps</h2>
+        <p class="hinweis">Öffnet in einem neuen Tab.</p>
+        <div class="apps" id="apps"></div>
+      </article>
+
+      <article class="kachel">
+        <h2>KI-Werkzeuge</h2>
+        <p class="hinweis">Nur echte Verbindungen zählen. Alles andere steht auf «noch nicht verbunden».</p>
+        <ul class="werkzeuge" id="werkzeuge"></ul>
+      </article>
+
+      <article class="kachel" id="hermes-kachel">
+        <h2>Hermes-Verbindung <span class="pille" id="hermes-pille">noch nicht verbunden</span></h2>
+        <p class="hinweis">Dieselben Einstellungen wie in der DR-Lab-Transkript-App. Bleiben nur auf diesem Gerät.</p>
+        <form class="hermes-box" id="hermes-form">
+          <input class="feld" id="h-addr" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Adresse, z. B. https://hermes-….sslip.io" aria-label="Hermes-Adresse">
+          <input class="feld" id="h-key" type="password" autocomplete="off" placeholder="Passwort" aria-label="Hermes-Passwort">
+          <div class="knoepfe">
+            <button class="btn gold" type="submit">Speichern</button>
+            <button class="btn" id="h-test" type="button">Testen</button>
+            <button class="btn" id="h-del" type="button">Löschen</button>
+          </div>
+          <small>Sense Engine schickt Text nur, wenn du auf «An Hermes» oder bei Nova auf «Senden» tippst.</small>
+        </form>
+        <div class="antwort" id="h-antwort" hidden></div>
+      </article>
+
+      <article class="kachel">
+        <h2>Freigaben <span class="zahl" id="frei-zahl"></span></h2>
+        <p class="hinweis">Welche App was mit wem teilen darf. Gesundheitsdaten sind aus.</p>
+        <button class="btn gold" id="frei-auf" type="button">Freigaben öffnen</button>
+      </article>
+    </div>
+
+    <div id="zentrale-frei" hidden>
+      <button class="btn zurueck" id="frei-zu" type="button">← Zurück zur Zentrale</button>
+      <article class="kachel">
+        <h2>Freigaben</h2>
+        <p class="hinweis">Gespeichert auf diesem Gerät. Schalter mit «gilt jetzt» steuert Sense Engine sofort. Die anderen sind vorbereitet: Diese Apps senden heute noch nichts an Sense Engine, und die Schalter bleiben aus, bis du sie einschaltest.</p>
+        <ul class="freigaben" id="freigaben"></ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== Transkript ===== -->
+  <section id="tab-transkript" role="tabpanel" aria-labelledby="t-transkript" hidden>
+    <article class="kachel">
+      <div class="diktat-kopf">
+        <button class="mik" id="dmik" type="button" aria-pressed="false" aria-label="Diktat starten">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          <span class="stopp" aria-hidden="true"></span>
+        </button>
+        <p id="d-status" role="status" aria-live="polite">Tippen und sprechen. Ich schreibe mit, bis du stoppst.</p>
+      </div>
+      <p class="live" id="d-live" aria-live="polite"></p>
+      <textarea class="feld" id="d-text" placeholder="Hier erscheint dein Text. Du kannst ihn auch direkt bearbeiten." aria-label="Transkript"></textarea>
+      <div class="knoepfe" style="margin-top:8px">
+        <button class="btn" id="d-kopie" type="button">Kopieren</button>
+        <button class="btn" id="d-neu" type="button">Neu</button>
+      </div>
+      <div class="senden">
+        <button class="btn gold" id="d-hermes" type="button">An Hermes</button>
+        <button class="btn" id="d-claude" type="button">An Claude</button>
+        <button class="btn" id="d-gpt" type="button">An ChatGPT</button>
+      </div>
+      <p class="hinweis" id="d-hermes-info" style="margin:8px 0 0"></p>
+      <div class="antwort" id="d-antwort" hidden></div>
+    </article>
+    <article class="kachel" style="margin-top:12px">
+      <h2>Verlauf <span class="zahl" id="v-zahl"></span></h2>
+      <p class="hinweis">Nur auf diesem Gerät. Tippen zum Öffnen.</p>
+      <ul class="verlauf" id="verlauf"></ul>
+    </article>
+  </section>
+
+  <!-- ===== Suche ===== -->
+  <section id="tab-suche" role="tabpanel" aria-labelledby="t-suche" hidden>
     <div class="bar" id="bar" hidden>
       <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false"
              placeholder="Sprich oder tippe, was du suchst" aria-label="Suche in allen Projekten">
@@ -329,44 +497,62 @@ body.hoert .mik .ringlicht { animation-duration: 1.2s; }
       </button>
     </div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-  </div>
-</header>
 
-<main class="wrap">
-  <section class="schloss" id="schloss" hidden>
-    <h2>Deine Notizen sind verschlüsselt</h2>
-    <p>Öffne einmal deinen persönlichen Link aus dem Claude-Chat. Danach merkt sich dieses Gerät den Schlüssel. Du kannst den Schlüssel auch hier einfügen.</p>
-    <form id="schloss-form">
-      <input id="schluessel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" aria-label="Schlüssel">
-      <button class="gross" type="submit">Entsperren</button>
-    </form>
-    <p class="fehler" id="schloss-fehler" hidden></p>
-    <div class="demo-box">
-      <p>Nur mal reinschauen? Die Demo zeigt Sense Engine mit Beispiel-Notizen, ganz ohne Schlüssel.</p>
-      <button class="demo-knopf" id="demo" type="button">✦ Demo starten</button>
+    <div class="schloss" id="schloss" hidden>
+      <h2>Deine Notizen sind verschlüsselt</h2>
+      <p>Für die Suche braucht es deinen persönlichen Schlüssel. Öffne einmal deinen Link aus dem Claude-Chat, danach merkt sich dieses Gerät den Schlüssel. Du kannst ihn auch hier einfügen. Zentrale und Transkript gehen ohne Schlüssel.</p>
+      <form id="schloss-form">
+        <input id="schluessel" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel einfügen" aria-label="Schlüssel">
+        <button class="gross" type="submit">Entsperren</button>
+      </form>
+      <p class="fehler-text" id="schloss-fehler" hidden></p>
+      <div class="demo-box">
+        <p>Nur mal reinschauen? Die Demo zeigt die Suche mit Beispiel-Notizen, ganz ohne Schlüssel.</p>
+        <button class="demo-knopf" id="demo" type="button">✦ Demo starten</button>
+      </div>
     </div>
-  </section>
 
-  <section class="leer" id="leer" hidden>
-    <h2>Sag einfach, was du suchst.</h2>
-    <p id="leer-text"></p>
-    <p class="label">Zum Ausprobieren</p>
-    <div class="chips" id="chips"></div>
-  </section>
+    <div class="leer" id="leer" hidden>
+      <h2>Sag einfach, was du suchst.</h2>
+      <p id="leer-text"></p>
+      <p class="label">Zum Ausprobieren</p>
+      <div class="chips" id="chips"></div>
+    </div>
 
-  <section id="treffer" hidden>
-    <div class="liste" id="liste"></div>
+    <div id="treffer" hidden>
+      <div class="liste" id="liste"></div>
+    </div>
   </section>
 </main>
 
 <div class="dock" id="dock" hidden>
   <button class="mik" id="mik" type="button" aria-pressed="false" aria-label="Sprachsuche starten">
-    <span class="ringlicht" aria-hidden="true"></span>
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
     <span class="stopp" aria-hidden="true"></span>
   </button>
   <span class="mik-text" id="mik-text">Tippen und sprechen</span>
 </div>
+
+<button class="nova-knopf" id="nova" type="button" aria-label="Nova fragen" aria-haspopup="dialog"><span data-robo=""></span></button>
+<div class="blatt-hg" id="blatt-hg" hidden></div>
+<div class="blatt" id="blatt" role="dialog" aria-modal="true" aria-labelledby="blatt-titel" hidden>
+  <div class="blatt-kopf">
+    <span data-robo=""></span>
+    <h2 id="blatt-titel">Nova<small id="blatt-unter">fragt Hermes für dich</small></h2>
+    <button class="x" id="blatt-zu" type="button" aria-label="Schliessen">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="chat" id="chat" aria-live="polite"></div>
+  <form class="chat-ein" id="chat-form">
+    <input class="feld" id="chat-text" type="text" autocomplete="off" placeholder="Frag Nova …" aria-label="Frage an Nova">
+    <button class="rund" id="chat-mik" type="button" aria-label="Frage sprechen" aria-pressed="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+    </button>
+    <button class="btn gold" type="submit">Senden</button>
+  </form>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
 "use strict";
@@ -376,10 +562,20 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
+/* JSON-Werte lesen und schreiben; alte Klartext-Werte werden toleriert */
+function jget(k, d) { const v = store.get(k); if (v === null) return d; try { return JSON.parse(v); } catch (e) { return v; } }
+function jput(k, v) { store.set(k, JSON.stringify(v)); }
 
+/* ---------- Nova, der kleine weisse Roboter ---------- */
+let roboN = 0;
+function robo(extra) {
+  /* Novas Gesicht aus dem Film «Otti und Nova» */
+  return '<img class="robo nova-bild ' + (extra || "") + '" src="nova-gesicht.jpg" alt="" aria-hidden="true">';
+}
+document.querySelectorAll("[data-robo]").forEach(el => { el.outerHTML = robo(el.getAttribute("data-robo")); });
 /* ---------- Text aufbereiten ---------- */
 function norm(s) {
-  return s.toLowerCase().replace(/ß/g, "ss").normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return s.toLowerCase().replace(/\u00DF/g, "ss").normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
 function tokens(s) { return norm(s).match(/[a-z0-9]+/g) || []; }
 const STOP = new Set(("der die das den dem des ein eine einen einem einer eines und oder aber auch noch nur schon mal doch ja nein nicht kein keine " +
@@ -630,6 +826,19 @@ function stop(msg) {
   if (msg) setStatus(msg);
 }
 
+/* ---------- kleine Helfer ---------- */
+let toastT = 0;
+function toast(t) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, 2200); }
+async function kopiere(t) {
+  try { await navigator.clipboard.writeText(t); return true; }
+  catch (e) {
+    try { const ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.append(ta); ta.select();
+      const ok = document.execCommand("copy"); ta.remove(); return ok; } catch (x) { return false; }
+  }
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+const DRLAB = "https://diegorobert-code.github.io/DR_Lab/";
+
 /* ---------- Daten laden und entschlüsseln ---------- */
 function b64u(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "=";
@@ -647,25 +856,29 @@ async function unlock(keyText) {
   const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: buf.slice(0, 12) }, key, buf.slice(12));
   return JSON.parse(new TextDecoder().decode(plain));
 }
+let offenSuche = false;     // Suche entsperrt?
 function ready(data) {
   buildIndex(data);
+  offenSuche = true;
   $("schloss").hidden = true; $("bar").hidden = false; $("leer").hidden = false;
   const projekte = new Set(FILES.map(f => f.p)).size;
   $("stand").textContent = BUILT ? "Stand " + BUILT : "";
   $("leer-text").textContent = "Während du sprichst, suche ich in " + FILES.length + " Notizen aus " + projekte + " Projekten und zeige die Treffer sofort.";
   const chips = $("chips"); chips.replaceChildren();
   FILES.slice().sort((a, b) => b.s.length - a.s.length).slice(0, 8).forEach(f => {
-    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = f.t;
+    const b = el("button", "chip", f.t); b.type = "button";
     b.onclick = () => { setQuery(f.t); window.scrollTo(0, 0); };
     chips.append(b);
   });
-  if (SR) $("dock").hidden = false;
-  else setStatus("Dieser Browser kann keine Spracherkennung. Öffne die Seite in Safari oder Chrome. Tippen geht trotzdem.");
+  if (!SR) setStatus("Dieser Browser kann keine Spracherkennung. Öffne die Seite in Safari oder Chrome. Tippen geht trotzdem.");
   render();
+  dockZeigen();
 }
 function locked(msg) {
-  $("schloss").hidden = false; $("bar").hidden = true; $("leer").hidden = true; $("treffer").hidden = true; $("dock").hidden = true;
+  offenSuche = false;
+  $("schloss").hidden = false; $("bar").hidden = true; $("leer").hidden = true; $("treffer").hidden = true;
   $("schloss-fehler").hidden = !msg; $("schloss-fehler").textContent = msg || "";
+  dockZeigen();
 }
 async function tryKey(k, fromForm) {
   try {
@@ -681,26 +894,422 @@ async function tryKey(k, fromForm) {
 $("q").addEventListener("input", () => { if ($("q").value.trim() !== lastQuery) { offen.clear(); lastQuery = $("q").value.trim(); } render(); });
 $("q").addEventListener("keydown", e => { if (e.key === "Enter") $("q").blur(); });
 $("leeren").onclick = () => { setQuery(""); if (!listening) $("q").focus(); };
-$("mik").onclick = () => { if (listening) stop(); else start(); };
+$("mik").onclick = () => { if (listening) stop(); else { andereStoppen("suche"); start(); } };
 $("schloss-form").addEventListener("submit", e => { e.preventDefault(); const k = $("schluessel").value; if (k.trim()) tryKey(k, true); });
-document.addEventListener("visibilitychange", () => { if (document.hidden && listening) stop(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { if (listening) stop(); diktatStopp(); kurzStopp(); } });
 
+/* ---------- Reiter ---------- */
+let aktiv = "zentrale";
+function zeigeTab(name) {
+  aktiv = name;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false"));
+  ["zentrale", "transkript", "suche"].forEach(n => { $("tab-" + n).hidden = n !== name; });
+  if (name !== "suche" && listening) stop();
+  dockZeigen();
+  window.scrollTo(0, 0);
+}
+function dockZeigen() {
+  const an = aktiv === "suche" && offenSuche && !!SR;
+  $("dock").hidden = !an;
+  document.body.classList.toggle("suche-dock", an);
+}
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => zeigeTab(b.dataset.tab)));
 
-/* ---------- Demo: Beispiel-Notizen, damit man Sense Engine ohne Schlüssel zeigen kann ---------- */
+/* ---------- Freigaben ---------- */
+const FREIGABEN = [
+  { id: "tr-hermes", app: "Transkript", an: "Hermes", was: "Diktierte Texte, nur wenn du «An Hermes» tippst", std: true, gilt: true },
+  { id: "tr-links", app: "Transkript", an: "Claude, ChatGPT", was: "Text im Link, nur wenn du den Knopf tippst", std: true, gilt: true },
+  { id: "nova-aufgaben", app: "Aufgaben", an: "Nova / Hermes", was: "Nova schickt deine Aufgabenliste mit der Frage mit", std: false, gilt: true },
+  { id: "nova-projekte", app: "Projekte", an: "Nova / Hermes", was: "Nova schickt den Projektstand mit der Frage mit", std: false, gilt: true },
+  { id: "hs-hermes", app: "HumanSpark", an: "Hermes", was: "Gesundheits- und Messdaten", std: false, gesund: true },
+  { id: "hs-ki", app: "HumanSpark", an: "Claude, ChatGPT", was: "Gesundheits- und Messdaten", std: false, gesund: true },
+  { id: "mond-hermes", app: "Mondschein / Otti", an: "Hermes", was: "Geschichten-Ideen", std: false },
+  { id: "jackie-hermes", app: "Jackie's Advice", an: "Hermes", was: "Gespräche und Notizen", std: false },
+  { id: "foto-hermes", app: "Foto", an: "Hermes", was: "Fotos und Bildbeschreibungen", std: false }
+];
+function frei(id) { const w = jget("se-freigaben", {}) || {}; const f = FREIGABEN.find(x => x.id === id); return typeof w[id] === "boolean" ? w[id] : !!(f && f.std); }
+function freiSetzen(id, v) { const w = jget("se-freigaben", {}) || {}; w[id] = v; jput("se-freigaben", w); }
+function renderFreigaben() {
+  const ul = $("freigaben"); ul.replaceChildren();
+  FREIGABEN.forEach(f => {
+    const li = el("li");
+    const tx = el("div", "ftext");
+    tx.append(el("b", null, f.app + " → " + f.an), el("span", null, f.was + (f.gesund ? " (Gesundheitsdaten)" : "")));
+    if (f.gilt) tx.append(el("em", null, "gilt jetzt"));
+    const sw = el("label", "schalter"); const inp = document.createElement("input"); inp.type = "checkbox"; inp.checked = frei(f.id);
+    inp.setAttribute("aria-label", f.app + " an " + f.an + ": " + f.was); inp.id = "frei-" + f.id;
+    inp.onchange = () => { freiSetzen(f.id, inp.checked); freiZahl(); toast(inp.checked ? "Freigabe an" : "Freigabe aus"); };
+    sw.append(inp, el("span"));
+    li.append(tx, sw); ul.append(li);
+  });
+  freiZahl();
+}
+function freiZahl() { const n = FREIGABEN.filter(f => frei(f.id)).length; $("frei-zahl").textContent = n + " von " + FREIGABEN.length + " an"; }
+$("frei-auf").onclick = () => { renderFreigaben(); $("zentrale-start").hidden = true; $("zentrale-frei").hidden = false; window.scrollTo(0, 0); };
+$("frei-zu").onclick = () => { $("zentrale-frei").hidden = true; $("zentrale-start").hidden = false; window.scrollTo(0, 0); };
+
+/* ---------- Projekte ---------- */
+const PROJEKTE_START = [
+  { id: "mondschein", n: "Mondschein / Otti-App", p: 60, s: "Otti-Geschichten mit Kindern testen" },
+  { id: "humanspark", n: "HumanSpark", p: 40, s: "Messung mit echten Werten prüfen" },
+  { id: "jackie", n: "Jackie's Advice", p: 35, s: "Film für Jackie's Advice auswählen" },
+  { id: "filme", n: "Filme", p: 30, s: "Alle Filme sichten: welche für DR Lab, HumanSpark und den Otti-Film" },
+  { id: "web", n: "DR-Lab-Website", p: 70, s: "Texte und Bilder final prüfen" },
+  { id: "sense", n: "Sense Engine", p: 45, s: "Hermes verbinden und testen" }
+];
+function projekte() {
+  const w = jget("se-projekte", null);
+  return PROJEKTE_START.map(p => Object.assign({}, p, (w && w[p.id]) || {}));
+}
+let projOffen = null;
+function renderProjekte() {
+  const box = $("projekte"); box.replaceChildren();
+  const ps = projekte();
+  $("proj-schnitt").textContent = "Ø " + Math.round(ps.reduce((n, p) => n + p.p, 0) / ps.length) + " %";
+  ps.forEach(p => {
+    const d = el("div", "projekt"); d.id = "proj-" + p.id;
+    const b = el("button"); b.type = "button"; b.setAttribute("aria-expanded", projOffen === p.id ? "true" : "false");
+    const z = el("span", "zeile"); z.append(el("span", null, p.n), el("b", null, p.p + " %"));
+    const bal = el("span", "balken"); bal.style.display = "block"; const i = el("i"); i.style.width = p.p + "%"; bal.append(i);
+    b.append(z, bal, el("span", "naechst", "Nächster Schritt: " + (p.s || "–")));
+    b.onclick = () => { projOffen = projOffen === p.id ? null : p.id; renderProjekte(); };
+    d.append(b);
+    if (projOffen === p.id) {
+      const f = el("form");
+      const l1 = el("label", null, "Fortschritt: " + p.p + " %"); const r = document.createElement("input"); r.type = "range"; r.min = 0; r.max = 100; r.step = 5; r.value = p.p;
+      r.setAttribute("aria-label", "Fortschritt " + p.n); r.oninput = () => { l1.textContent = "Fortschritt: " + r.value + " %"; };
+      const l2 = el("label", null, "Nächster Schritt"); const t = document.createElement("input"); t.className = "feld"; t.type = "text"; t.value = p.s || ""; t.setAttribute("aria-label", "Nächster Schritt " + p.n);
+      const k = el("div", "knoepfe"); const sp = el("button", "btn gold", "Speichern"); sp.type = "submit";
+      const rs = el("button", "btn", "Startwert"); rs.type = "button";
+      k.append(sp, rs); f.append(l1, r, l2, t, k);
+      f.onsubmit = e => { e.preventDefault(); const w = jget("se-projekte", {}) || {}; w[p.id] = { p: +r.value, s: t.value.trim() }; jput("se-projekte", w); projOffen = null; renderProjekte(); toast("Gespeichert"); };
+      rs.onclick = () => { const w = jget("se-projekte", {}) || {}; delete w[p.id]; jput("se-projekte", w); projOffen = null; renderProjekte(); };
+      d.append(f);
+    }
+    box.append(d);
+  });
+}
+
+/* ---------- Meine Apps ---------- */
+const APPS = [["Mondschein / Otti", "mondschein/"], ["HumanSpark", "humanspark/"], ["Jackie's Advice", "jackie/"], ["Reminder", "reminder/"],
+  ["Foto", "foto/"], ["Transkript", "transkript/"], ["Alle Apps", "apps/"]];
+APPS.forEach(([n, p]) => { const a = el("a", null, n); a.href = DRLAB + p; a.target = "_blank"; a.rel = "noopener"; $("apps").append(a); });
+
+/* ---------- Aufgaben ---------- */
+function aufgaben() { const a = jget("se-aufgaben", []); return Array.isArray(a) ? a : []; }
+function renderAufgaben() {
+  const a = aufgaben(), ul = $("aufgaben"); ul.replaceChildren();
+  const fertig = a.filter(x => x.ok).length;
+  $("auf-zahl").textContent = a.length ? fertig + " / " + a.length : "";
+  $("auf-balken").style.width = (a.length ? Math.round(fertig / a.length * 100) : 0) + "%";
+  if (!a.length) { ul.append(el("li", "leerzeile", "Noch keine Aufgaben.")); return; }
+  a.forEach((x, i) => {
+    const li = el("li", x.ok ? "erledigt" : "");
+    const lab = el("label"); const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = !!x.ok;
+    cb.onchange = () => { const b = aufgaben(); if (b[i]) { b[i].ok = cb.checked; jput("se-aufgaben", b); renderAufgaben(); } };
+    lab.append(cb, el("span", null, x.t));
+    const del = el("button", "weg-x", "✕"); del.type = "button"; del.setAttribute("aria-label", "Aufgabe löschen: " + x.t);
+    del.onclick = () => { const b = aufgaben(); b.splice(i, 1); jput("se-aufgaben", b); renderAufgaben(); };
+    li.append(lab, del); ul.append(li);
+  });
+}
+$("auf-form").addEventListener("submit", e => {
+  e.preventDefault(); kurzStopp();
+  const t = $("auf-text").value.trim(); if (!t) { $("auf-text").focus(); return; }
+  const a = aufgaben(); a.unshift({ t, ok: false, d: Date.now() }); jput("se-aufgaben", a);
+  $("auf-text").value = ""; renderAufgaben();
+});
+
+/* ---------- Kurzes Zuhören (Aufgabe, Frage an Nova) ---------- */
+let kurz = null;
+function kurzStopp() {
+  if (!kurz) return; const k = kurz; kurz = null;
+  try { k.rec.abort(); } catch (e) {}
+  k.knopf.classList.remove("an"); k.knopf.setAttribute("aria-pressed", "false");
+}
+function kurzHoeren(knopf, feld, fertig) {
+  if (kurz && kurz.knopf === knopf) { kurzStopp(); return; }
+  if (!SR) { toast("Dieser Browser kann keine Spracherkennung. Tippen geht."); return; }
+  andereStoppen("kurz"); kurzStopp();
+  const rec = new SR(); rec.lang = "de-CH"; rec.interimResults = true; rec.continuous = false;
+  kurz = { rec, knopf }; knopf.classList.add("an"); knopf.setAttribute("aria-pressed", "true");
+  rec.onresult = e => { let t = ""; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; feld.value = t.trim(); };
+  rec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Mikrofon ist blockiert. Erlaube es in den Browser-Einstellungen."); };
+  rec.onend = () => { if (kurz && kurz.rec === rec) { kurzStopp(); if (feld.value.trim() && fertig) fertig(); } };
+  try { rec.start(); } catch (e) { kurzStopp(); toast("Das Mikrofon lässt sich nicht starten."); }
+}
+$("auf-mik").onclick = () => kurzHoeren($("auf-mik"), $("auf-text"), null);
+function andereStoppen(ausser) {
+  if (ausser !== "suche" && listening) stop();
+  if (ausser !== "diktat") diktatStopp();
+  if (ausser !== "kurz") kurzStopp();
+}
+
+/* ---------- Hermes ---------- */
+const HKEYS = { addr: "drlab-hermes-adresse", key: "drlab-hermes-passwort" };
+const TEST_KEY = "se-hermes-test";
+function hAddr() { return String(jget(HKEYS.addr, "") || "").trim().replace(/\/+$/, ""); }
+function hPw() { return String(jget(HKEYS.key, "") || ""); }
+function adresseOk(a) { return /^https:\/\/[^\s/]+/.test(a) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(a); }
+function hermesReady() { return adresseOk(hAddr()) && !!hPw(); }
+function hermesStatus() {
+  if (!hermesReady()) return { k: "", t: "noch nicht verbunden" };
+  const t = jget(TEST_KEY, null);
+  if (t && typeof t === "object" && t.addr === hAddr()) {
+    if (t.ok) return { k: "ok", t: "verbunden" };
+    return { k: "fehl", t: "Fehler: " + (t.msg || "keine Verbindung") };
+  }
+  return { k: "halb", t: "eingerichtet, noch nicht getestet" };
+}
+function renderHermes() {
+  const s = hermesStatus();
+  $("hermes-pille").className = "pille" + (s.k ? " " + s.k : ""); $("hermes-pille").textContent = s.k === "fehl" ? "Fehler" : s.t;
+  $("h-addr").value = hAddr(); $("h-key").value = hPw() ? "••••••••" : "";
+  $("d-hermes-info").textContent = hermesReady() ? "Hermes: " + s.t + "." : "Hermes ist noch nicht verbunden. Einrichten in der Zentrale unter «Hermes-Verbindung».";
+  $("blatt-unter").textContent = hermesReady() ? "fragt Hermes für dich · " + (s.k === "fehl" ? "letzter Versuch fehlgeschlagen" : s.t) : "noch nicht mit Hermes verbunden";
+  renderWerkzeuge();
+}
+function hermesFehler(e) {
+  if (e && e.name === "AbortError") return "Hermes antwortet nicht (nach 120 Sekunden abgebrochen).";
+  if (e && e.code === "pw") return "Passwort stimmt nicht.";
+  if (e && e.code === "http") return e.message;
+  if (e instanceof TypeError) return "Server nicht erreichbar. Prüfe die Adresse und ob Hermes läuft.";
+  return (e && e.message) || "Unbekannter Fehler.";
+}
+async function callHermes(text) {
+  if (!hermesReady()) { const e = new Error("Hermes ist noch nicht eingerichtet."); e.code = "setup"; throw e; }
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const r = await fetch(hAddr() + "/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + hPw() },
+      body: JSON.stringify({ model: "hermes-agent", messages: [{ role: "user", content: text }] }),
+      signal: ctrl.signal
+    });
+    if (r.status === 401 || r.status === 403) { const e = new Error("Passwort stimmt nicht."); e.code = "pw"; throw e; }
+    if (!r.ok) { const e = new Error("Server meldet Fehler " + r.status + "."); e.code = "http"; throw e; }
+    let j = null; try { j = await r.json(); } catch (x) { const e = new Error("Hermes hat keine lesbare Antwort geschickt."); e.code = "http"; throw e; }
+    const c = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+    return (typeof c === "string" && c.trim()) ? c.trim() : "Hermes hat den Text erhalten.";
+  } finally { clearTimeout(timer); }
+}
+function zeigeAntwort(boxId, titel, text, fehler) {
+  const b = $(boxId); b.replaceChildren(el("b", null, titel), document.createTextNode(text));
+  b.classList.toggle("fehler", !!fehler); b.hidden = false;
+}
+$("hermes-form").addEventListener("submit", e => {
+  e.preventDefault();
+  let a = $("h-addr").value.trim().replace(/\/+$/, ""); const k = $("h-key").value.trim();
+  if (a && !/^https?:\/\//.test(a)) a = "https://" + a;
+  if (a && !adresseOk(a)) { zeigeAntwort("h-antwort", "Hinweis", "Die Adresse muss mit https:// beginnen.", true); return; }
+  jput(HKEYS.addr, a); if (k && k !== "••••••••") jput(HKEYS.key, k);
+  renderHermes(); toast("Gespeichert");
+});
+$("h-del").onclick = () => { jput(HKEYS.addr, ""); jput(HKEYS.key, ""); store.del(TEST_KEY); $("h-antwort").hidden = true; renderHermes(); toast("Hermes-Verbindung gelöscht"); };
+$("h-test").onclick = async () => {
+  // ungespeicherte Eingaben zuerst übernehmen
+  const a = $("h-addr").value.trim(), k = $("h-key").value.trim();
+  if ((a && a.replace(/\/+$/, "") !== hAddr()) || (k && k !== "••••••••" && k !== hPw())) $("hermes-form").requestSubmit ? $("hermes-form").requestSubmit() : $("hermes-form").dispatchEvent(new Event("submit"));
+  if (!hermesReady()) { zeigeAntwort("h-antwort", "Hinweis", "Erst Adresse (https://…) und Passwort eintragen und speichern.", true); return; }
+  const btn = $("h-test"); btn.disabled = true; btn.textContent = "Teste …";
+  zeigeAntwort("h-antwort", "Hermes", "Verbinde …");
+  try {
+    const t = await callHermes("Antworte nur mit: Verbindung steht.");
+    jput(TEST_KEY, { ok: true, addr: hAddr(), t: Date.now() });
+    zeigeAntwort("h-antwort", "Hermes", t);
+  } catch (e) {
+    const m = hermesFehler(e); jput(TEST_KEY, { ok: false, addr: hAddr(), msg: m, t: Date.now() });
+    zeigeAntwort("h-antwort", "Keine Verbindung", m, true);
+  }
+  btn.disabled = false; btn.textContent = "Testen"; renderHermes();
+};
+function merkeHermesErgebnis(ok, msg) { jput(TEST_KEY, ok ? { ok: true, addr: hAddr(), t: Date.now() } : { ok: false, addr: hAddr(), msg, t: Date.now() }); renderHermes(); }
+
+/* ---------- KI-Werkzeuge ---------- */
+function renderWerkzeuge() {
+  const ul = $("werkzeuge"); ul.replaceChildren();
+  const s = hermesStatus();
+  const zeilen = [
+    ["Hermes", s.k === "fehl" ? "Fehler" : s.t, s.k, null],
+    ["Claude", "Link", "link", "https://claude.ai/new"],
+    ["ChatGPT", "Link", "link", "https://chatgpt.com/"],
+    ["Replicate", "noch nicht verbunden", "", null],
+    ["Runway", "noch nicht verbunden", "", null],
+    ["Vibecode", "noch nicht verbunden", "", null],
+    ["Mac-Status", "noch nicht verbunden", "", null],
+    ["Filmproduktion", "noch nicht verbunden", "", null]
+  ];
+  zeilen.forEach(([n, t, k, href]) => {
+    const li = el("li"); li.append(el("span", "wname", n));
+    let p;
+    if (href) { p = el("a", "pille", t + " ↗"); p.href = href; p.target = "_blank"; p.rel = "noopener"; }
+    else if (n === "Hermes") { p = el("button", "pille" + (k ? " " + k : ""), t); p.type = "button"; p.style.background = k === "ok" ? "" : "transparent"; p.onclick = () => $("hermes-kachel").scrollIntoView({ behavior: "smooth", block: "start" }); }
+    else p = el("span", "pille", t);
+    li.append(p); ul.append(li);
+  });
+}
+
+/* ---------- Transkript: Diktat ---------- */
+let diktat = null;   // { rec, an }
+function diktatUi(an, msg) {
+  document.body.classList.toggle("diktiert", an);
+  $("dmik").setAttribute("aria-pressed", an ? "true" : "false");
+  $("dmik").setAttribute("aria-label", an ? "Diktat stoppen" : "Diktat starten");
+  $("d-status").textContent = msg || (an ? "Ich schreibe mit … Tippe zum Stoppen." : "Tippen und sprechen. Ich schreibe mit, bis du stoppst.");
+}
+function anhaengen(t) {
+  t = t.trim(); if (!t) return;
+  const ta = $("d-text"); const v = ta.value.replace(/\s+$/, "");
+  ta.value = v ? v + (/[.!?:]$/.test(v) ? " " : " ") + t : t;
+  ta.scrollTop = ta.scrollHeight; entwurfMerken();
+}
+function diktatLauf() {
+  const rec = new SR(); rec.lang = "de-CH"; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+  diktat.rec = rec; diktat.err = null;
+  rec.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) anhaengen(r[0].transcript); else interim += r[0].transcript;
+    }
+    $("d-live").textContent = interim.trim();
+  };
+  rec.onerror = e => { if (diktat) diktat.err = e.error; };
+  rec.onend = () => {
+    $("d-live").textContent = "";
+    if (!diktat || diktat.rec !== rec) return;
+    const err = diktat.err;
+    if (err === "not-allowed" || err === "service-not-allowed") { diktatStopp("Das Mikrofon ist blockiert oder pausiert. Erlaube es für diese Seite und tippe nochmal."); return; }
+    if (err === "audio-capture") { diktatStopp("Kein Mikrofon gefunden."); return; }
+    if (err === "network") { diktatStopp("Die Spracherkennung braucht Internet."); return; }
+    setTimeout(() => { if (diktat && diktat.rec === rec) { try { diktatLauf(); } catch (x) { diktatStopp("Das Mikrofon lässt sich nicht neu starten. Tippe nochmal."); } } }, 250);   // nach Pausen automatisch weiter
+  };
+  rec.start();
+}
+function diktatStart() {
+  if (!SR) { diktatUi(false, "Dieser Browser kann keine Spracherkennung. Öffne die Seite in Safari oder Chrome. Tippen geht trotzdem."); return; }
+  andereStoppen("diktat");
+  diktat = { rec: null, err: null }; diktatUi(true);
+  try { diktatLauf(); } catch (e) { diktatStopp("Das Mikrofon lässt sich nicht starten. Tippe nochmal."); }
+}
+function diktatStopp(msg) {
+  if (!diktat) return;
+  const d = diktat; diktat = null;
+  try { d.rec && d.rec.stop(); } catch (e) {}
+  const live = $("d-live").textContent; if (live) anhaengen(live);
+  $("d-live").textContent = "";
+  diktatUi(false, msg);
+}
+$("dmik").onclick = () => { if (diktat) diktatStopp(); else diktatStart(); };
+$("d-text").addEventListener("input", entwurfMerken);
+function entwurfMerken() { store.set("se-entwurf", $("d-text").value); }
+
+/* Verlauf */
+function verlauf() { const v = jget("se-transkripte", []); return Array.isArray(v) ? v : []; }
+function verlaufSpeichern(t) {
+  t = (t || "").trim(); if (!t) return;
+  const v = verlauf(); if (v[0] && v[0].t === t) return;
+  v.unshift({ t, d: Date.now() }); jput("se-transkripte", v.slice(0, 50)); renderVerlauf();
+}
+function renderVerlauf() {
+  const v = verlauf(), ul = $("verlauf"); ul.replaceChildren();
+  $("v-zahl").textContent = v.length ? String(v.length) : "";
+  if (!v.length) { ul.append(el("li", "leerzeile", "Noch nichts gespeichert. Texte landen hier, wenn du «Neu» oder einen Senden-Knopf tippst.")); ul.lastChild.style.border = "0"; ul.lastChild.style.background = "transparent"; return; }
+  v.forEach((x, i) => {
+    const li = el("li"); const b = el("button"); b.type = "button";
+    const dt = new Date(x.d);
+    b.append(el("span", "zeit", dt.toLocaleDateString("de-CH") + " " + dt.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" })), el("span", "vorschau", x.t));
+    b.onclick = () => { diktatStopp(); $("d-text").value = x.t; entwurfMerken(); window.scrollTo(0, 0); toast("Text geöffnet"); };
+    const del = el("button", "weg-x", "✕"); del.type = "button"; del.setAttribute("aria-label", "Aus dem Verlauf löschen");
+    del.onclick = () => { const w = verlauf(); w.splice(i, 1); jput("se-transkripte", w); renderVerlauf(); };
+    li.append(b, del); ul.append(li);
+  });
+}
+function textJetzt() { diktatStopp(); return $("d-text").value.trim(); }
+$("d-kopie").onclick = async () => { const t = textJetzt(); if (!t) { toast("Noch kein Text"); return; } toast(await kopiere(t) ? "Kopiert" : "Kopieren nicht möglich"); };
+$("d-neu").onclick = () => { const t = textJetzt(); verlaufSpeichern(t); $("d-text").value = ""; entwurfMerken(); $("d-antwort").hidden = true; $("d-text").focus(); if (t) toast("Im Verlauf gespeichert"); };
+$("d-hermes").onclick = async () => {
+  const t = textJetzt(); if (!t) { toast("Noch kein Text"); return; }
+  if (!frei("tr-hermes")) { zeigeAntwort("d-antwort", "Gesperrt", "In den Freigaben ist «Transkript → Hermes» ausgeschaltet.", true); return; }
+  verlaufSpeichern(t);
+  if (!hermesReady()) { zeigeAntwort("d-antwort", "Hermes", "Hermes ist noch nicht verbunden. Trag in der Zentrale unter «Hermes-Verbindung» Adresse und Passwort ein. Dein Text ist im Verlauf.", true); return; }
+  const btn = $("d-hermes"); btn.disabled = true;
+  zeigeAntwort("d-antwort", "Hermes", "Sende an Hermes …");
+  try { const a = await callHermes(t); zeigeAntwort("d-antwort", "Hermes", a); merkeHermesErgebnis(true); }
+  catch (e) { const m = hermesFehler(e); zeigeAntwort("d-antwort", "Nicht gesendet", m + " Dein Text ist im Verlauf.", true); merkeHermesErgebnis(false, m); }
+  btn.disabled = false;
+};
+function linkSenden(basis) {
+  const t = textJetzt(); if (!t) { toast("Noch kein Text"); return; }
+  if (!frei("tr-links")) { zeigeAntwort("d-antwort", "Gesperrt", "In den Freigaben ist «Transkript → Claude, ChatGPT» ausgeschaltet.", true); return; }
+  verlaufSpeichern(t); kopiere(t);
+  window.open(basis + encodeURIComponent(t.slice(0, 6000)), "_blank", "noopener");
+}
+$("d-claude").onclick = () => linkSenden("https://claude.ai/new?q=");
+$("d-gpt").onclick = () => linkSenden("https://chatgpt.com/?q=");
+
+/* ---------- Nova: Chat-Blatt unten rechts ---------- */
+const ANLEITUNG = "So verbindest du Nova mit Hermes: In Sense Engine die Zentrale öffnen, bei «Hermes-Verbindung» die Adresse deines Hermes-Servers (beginnt mit https://) und das Passwort eintragen, «Speichern» und dann «Testen» tippen.";
+function blase(text, wer, fehler) { const b = el("div", "blase " + wer + (fehler ? " fehl" : ""), text); $("chat").append(b); $("chat").scrollTop = $("chat").scrollHeight; return b; }
+let novaBegruesst = false;
+function novaAuf() {
+  $("blatt").hidden = false; $("blatt-hg").hidden = false; $("nova").setAttribute("aria-expanded", "true");
+  if (!hermesReady()) {
+    $("chat").replaceChildren(); novaBegruesst = false;
+    blase("Ich bin noch nicht mit Hermes verbunden. Trag in der Zentrale unter «Hermes-Verbindung» Adresse und Passwort ein, dann tippe «Testen».", "nova");
+    const k = el("div", "knoepfe");
+    const b1 = el("button", "btn gold klein", "Jetzt einrichten"); b1.type = "button";
+    b1.onclick = () => { novaZu(); zeigeTab("zentrale"); $("frei-zu").click(); setTimeout(() => { $("hermes-kachel").scrollIntoView({ block: "start" }); $("h-addr").focus(); }, 50); };
+    const b2 = el("button", "btn klein", "Anleitung kopieren"); b2.type = "button";
+    b2.onclick = async () => toast(await kopiere(ANLEITUNG) ? "Anleitung kopiert" : "Kopieren nicht möglich");
+    k.append(b1, b2); $("chat").append(k);
+  } else if (!novaBegruesst) {
+    $("chat").replaceChildren(); novaBegruesst = true;
+    blase("Hallo, ich bin Nova. Frag mich etwas, ich gebe es an Hermes weiter.", "nova");
+  }
+  setTimeout(() => $("chat-text").focus(), 50);
+}
+function novaZu() { kurzStopp(); $("blatt").hidden = true; $("blatt-hg").hidden = true; $("nova").setAttribute("aria-expanded", "false"); $("nova").focus(); }
+$("nova").onclick = novaAuf;
+$("blatt-zu").onclick = novaZu;
+$("blatt-hg").onclick = novaZu;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("blatt").hidden) novaZu(); });
+$("chat-mik").onclick = () => kurzHoeren($("chat-mik"), $("chat-text"), null);
+$("chat-form").addEventListener("submit", async e => {
+  e.preventDefault(); kurzStopp();
+  const t = $("chat-text").value.trim(); if (!t) return;
+  if (!hermesReady()) { novaAuf(); return; }
+  if (!novaBegruesst) { $("chat").replaceChildren(); novaBegruesst = true; }
+  blase(t, "ich"); $("chat-text").value = "";
+  let kontext = "";
+  if (frei("nova-aufgaben")) { const a = aufgaben().filter(x => !x.ok).map(x => "- " + x.t); if (a.length) kontext += "\nOffene Aufgaben:\n" + a.join("\n"); }
+  if (frei("nova-projekte")) kontext += "\nProjektstand:\n" + projekte().map(p => "- " + p.n + ": " + p.p + " %, nächster Schritt: " + p.s).join("\n");
+  const frage = "Du bist Nova in Sense Engine. Antworte auf Deutsch (Schweizer Schreibweise, ss, nie Eszett) in 2 bis 3 kurzen Sätzen.\n" + (kontext ? kontext + "\n" : "") + "\nFrage: " + t;
+  const warte = blase("…", "nova");
+  const btn = e.submitter || $("chat-form").querySelector("[type=submit]"); btn.disabled = true;
+  try { warte.textContent = await callHermes(frage); merkeHermesErgebnis(true); }
+  catch (x) { const m = hermesFehler(x); warte.textContent = m; warte.classList.add("fehl"); merkeHermesErgebnis(false, m); }
+  btn.disabled = false;
+});
+
+/* ---------- Demo: Beispiel-Notizen, damit man die Suche ohne Schlüssel zeigen kann ---------- */
 const DEMO = { built: "Demo", files: [
   { p: "Hungry Belly", t: "Ich hab Hunger", a: ["essen", "restaurant", "kochen"], s: [
     { x: "Einfach sagen «Ich hab Hunger», und der Agent schlägt drei Möglichkeiten vor: kochen, bestellen oder ausgehen.", h: "Idee" },
     { x: "Kein Google, keine zehn Apps. Ein Satz reicht, die Antwort kommt sofort." },
     { x: "Merkt sich, was ich mag: scharf, vegetarisch unter der Woche, Pizza am Freitag." } ] },
-  { p: "Mondschein", t: "Gutenachtgeschichten mit Sunny", a: ["kinder", "schlafen", "nova", "drache"], s: [
-    { x: "Sunny der Igel, Kiki das Licht und Nova der kleine Drache erzählen jeden Abend eine neue Geschichte." },
+  { p: "Mondschein", t: "Gutenachtgeschichten mit Otti", a: ["kinder", "schlafen", "otti", "igel", "nova", "roboter"], s: [
+    { x: "Otti der Igel und Nova, der kleine weisse Roboter, erzählen jeden Abend eine neue Geschichte." },
     { x: "Das Kind entscheidet mit: Wer hilft? Wohin geht die Reise? Die Geschichte erzählt sich weiter." } ] },
+  { p: "Filme", t: "Otti-Film", a: ["film", "otti", "igel", "kinder"], s: [
+    { x: "Der lange Kinderfilm heisst jetzt Otti-Film. Otti ist der Igel mit der gelben Schleife." },
+    { x: "Alle Filme sichten und entscheiden: welche für DR Lab, welche für HumanSpark, welche für den Otti-Film." } ] },
   { p: "Jackie's Advice", t: "Die KI an der Seite von Müttern", a: ["jackie", "familie", "schule", "amt"], s: [
     { x: "Sie hört zu, ordnet und zeigt den nächsten Schritt, von der Schule bis zum Amt." },
     { x: "Zwei Minuten Atempause, wenn alles zu viel wird." } ] },
-  { p: "Nova", t: "Nova lernt von allen Projekten", a: ["nova", "vernetzung", "agent"], s: [
-    { x: "Nova ist in jedem Projekt dabei und kennt alle Notizen. Eine Frage, alle Antworten." },
-    { x: "Neue Idee diktiert? Nova sagt sofort: «Das passt auch zu Hungry Belly.»" } ] },
+  { p: "Sense Engine", t: "Nova hilft in der Zentrale", a: ["nova", "roboter", "vernetzung", "agent", "hermes"], s: [
+    { x: "Nova, der kleine weisse Roboter, sitzt unten rechts und gibt Fragen an Hermes weiter." },
+    { x: "Neue Idee diktiert? Mit einem Tipp geht sie an Hermes, Claude oder ChatGPT." } ] },
   { p: "DR Lab", t: "Die fünf Elemente", a: ["holz", "feuer", "erde", "metall", "wasser"], s: [
     { x: "Jedes Projekt bekommt ein Element: Holz, Feuer, Erde, Metall oder Wasser." },
     { x: "Die fünf Elemente sind der Start von allem, der erste Atemzug." } ] },
@@ -718,13 +1327,21 @@ function demo() {
   try { history.replaceState(null, "", location.pathname + "?demo"); } catch (e) {}
 }
 $("demo").onclick = demo;
+
 (function boot() {
-  const m = location.hash.match(/^#k=([A-Za-z0-9_-]+)$/);
-  let k = store.get("se-key");
-  if (m) { k = m[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
-  if (!m && /(^|[?&])demo\b/.test(location.search)) demo();
-  else if (k) tryKey(k, false); else locked("");
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const k0 = h.get("k"), hz = h.get("hermes");
+  if (hz) { let a = hz.trim().replace(/\/+$/, ""); if (!/^https?:\/\//.test(a)) a = "https://" + a; if (adresseOk(a)) jput(HKEYS.addr, a); }
+  if (location.hash) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+  const k = (k0 && /^[A-Za-z0-9_-]+$/.test(k0)) ? k0 : store.get("se-key");
+  const entwurf = store.get("se-entwurf"); if (entwurf) $("d-text").value = entwurf;
+  renderProjekte(); renderAufgaben(); renderHermes(); renderVerlauf(); freiZahl();
+  if (!SR) { $("d-status").textContent = "Dieser Browser kann keine Spracherkennung. Öffne die Seite in Safari oder Chrome. Tippen geht trotzdem."; }
+  if (!k0 && /(^|[?&])demo\b/.test(location.search)) { demo(); }
+  else if (k) tryKey(k, !!k0); else locked("");
+  zeigeTab("zentrale");
 })();
+
 /* ---------- Intro: Sternenfeld, Nova erscheint, dann die App ---------- */
 (function intro() {
   const el = $("intro"), cv = $("sterne");
@@ -736,14 +1353,14 @@ $("demo").onclick = demo;
   if (still || !cv.getContext) return;
   const ctx = cv.getContext("2d"), dpr = Math.min(window.devicePixelRatio || 1, 2);
   let w, h; const fit = () => { w = cv.width = innerWidth * dpr; h = cv.height = innerHeight * dpr; }; fit(); addEventListener("resize", fit);
-  const farben = ["#FFFFFF", "#FFF7D6", "#5EE7FF", "#FFB547", "#FF4F7B", "#B26BFF"];
+  const farben = ["#FFFFFF", "#E6FDFF", "#5EE7FF", "#F1D08A", "#D4A84B"];
   const P = Array.from({ length: 240 }, () => ({ a: Math.random() * Math.PI * 2, r: Math.random() * 0.02, v: 0.004 + Math.random() * 0.018, s: (0.6 + Math.random() * 1.8) * dpr, c: farben[(Math.random() * farben.length) | 0] }));
   const t0 = performance.now();
   (function frame(t) {
     const z = (t - t0) / 1000;
     ctx.fillStyle = "rgba(4,5,16,.28)"; ctx.fillRect(0, 0, w, h);
     const cx = w / 2, cy = h * 0.42, R = Math.hypot(w, h) / 2;
-    const schub = z < 0.5 ? 0.2 : z < 1.4 ? 2.6 : 0.9;   // Warp-Sprung, wenn Nova aufleuchtet
+    const schub = z < 0.5 ? 0.2 : z < 1.4 ? 2.6 : 0.9;
     for (const p of P) {
       p.r += p.v * schub;
       if (p.r > 1.1) { p.r = Math.random() * 0.05; p.a = Math.random() * Math.PI * 2; }
