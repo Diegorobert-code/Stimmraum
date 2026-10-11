@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#07091A">
 <title>Sense Engine</title>
-<link rel="icon" href="icon.svg">
+<link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -65,7 +65,7 @@ a { color: var(--gold-hell); }
 }
 .brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .brand h1 { margin: 0; font: 700 1.25rem/1.1 var(--font-display); letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
-.brand h1 .robo { width: 34px; height: 40px; animation: schweben 4s ease-in-out infinite; }
+.brand h1 .robo { width: 38px; height: 38px; animation: schweben 4s ease-in-out infinite; }
 .brand h1 .name { background: linear-gradient(90deg, var(--gold-hell), var(--gold) 60%, #B98A2E); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .brand h1 { flex: none; }
 .brand .stand { min-width: 0; font-size: 0.75rem; line-height: 1.25; color: var(--muted); text-align: right; }
@@ -286,6 +286,7 @@ body.hoert #mik, body.diktiert #dmik { background: radial-gradient(circle at 38%
 body.hoert .mik-text { color: var(--rec); }
 
 /* Nova: kleiner weisser Roboter */
+.robo.nova-bild { overflow: hidden; display: inline-block; aspect-ratio: 1; object-fit: cover; border-radius: 50%; box-shadow: 0 0 0 2px rgba(94,231,255,.7), 0 0 18px rgba(94,231,255,.35); background: #0D1424; }
 .robo { overflow: visible; }
 .robo .auge { transform-box: fill-box; transform-origin: center; animation: blinzeln 5s infinite; }
 .robo .bauch { animation: glimmen 2.8s ease-in-out infinite; }
@@ -294,7 +295,7 @@ body.hoert .mik-text { color: var(--rec); }
 @keyframes schweben { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-4px) rotate(3deg); } }
 .nova-knopf {
   position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 40;
-  width: 68px; height: 74px; border: 0; padding: 0; background: transparent;
+  width: 68px; height: 68px; border: 0; padding: 0; background: transparent;
   filter: drop-shadow(0 6px 16px rgba(94,231,255,.35));
 }
 .nova-knopf .robo { width: 100%; height: 100%; animation: schweben 4s ease-in-out infinite; }
@@ -307,7 +308,7 @@ body.suche-dock .nova-knopf { bottom: calc(118px + env(safe-area-inset-bottom, 0
   box-shadow: 0 -10px 40px rgba(0,0,0,.5);
 }
 .blatt-kopf { display: flex; align-items: center; gap: 10px; }
-.blatt-kopf .robo { width: 36px; height: 42px; }
+.blatt-kopf .robo { width: 40px; height: 40px; }
 .blatt-kopf h2 { flex: 1; margin: 0; font: 700 1.125rem/1.2 var(--font-display); color: var(--gold-hell); }
 .blatt-kopf small { display: block; font: 400 .8125rem/1.3 var(--font-body); color: var(--muted); }
 .chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
@@ -568,25 +569,8 @@ function jput(k, v) { store.set(k, JSON.stringify(v)); }
 /* ---------- Nova, der kleine weisse Roboter ---------- */
 let roboN = 0;
 function robo(extra) {
-  const i = "r" + (++roboN);
-  return '<svg class="robo ' + (extra || "") + '" viewBox="0 0 120 140" aria-hidden="true">' +
-  '<defs><linearGradient id="' + i + 'h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D5DEE9"/></linearGradient>' +
-  '<radialGradient id="' + i + 'b" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#E6FDFF"/><stop offset=".45" stop-color="#5EE7FF"/><stop offset="1" stop-color="#5EE7FF" stop-opacity="0"/></radialGradient></defs>' +
-  '<ellipse cx="60" cy="134" rx="24" ry="4" fill="#5EE7FF" opacity=".28"/>' +
-  '<path d="M40 96 q-12 6 -10 20" fill="none" stroke="#E4EBF3" stroke-width="7" stroke-linecap="round"/><circle cx="30" cy="117" r="5" fill="#E4EBF3"/>' +
-  '<path d="M80 96 q12 6 10 20" fill="none" stroke="#E4EBF3" stroke-width="7" stroke-linecap="round"/><circle cx="90" cy="117" r="5" fill="#E4EBF3"/>' +
-  '<ellipse cx="50" cy="128" rx="7" ry="4" fill="#3A4152"/><ellipse cx="70" cy="128" rx="7" ry="4" fill="#3A4152"/>' +
-  '<ellipse cx="60" cy="104" rx="23" ry="23" fill="url(#' + i + 'h)"/>' +
-  '<ellipse class="bauch" cx="60" cy="108" rx="15" ry="12" fill="url(#' + i + 'b)"/>' +
-  '<rect x="48" y="80" width="24" height="5" rx="2.5" fill="#5EE7FF" opacity=".85"/>' +
-  '<circle cx="19" cy="50" r="8" fill="#DCE4EE" stroke="#B9C5D3" stroke-width="2"/><circle cx="101" cy="50" r="8" fill="#DCE4EE" stroke="#B9C5D3" stroke-width="2"/>' +
-  '<ellipse cx="60" cy="48" rx="41" ry="36" fill="url(#' + i + 'h)"/>' +
-  '<ellipse cx="44" cy="22" rx="13" ry="5" fill="#fff" opacity=".9" transform="rotate(-12 44 22)"/>' +
-  '<rect x="28" y="32" width="64" height="38" rx="19" fill="#0D1424"/>' +
-  '<g class="auge"><circle cx="46" cy="51" r="8.5" fill="none" stroke="#5EE7FF" stroke-width="4.5"/></g>' +
-  '<g class="auge"><circle cx="74" cy="51" r="8.5" fill="none" stroke="#5EE7FF" stroke-width="4.5"/></g>' +
-  '<path d="M54 63 q6 3 12 0" fill="none" stroke="#5EE7FF" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>' +
-  '</svg>';
+  /* Novas Gesicht aus dem Film «Otti und Nova» */
+  return '<img class="robo nova-bild ' + (extra || "") + '" src="nova-gesicht.jpg" alt="" aria-hidden="true">';
 }
 document.querySelectorAll("[data-robo]").forEach(el => { el.outerHTML = robo(el.getAttribute("data-robo")); });
 /* ---------- Text aufbereiten ---------- */
