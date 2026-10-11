@@ -1312,14 +1312,19 @@ function hermesFehler(e) {
   if (e instanceof TypeError) return "Server nicht erreichbar. Prüfe die Adresse und ob Hermes läuft.";
   return (e && e.message) || "Unbekannter Fehler.";
 }
+// Novas Persönlichkeit für Sense Engine kommt aus DR_Lab/nova/seelen.js (eine Quelle für alle Apps).
+function novaNachrichten(text) {
+  const seele = (window.NOVA_SEELEN || {})["Sense Engine"];
+  return (seele ? [{ role: "system", content: seele }] : []).concat([{ role: "user", content: text }]);
+}
 async function callHermes(text) {
   if (!hermesReady()) { const e = new Error("Hermes ist noch nicht eingerichtet."); e.code = "setup"; throw e; }
   const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 120000);
   try {
     const r = await fetch(hAddr() + "/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + hPw() },
-      body: JSON.stringify({ model: "hermes-agent", messages: [{ role: "user", content: text }] }),
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + hPw(), "X-Nova-App": "Sense Engine" },
+      body: JSON.stringify({ model: "hermes-agent", messages: novaNachrichten(text) }),
       signal: ctrl.signal
     });
     if (r.status === 401 || r.status === 403) { const e = new Error("Passwort stimmt nicht."); e.code = "pw"; throw e; }
@@ -1790,5 +1795,6 @@ function springe(id) {
   })(t0);
 })();
 </script>
+<script src="/DR_Lab/nova/seelen.js" defer></script>
 </body>
 </html>
