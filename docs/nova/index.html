@@ -245,19 +245,49 @@ async function anTinko(text) {
 /* ---------- Gesicht und Stimme ---------- */
 function stimmung(s) { document.body.classList.remove("hoert", "denkt", "spricht"); if (s) document.body.classList.add(s); }
 function untertitel(t) { $("untertitel").textContent = t; }
-function vorlesen(text) {
-  stimmung("spricht");
-  const ende = () => stimmung("");
-  if (!jget(K.vorlesen, false) || !("speechSynthesis" in window)) { setTimeout(ende, Math.min(4000, 400 + text.length * 35)); return; }
+// Novas eigene Stimme kommt vom Zuhause (Sense Engine /v1/stimme); ohne Zuhause oder über dem Deckel: Handy-Stimme.
+const stimmeAudio = new Audio();
+let audioFrei = false;
+document.addEventListener("pointerdown", () => {   // iPhone: Ton erst nach dem ersten Tippen erlaubt
+  if (audioFrei) return; audioFrei = true;
+  stimmeAudio.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isVNoMPMjAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq";
+  stimmeAudio.play().catch(() => {});
+}, { capture: true });
+
+function handyStimme(text, ende) {
+  if (!("speechSynthesis" in window)) { setTimeout(ende, Math.min(4000, 400 + text.length * 35)); return; }
   try {
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[*_#>`]/g, ""));
+    const u = new SpeechSynthesisUtterance(text);
     u.lang = "de-CH";
     const st = speechSynthesis.getVoices().find(v => /^de(-CH)?/i.test(v.lang) && /CH/i.test(v.lang)) || speechSynthesis.getVoices().find(v => /^de/i.test(v.lang));
     if (st) u.voice = st;
     u.rate = 1.02; u.onend = ende; u.onerror = ende;
     speechSynthesis.speak(u);
   } catch (e) { ende(); }
+}
+async function novaStimme(text) {
+  if (!zuhauseBereit()) return null;
+  try {
+    const r = await fetch(hAddr() + "/v1/stimme", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + hPw(), "X-Nova-App": "Nova-App" },
+      body: JSON.stringify({ figur: "nova", text: text.slice(0, 600) })
+    });
+    if (r.status !== 200) return null;   // 204 = Deckel erreicht oder keine Stimme eingerichtet
+    return URL.createObjectURL(await r.blob());
+  } catch (e) { return null; }
+}
+async function vorlesen(text) {
+  stimmung("spricht");
+  const ende = () => stimmung("");
+  const rein = text.replace(/[*_#>`]/g, "");
+  if (!jget(K.vorlesen, false)) { setTimeout(ende, Math.min(4000, 400 + rein.length * 35)); return; }
+  const url = await novaStimme(rein);
+  if (!url) { handyStimme(rein, ende); return; }
+  stimmeAudio.onended = stimmeAudio.onerror = () => { URL.revokeObjectURL(url); ende(); };
+  stimmeAudio.src = url;
+  stimmeAudio.play().catch(() => { URL.revokeObjectURL(url); handyStimme(rein, ende); });
 }
 
 /* ---------- Gespräch ---------- */
