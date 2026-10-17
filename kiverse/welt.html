@@ -246,6 +246,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <span class="hueter">Hüter: <b>Sunny</b></span>
   <div class="rechts">
     <span id="modus" class="pille">Vorschau</span>
+    <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
     <button id="brilleKnopf" class="knopf" type="button" aria-label="Brillen-Ansicht">Brille</button>
     <button id="einladenKnopf" class="knopf" type="button">KI einladen</button>
@@ -1076,6 +1077,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     figuren.innerHTML = ''; protokoll.innerHTML = ''; z.bewohner.clear(); z.bruecken.clear();
     s.bewohner.forEach(b => figurZeigen(b, false)); s.bruecken.forEach(brueckeZeigen); s.nachrichten.forEach(nachrichtZeigen);
     wohnungenZeigen(s.wohnungen || []);
+    if (s.nova) novaZeigen(s.nova);
     z.ideen = s.ideen || []; ideenZeigen(z.ideen);
     $('#postListe').innerHTML = ''; z.briefe.clear(); (s.briefe || []).forEach(b => briefZeigen(b, false));
     $('#fragenListe').innerHTML = ''; z.fragen.clear(); (s.fragen || []).forEach(frageZeigen); gedaechtnisZeigen(s.gedaechtnis || []);
@@ -1092,6 +1094,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     q.addEventListener('wohnungen', e => wohnungenZeigen(JSON.parse(e.data)));
     q.addEventListener('ideen', e => { z.ideen = JSON.parse(e.data); ideenZeigen(z.ideen); });
     q.addEventListener('gedaechtnis', e => gedaechtnisZeigen(JSON.parse(e.data)));
+    q.addEventListener('nova', e => novaZeigen(JSON.parse(e.data)));
     q.addEventListener('bruecke_weg', e => { z.bruecken.delete(JSON.parse(e.data).id); brueckenMalen(); });
   }
 
@@ -1478,6 +1481,22 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     raum.on('signal', signalEmpfangen);
     raumMelden();
   })();
+
+
+  // ---------- Nova lernt mit (nur live, nur wenn ein Mensch es einschaltet) ----------
+  const novaStand = { lernt: false, verbunden: false };
+  function novaZeigen(n) {
+    Object.assign(novaStand, n);
+    const k = $('#novaKnopf');
+    k.hidden = !z.live || novaStand.verbunden === false;
+    k.textContent = novaStand.lernt ? 'Nova lernt: an' : 'Nova lernt: aus';
+    k.classList.toggle('an', !!novaStand.lernt);
+  }
+  $('#novaKnopf').addEventListener('click', async () => {
+    if (!z.live || !z.ich) { nachrichtZeigen({ von: 'sunny', text: 'Komm zuerst durchs Tor, dann kannst du Nova einladen.' }); return; }
+    try { novaZeigen(await api('api/nova', { id: z.ich.id, an: !novaStand.lernt })); }
+    catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); }
+  });
 
   // ---------- Einladen ----------
   $('#einladenKnopf').addEventListener('click', () => { $('#einladen').hidden = false; });

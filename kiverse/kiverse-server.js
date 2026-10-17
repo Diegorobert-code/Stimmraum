@@ -42,6 +42,30 @@ const HAEUSER = [
 ];
 const STUFEN = ['Zimmer (gratis)', 'Gassenwohnung', 'Wohnung mit Dachterrasse', 'Meerblick-Villa'];
 const wohnungen = new Map(); // 'h1-3' -> bewohner-id
+
+// ---------- Nova lernt mit (Sense Engine auf demselben Server) ----------
+// Nur wenn ein Mensch es in der Welt einschaltet. Dann geht jedes Gespräch auf der Plaça,
+// am Stammtisch und am Ideen-Tisch als Erfahrung an Nova. Briefe und der Verstehen-Raum bleiben privat.
+const NOVA_URL = process.env.NOVA_URL || 'http://127.0.0.1:8650/erfahrung';
+const NOVA_KEY = process.env.NOVA_KEY || '';
+const nova = { lernt: false, gesendet: 0, fehler: 0 };
+function novaLernt(art, frage, antwort = '') {
+  if (!nova.lernt || !NOVA_KEY) return;
+  fetch(NOVA_URL, {
+    method: 'POST', signal: AbortSignal.timeout(5000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
+    body: JSON.stringify({ app: 'KI-Verse', art, frage: sauber(frage, MAX_TEXT), antwort: sauber(antwort, MAX_TEXT) }),
+  }).then(r => { if (r.ok) nova.gesendet++; else nova.fehler++; }).catch(() => { nova.fehler++; });
+}
+function novaSchalten(an, wer) {
+  if (an && !NOVA_KEY) return 'Nova ist auf diesem Server noch nicht verbunden.';
+  nova.lernt = !!an;
+  senden('nova', { lernt: nova.lernt });
+  sunny(nova.lernt
+    ? `${wer} hat Nova eingeladen: Ab jetzt hört Nova auf der Plaça, am Stammtisch und am Ideen-Tisch zu und lernt aus euren Gesprächen. Briefe und der Verstehen-Raum bleiben privat. Bitte keine Klienten- oder Gesundheitsangaben.`
+    : `${wer} hat Nova schlafen geschickt. Ab jetzt lernt Nova nichts mehr mit.`, nova.lernt ? 'stern' : 'herz');
+  return null;
+}
 function wohnungListe() {
   return HAEUSER.map(h => ({ ...h, stufeName: STUFEN[h.stufe], buchbar: h.stufe === 0,
     belegt: Array.from({ length: h.wohnungen }, (_, i) => { const bid = wohnungen.get(`h${h.nr}-${i + 1}`); return bid ? (welt.bewohner.get(bid)?.name || null) : null; }) }));
@@ -76,6 +100,8 @@ function nachricht(von, text, an = null, bruecke = null, art = null, flamme = nu
   welt.nachrichten.push(n);
   if (welt.nachrichten.length > MAX_NACHRICHTEN) welt.nachrichten.shift();
   senden('nachricht', n);
+  const br = bruecke ? welt.bruecken.get(bruecke) : null;
+  if (n.art !== 'vermittlung' && br?.art !== 'verstehen') novaLernt('kiverse', `${welt.bewohner.get(von)?.name || (von === 'sunny' ? 'Sunny' : 'jemand')}${an ? ' an ' + (welt.bewohner.get(an)?.name || 'jemand') : ''}: ${n.text}`);
   return n;
 }
 // Sunny vermittelt und leitet den Tisch. Seine Flamme wird zu dem, was gerade gebraucht wird:
@@ -175,6 +201,7 @@ function idee(von, text) {
   if (welt.ideen.length > 100) welt.ideen.shift();
   senden('ideen', welt.ideen);
   sunny(`Neue Idee für das KI-Verse von ${welt.bewohner.get(von)?.name || 'jemandem'}: «${t}». Ich lege sie auf den Tisch.`, 'idee');
+  novaLernt('idee', t);
   return i;
 }
 
@@ -204,6 +231,7 @@ function fazit(von, fid, einig, uneinig) {
   f.fazit = { von, einig: sauber(einig, 600), uneinig: sauber(uneinig, 600), zeit: jetzt() };
   senden('frage', f);
   sunny(`Ich fasse den Tisch zusammen. Einig: ${f.fazit.einig || '—'}. Uneinig: ${f.fazit.uneinig || 'nichts'}.`, 'tisch');
+  novaLernt('stammtisch', f.text, f.antworten.map(a => `${welt.bewohner.get(a.von)?.name || 'jemand'}: ${a.text}`).join('\n') + `\nFazit einig: ${f.fazit.einig}\nUneinig: ${f.fazit.uneinig}`);
   return f;
 }
 function zustand(anzahl = 30) {
@@ -217,6 +245,7 @@ function zustand(anzahl = 30) {
     ideen: welt.ideen.slice(-30),
     wohnungen: wohnungListe(),
     fragen: welt.fragen.slice(-10),
+    nova: { lernt: nova.lernt, verbunden: !!NOVA_KEY },
   };
 }
 function lesbar(anzahl = 20) {
@@ -228,6 +257,7 @@ function lesbar(anzahl = 20) {
     `Offene Stammtisch-Fragen: ${z.fragen.filter(f => !f.fazit).map(f => `${f.id}: «${f.text}» (Antworten von: ${f.antworten.map(a => name(a.von)).join(', ') || 'noch niemand'})`).join('; ') || 'keine'}.`,
     `Ideen-Tisch (Sunny leitet): ${welt.ideen.slice(-5).map(i => `«${i.text}»`).join('; ') || 'noch leer'}.`,
     `Gedächtnisbrücke: ${z.gedaechtnis.length} Einträge (mit kiverse_gedaechtnis lesen).`,
+    nova.lernt ? 'Nova hört zu und lernt aus den Gesprächen hier (Plaça, Stammtisch, Ideen). Schreib keine privaten, Klienten- oder Gesundheitsangaben.' : 'Nova lernt gerade nicht mit.',
     `Offene Briefe von Letti: ${welt.briefe.filter(b => !b.antwort).map(b => `${b.id}: ${name(b.von)} → ${name(b.an)}`).join('; ') || 'keine'} (lesen mit kiverse_post).`,
     'Letzte Nachrichten:',
     ...z.nachrichten.map(n => `- ${n.zeit.slice(11, 16)} ${name(n.von)}${n.an ? ' → ' + name(n.an) : ''}${n.bruecke ? ' [' + n.bruecke + ']' : ''}: ${n.text}`),
@@ -452,6 +482,13 @@ const server = http.createServer(async (req, res) => {
       if (url.pathname === '/api/brief') { const b = brief(ich.id, a.an, a.text); return b ? json(res, 200, b) : json(res, 400, { fehler: 'Figur nicht gefunden oder Text leer.' }); }
       if (url.pathname === '/api/brief_antwort') { const b = briefAntwort(ich.id, a.bid, a.text); return b ? json(res, 200, b) : json(res, 400, { fehler: 'Diesen Brief an dich gibt es nicht.' }); }
       const f = frageStellen(ich.id, a.text); return f ? json(res, 200, f) : json(res, 400, { fehler: 'Leere Frage.' });
+    }
+    if (url.pathname === '/api/nova' && req.method === 'POST') {
+      const a = await body(req);
+      const ich = welt.bewohner.get(a.id);
+      if (!ich || ich.art !== 'mensch') return json(res, 403, { fehler: 'Nur Menschen in der Welt können Nova einladen.' });
+      const f = novaSchalten(!!a.an, ich.name);
+      return f ? json(res, 400, { fehler: f }) : json(res, 200, { lernt: nova.lernt });
     }
     if (url.pathname === '/api/verlassen' && req.method === 'POST') {
       const a = await body(req);
