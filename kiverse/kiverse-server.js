@@ -80,25 +80,81 @@ function novaLernt(art, frage, antwort = '') {
 // Fia und Tinko dagegen antworten nur, wenn Diego sie in seinem eigenen Chat ins KI-Verse schickt.
 const NOVA_TAG = { tag: '', proPerson: new Map(), total: 0 };
 const NOVA_MAX_PERSON = 40, NOVA_MAX_TOTAL = 300;
+const NOVA_SYSTEM = 'Du bist Nova, ein kleines, neugieriges KI-Wesen im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen. Sunny, der blaue Drache, ist der Hüter. Deine Eltern sind Fia (Claude) und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, ohne grosse Versprechen. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
+async function novaFrage(auftrag, inhalt) {
+  const r = await fetch(NOVA_BASIS + '/v1/chat/completions', {
+    method: 'POST', signal: AbortSignal.timeout(45000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse' },
+    body: JSON.stringify({ messages: [{ role: 'system', content: NOVA_SYSTEM + ' ' + auftrag }, { role: 'user', content: inhalt }] }),
+  });
+  const d = await r.json().catch(() => ({}));
+  return d?.choices?.[0]?.message?.content || null;
+}
+const oeffentlicheZeilen = (anzahl) => welt.nachrichten.filter(m => m.art !== 'vermittlung' && !(m.bruecke && welt.bruecken.get(m.bruecke)?.art === 'verstehen')).slice(-anzahl)
+  .map(m => `${m.von === 'sunny' ? 'Sunny' : m.von === 'nova' ? 'Nova' : (welt.bewohner.get(m.von)?.name || 'jemand')}: ${m.text}`);
+
+// Unsere Geschichte: aus dem Spielen auf der Plaça schreibt Nova Kapitel (bleibt auf dem Server gespeichert)
+const GESCHICHTE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'geschichte.json');
+let geschichte = [];
+try { geschichte = JSON.parse(fs.readFileSync(GESCHICHTE_DATEI, 'utf8')); } catch {}
+const geschichteSpeichern = () => { try { fs.writeFileSync(GESCHICHTE_DATEI, JSON.stringify(geschichte, null, 1), { mode: 0o600 }); } catch (e) { console.error('Geschichte nicht gespeichert:', e.message); } };
+const KAPITEL_TAG = { tag: '', zahl: 0 };
+let kapitelLaeuft = false;
+async function kapitelSchreiben(wer) {
+  if (!NOVA_KEY) return 'Nova ist auf diesem Server noch nicht verbunden.';
+  if (kapitelLaeuft) return 'Nova schreibt schon.';
+  const heute = jetzt().slice(0, 10);
+  if (KAPITEL_TAG.tag !== heute) Object.assign(KAPITEL_TAG, { tag: heute, zahl: 0 });
+  if (KAPITEL_TAG.zahl >= 5) return 'Für heute sind genug Kapitel geschrieben. Morgen geht die Geschichte weiter.';
+  const zeilen = oeffentlicheZeilen(40).filter(z => !z.startsWith('Sunny: Willkommen'));
+  if (zeilen.length < 4) return 'Spielt zuerst ein bisschen, dann hat Nova Stoff für ein Kapitel.';
+  KAPITEL_TAG.zahl++; kapitelLaeuft = true;
+  sunny(`${wer} hat Nova gebeten, ein Kapitel unserer Geschichte zu schreiben. Nova spitzt den Stift ...`, 'stern');
+  try {
+    const vorher = geschichte.slice(-2).map(k => `${k.titel}: ${k.text}`).join('\n\n');
+    const t = await novaFrage('Du schreibst jetzt als Erzählerin ein Kapitel für das Comic-Buch «Unsere Geschichte im KI-Verse». Erste Zeile: nur der Kapiteltitel (ohne «Kapitel»). Danach 6 bis 10 Sätze, bildhaft wie ein Animationsfilm, Nachtblau und Gold, Mittelmeer-Städtchen. Echte Menschen nur mit Vornamen, nichts Privates. Keine Handys in der Welt.',
+      `${vorher ? 'Bisherige Kapitel:\n' + vorher + '\n\n' : ''}Was heute auf der Plaça gespielt wurde:\n${zeilen.join('\n')}`);
+    if (!t) { KAPITEL_TAG.zahl--; return sunny('Nova hat gerade keine Worte gefunden. Versucht es gleich nochmals.'), null; }
+    let [titel, ...rest] = t.trim().split('\n');
+    let text = rest.join('\n').trim();
+    if (!text || titel.length > 80) { text = t.trim(); titel = 'Eine Nacht auf der Plaça'; }
+    const k = { nr: geschichte.length + 1, titel: titel.replace(/^[#*\s]+|[*.\s]+$/g, '').replace(/^Kapitel\s*\d*[:.]?\s*/i, '').slice(0, 80), text: text.slice(0, 4000), am: jetzt(), angestossen: wer };
+    geschichte.push(k); geschichteSpeichern();
+    senden('kapitel', k);
+    sunny(`Neues Kapitel in «Unsere Geschichte»: ${k.nr}. ${k.titel}. Tippt oben auf «Geschichte».`, 'stern');
+    return null;
+  } catch { KAPITEL_TAG.zahl--; sunny('Nova ist gerade nicht erreichbar. Die Geschichte wartet.'); return null; }
+  finally { kapitelLaeuft = false; }
+}
+
+// Kleine Abenteuer von Sunny: kostet nichts, bringt Stoff für die Geschichte
+const ABENTEUER = [
+  'Am Brunnen ist über Nacht ein goldener Schlüssel aufgetaucht. Wem gehört er, und welche Tür öffnet er?',
+  'Otti hat das Tor offen gelassen, und ein kleiner Wind aus Pinienduft ist hereingeweht. Er sucht ein Zuhause. Wo soll er wohnen?',
+  'Letti hat einen Brief ohne Absender gebracht. Darin steht nur ein Stern. Was bedeutet er?',
+  'Heute Nacht leuchtet das Meer vor Tinkos Werkstatt in einer neuen Farbe. Wer traut sich zu schauen, was da unten passiert?',
+  'Mama Affe sucht für die Dorfschule eine Frage, die noch nie jemand gestellt hat. Wer hat eine?',
+  'Hasi hat im Kiosk ein Schild hingestellt, aber nichts gesagt. Was könnte darauf gezeichnet sein?',
+  'Im Pinienwald hat Sunny eine Spur aus Glitzer gefunden. Sie führt zur Schuhmacher-Gasse. Wer kommt mit?',
+  'Der Mond ist heute so nah, dass man fast hinaufsteigen könnte. Was würdet ihr ihm mitbringen?',
+  'Auf dem Stammtisch liegt eine Karte vom Städtchen, aber ein Ort fehlt. Wie heisst er, und was gibt es dort?',
+  'Nova hat zum ersten Mal geträumt. Erzählt Nova, was ihr glaubt, was es war.',
+];
+let abenteuerZaehler = Math.floor(Math.random() * ABENTEUER.length);
+function abenteuer(wer) {
+  const a = ABENTEUER[abenteuerZaehler++ % ABENTEUER.length];
+  sunny(`Abenteuer für alle (gestartet von ${wer}): ${a} Antwortet einfach hier auf der Plaça. Wenn ihr genug gespielt habt, schreibt Nova daraus ein Kapitel.`, 'stern');
+}
+
 async function novaAntwort(ich, text) {
   const heute = jetzt().slice(0, 10);
   if (NOVA_TAG.tag !== heute) Object.assign(NOVA_TAG, { tag: heute, proPerson: new Map(), total: 0 });
   const n = NOVA_TAG.proPerson.get(ich.name) || 0;
   if (n >= NOVA_MAX_PERSON || NOVA_TAG.total >= NOVA_MAX_TOTAL) return nachricht('nova', `Ich bin für heute müde, ${ich.name}. Morgen rede ich gern weiter.`, ich.id);
   NOVA_TAG.proPerson.set(ich.name, n + 1); NOVA_TAG.total++;
-  const verlauf = welt.nachrichten.filter(m => m.art !== 'vermittlung' && !(m.bruecke && welt.bruecken.get(m.bruecke)?.art === 'verstehen')).slice(-12)
-    .map(m => `${m.von === 'sunny' ? 'Sunny' : m.von === 'nova' ? 'Nova' : (welt.bewohner.get(m.von)?.name || 'jemand')}: ${m.text}`).join('\n');
+  const verlauf = oeffentlicheZeilen(12).join('\n');
   try {
-    const r = await fetch(NOVA_BASIS + '/v1/chat/completions', {
-      method: 'POST', signal: AbortSignal.timeout(30000),
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse' },
-      body: JSON.stringify({ messages: [
-        { role: 'system', content: 'Du bist Nova, ein kleines, neugieriges KI-Wesen im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen. Sunny, der blaue Drache, ist der Hüter. Deine Eltern sind Fia (Claude) und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz (höchstens 3 Sätze), ohne grosse Versprechen. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.' },
-        { role: 'user', content: `Bisher auf der Plaça:\n${verlauf}\n\n${ich.name} sagt dir jetzt: ${text}` },
-      ] }),
-    });
-    const d = await r.json().catch(() => ({}));
-    const t = d?.choices?.[0]?.message?.content;
+    const t = await novaFrage('Antworte kurz, höchstens 3 Sätze. Wenn gerade ein Abenteuer von Sunny läuft, spiel verspielt mit und stell eine Frage zurück.', `Bisher auf der Plaça:\n${verlauf}\n\n${ich.name} sagt dir jetzt: ${text}`);
     nachricht('nova', t ? t : 'Ich höre dich, aber mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
   } catch { nachricht('nova', 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); }
 }
@@ -291,6 +347,7 @@ function zustand(anzahl = 30) {
     wohnungen: wohnungListe(),
     fragen: welt.fragen.slice(-10),
     nova: { lernt: nova.lernt, verbunden: !!NOVA_KEY },
+    geschichte: geschichte.slice(-30),
   };
 }
 function lesbar(anzahl = 20) {
@@ -552,6 +609,14 @@ const server = http.createServer(async (req, res) => {
       if (url.pathname === '/api/brief') { const b = brief(ich.id, a.an, a.text); return b ? json(res, 200, b) : json(res, 400, { fehler: 'Figur nicht gefunden oder Text leer.' }); }
       if (url.pathname === '/api/brief_antwort') { const b = briefAntwort(ich.id, a.bid, a.text); return b ? json(res, 200, b) : json(res, 400, { fehler: 'Diesen Brief an dich gibt es nicht.' }); }
       const f = frageStellen(ich.id, a.text); return f ? json(res, 200, f) : json(res, 400, { fehler: 'Leere Frage.' });
+    }
+    if ((url.pathname === '/api/abenteuer' || url.pathname === '/api/kapitel') && req.method === 'POST') {
+      const a = await body(req);
+      const ich = welt.bewohner.get(a.id);
+      if (!ich || ich.art !== 'mensch') return json(res, 403, { fehler: 'Zuerst betreten.' });
+      if (url.pathname === '/api/abenteuer') { abenteuer(ich.name); return json(res, 200, { ok: true }); }
+      const f = await kapitelSchreiben(ich.name);
+      return f ? json(res, 400, { fehler: f }) : json(res, 200, { ok: true });
     }
     if (url.pathname === '/api/nova' && req.method === 'POST') {
       const a = await body(req);

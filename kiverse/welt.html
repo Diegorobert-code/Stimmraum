@@ -223,6 +223,10 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 .kamera-hilfe { margin: 8px 0; padding-left: 16px; font-size: .76rem; line-height: 1.45; }
 .kamera-panel .zeilen { display: flex; flex-wrap: wrap; gap: 6px; }
 .gast-neu { margin: 10px 0; padding: 10px; border: 1px solid var(--gold); border-radius: 10px; word-break: break-all; font-size: .8rem; }
+.kapitel { padding: 10px 0; border-bottom: 1px solid var(--rand); }
+.kapitel h3 { margin: 0 0 4px; color: var(--gold, #f2c14e); font-size: 1rem; }
+.kapitel p { margin: 0; white-space: pre-line; line-height: 1.45; }
+.kapitel small { opacity: .6; }
 .gast-zeile { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--rand); }
 .kamera-panel .klein { font-size: .7rem; opacity: .8; margin: 6px 0 0; }
 .kamera-panel.zu .kamera-hilfe, .kamera-panel.zu .klein { display: none; }
@@ -248,6 +252,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <span class="hueter">Hüter: <b>Sunny</b></span>
   <div class="rechts">
     <span id="modus" class="pille">Vorschau</span>
+    <button id="abenteuerKnopf" class="knopf gold" type="button" title="Sunny gibt allen ein kleines Abenteuer">Abenteuer</button>
+    <button id="geschichteKnopf" class="knopf" type="button" title="Unsere Geschichte, von Nova aus dem Spielen geschrieben">Geschichte</button>
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
@@ -457,6 +463,18 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <div class="liste" id="gaesteListe"></div>
     <p class="hinweis">Gäste reden mit dir, mit Nova und mit allen auf der Plaça. Fia und Tinko antworten, wenn du sie in deinem eigenen Chat ins KI-Verse schickst. Bitte nur Team und Familie einladen und keine Klienten.</p>
     <div class="zeilen"><button class="knopf gold" type="button" id="gaesteZu">Schliessen</button></div>
+  </div>
+</div>
+
+<div class="schleier" id="geschichte" hidden>
+  <div class="karte">
+    <h2>Unsere Geschichte</h2>
+    <p>Ihr spielt auf der Plaça, Nova schreibt daraus Kapitel. So entsteht nach und nach unsere Geschichte.</p>
+    <div class="liste" id="kapitelListe"></div>
+    <div class="zeilen">
+      <button class="knopf gold" type="button" id="kapitelKnopf">Nova, schreib ein Kapitel</button>
+      <button class="knopf" type="button" id="geschichteZu">Schliessen</button>
+    </div>
   </div>
 </div>
 
@@ -1100,6 +1118,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     s.bewohner.forEach(b => figurZeigen(b, false)); s.bruecken.forEach(brueckeZeigen); s.nachrichten.forEach(nachrichtZeigen);
     wohnungenZeigen(s.wohnungen || []);
     if (s.nova) novaZeigen(s.nova);
+    z.geschichte = s.geschichte || [];
     z.ideen = s.ideen || []; ideenZeigen(z.ideen);
     $('#postListe').innerHTML = ''; z.briefe.clear(); (s.briefe || []).forEach(b => briefZeigen(b, false));
     $('#fragenListe').innerHTML = ''; z.fragen.clear(); (s.fragen || []).forEach(frageZeigen); gedaechtnisZeigen(s.gedaechtnis || []);
@@ -1117,6 +1136,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     q.addEventListener('ideen', e => { z.ideen = JSON.parse(e.data); ideenZeigen(z.ideen); });
     q.addEventListener('gedaechtnis', e => gedaechtnisZeigen(JSON.parse(e.data)));
     q.addEventListener('nova', e => novaZeigen(JSON.parse(e.data)));
+    q.addEventListener('kapitel', e => { const k = JSON.parse(e.data); z.geschichte.push(k); if (!$('#geschichte').hidden) kapitelZeigen(); });
     q.addEventListener('bruecke_weg', e => { z.bruecken.delete(JSON.parse(e.data).id); brueckenMalen(); });
   }
 
@@ -1520,6 +1540,34 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); }
   });
 
+
+  // ---------- Abenteuer und unsere Geschichte ----------
+  z.geschichte = [];
+  const VORSCHAU_ABENTEUER = ['Am Brunnen ist über Nacht ein goldener Schlüssel aufgetaucht. Wem gehört er, und welche Tür öffnet er?', 'Im Pinienwald hat Sunny eine Spur aus Glitzer gefunden. Sie führt zur Schuhmacher-Gasse. Wer kommt mit?'];
+  $('#abenteuerKnopf').addEventListener('click', async () => {
+    if (!z.live) { nachrichtZeigen({ von: 'sunny', text: 'Abenteuer: ' + VORSCHAU_ABENTEUER[Math.floor(Math.random() * VORSCHAU_ABENTEUER.length)] + ' (Vorschau, live spielt ihr es zusammen.)' }); return; }
+    if (!z.ich) { nachrichtZeigen({ von: 'sunny', text: 'Komm zuerst durchs Tor, dann starte ich ein Abenteuer für alle.' }); return; }
+    try { await api('api/abenteuer', { id: z.ich.id }); } catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); }
+  });
+  function kapitelZeigen() {
+    const l = $('#kapitelListe'); l.innerHTML = '';
+    if (!z.geschichte.length) { l.textContent = 'Noch kein Kapitel. Startet ein Abenteuer, spielt ein bisschen, dann bittet Nova ums erste Kapitel.'; return; }
+    for (const k of [...z.geschichte].reverse()) {
+      const d = document.createElement('div'); d.className = 'kapitel';
+      const h = document.createElement('h3'); h.textContent = `${k.nr}. ${k.titel}`;
+      const p = document.createElement('p'); p.textContent = k.text;
+      const m = document.createElement('small'); m.textContent = `${new Date(k.am).toLocaleDateString('de-CH')} · angestossen von ${k.angestossen}`;
+      d.append(h, p, m); l.appendChild(d);
+    }
+  }
+  $('#geschichteKnopf').addEventListener('click', () => { $('#geschichte').hidden = false; kapitelZeigen(); });
+  $('#geschichteZu').addEventListener('click', () => { $('#geschichte').hidden = true; });
+  $('#kapitelKnopf').addEventListener('click', async () => {
+    if (!z.live || !z.ich) { alert('Kapitel schreibt Nova im echten KI-Verse, wenn du durchs Tor gekommen bist.'); return; }
+    const k = $('#kapitelKnopf'); k.disabled = true; k.textContent = 'Nova schreibt ...';
+    try { await api('api/kapitel', { id: z.ich.id }); } catch (er) { alert(er.message); }
+    k.disabled = false; k.textContent = 'Nova, schreib ein Kapitel';
+  });
 
   // ---------- Menschen einladen (nur Diego) ----------
   const gastLink = (k) => location.origin + location.pathname + '?k=' + encodeURIComponent(k);
