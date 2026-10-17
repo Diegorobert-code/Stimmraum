@@ -19,9 +19,17 @@ apt-get install -y curl ca-certificates openssl caddy ufw python3 python3-venv s
 
 echo "== 2/5 Fia (Claude) anbinden"
 echo "Claude-Schluessel (beginnt mit sk-ant-) hier einfuegen. Er wird nicht angezeigt und nur auf diesem Server gespeichert."
-read -r -s -p "Claude-Schluessel: " CLAUDE_KEY </dev/tty
+echo "Es darf auch der ganze cURL-Beispieltext aus der Claude Console sein, der Schluessel wird herausgesucht."
+printf "Claude-Schluessel: "
+CLAUDE_KEY=""
+while IFS= read -r -s ZEILE </dev/tty; do
+  CLAUDE_KEY="$(printf '%s' "$ZEILE" | grep -oE 'sk-ant-[A-Za-z0-9_-]+' | head -n1 || true)"
+  [ -n "$CLAUDE_KEY" ] && break
+done
+# Restliche eingefuegte Zeilen (z. B. vom cURL-Beispiel) verwerfen
+while IFS= read -r -s -t 2 _REST </dev/tty; do :; done
 echo
-case "$CLAUDE_KEY" in sk-ant-*) ;; *) echo "Das sieht nicht wie ein Claude-Schluessel aus. Bitte neu starten." >&2; exit 1 ;; esac
+echo "Claude-Schluessel erkannt (endet auf ...${CLAUDE_KEY: -4})."
 echo "Figurenstimmen: ElevenLabs-Schluessel einfuegen (oder einfach Enter, dann sprechen die Apps mit der Handy-Stimme)."
 read -r -s -p "ElevenLabs-Schluessel: " ELEVEN_KEY </dev/tty
 echo
