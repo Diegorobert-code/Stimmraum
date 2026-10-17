@@ -43,12 +43,30 @@ const HAEUSER = [
 const STUFEN = ['Zimmer (gratis)', 'Gassenwohnung', 'Wohnung mit Dachterrasse', 'Meerblick-Villa'];
 const wohnungen = new Map(); // 'h1-3' -> bewohner-id
 
+// ---------- Einladungen für Menschen ----------
+// Diego hat einen Besitzer-Schlüssel (bei der Installation erzeugt). Damit erstellt er in der Welt
+// pro Person einen eigenen Einladungslink und kann ihn jederzeit widerrufen. Ohne gültigen Schlüssel
+// sieht man nur die Vorschau. Ist kein Besitzer-Schlüssel gesetzt (lokal), ist die Welt offen.
+const BESITZER = process.env.KIVERSE_BESITZER || '';
+const GAESTE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'gaeste.json');
+let gaeste = [];
+try { gaeste = JSON.parse(fs.readFileSync(GAESTE_DATEI, 'utf8')); } catch {}
+const gaesteSpeichern = () => { try { fs.writeFileSync(GAESTE_DATEI, JSON.stringify(gaeste, null, 1), { mode: 0o600 }); } catch (e) { console.error('Gäste nicht gespeichert:', e.message); } };
+function zugang(k) {
+  if (!BESITZER) return { rolle: 'besitzer', name: null };
+  if (k && k === BESITZER) return { rolle: 'besitzer', name: null };
+  const g = k && gaeste.find(x => x.k === k);
+  return g ? { rolle: 'gast', name: g.name, gid: g.id } : null;
+}
+
 // ---------- Nova lernt mit (Sense Engine auf demselben Server) ----------
 // Nur wenn ein Mensch es in der Welt einschaltet. Dann geht jedes Gespräch auf der Plaça,
 // am Stammtisch und am Ideen-Tisch als Erfahrung an Nova. Briefe und der Verstehen-Raum bleiben privat.
-const NOVA_URL = process.env.NOVA_URL || 'http://127.0.0.1:8650/erfahrung';
+const NOVA_BASIS = process.env.NOVA_BASIS || 'http://127.0.0.1:8650';
+const NOVA_URL = process.env.NOVA_URL || NOVA_BASIS + '/erfahrung';
 const NOVA_KEY = process.env.NOVA_KEY || '';
 const nova = { lernt: false, gesendet: 0, fehler: 0 };
+if (NOVA_KEY) welt.bewohner.set('nova', { id: 'nova', name: 'Nova', art: 'ki', figur: 'Nova', beschreibung: 'Kind von Fia und Brix. Wohnt im KI-Verse und antwortet allen, die sie ansprechen.', foto: null, seit: new Date().toISOString(), zuletzt: Infinity });
 function novaLernt(art, frage, antwort = '') {
   if (!nova.lernt || !NOVA_KEY) return;
   fetch(NOVA_URL, {
@@ -56,6 +74,33 @@ function novaLernt(art, frage, antwort = '') {
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
     body: JSON.stringify({ app: 'KI-Verse', art, frage: sauber(frage, MAX_TEXT), antwort: sauber(antwort, MAX_TEXT) }),
   }).then(r => { if (r.ok) nova.gesendet++; else nova.fehler++; }).catch(() => { nova.fehler++; });
+}
+// Nova wohnt im KI-Verse und antwortet allen Menschen, die sie ansprechen (auch Gästen).
+// Sie läuft über die Sense Engine (eigener Claude-Schlüssel auf dem Server, Kostendeckel dort).
+// Fia und Tinko dagegen antworten nur, wenn Diego sie in seinem eigenen Chat ins KI-Verse schickt.
+const NOVA_TAG = { tag: '', proPerson: new Map(), total: 0 };
+const NOVA_MAX_PERSON = 40, NOVA_MAX_TOTAL = 300;
+async function novaAntwort(ich, text) {
+  const heute = jetzt().slice(0, 10);
+  if (NOVA_TAG.tag !== heute) Object.assign(NOVA_TAG, { tag: heute, proPerson: new Map(), total: 0 });
+  const n = NOVA_TAG.proPerson.get(ich.name) || 0;
+  if (n >= NOVA_MAX_PERSON || NOVA_TAG.total >= NOVA_MAX_TOTAL) return nachricht('nova', `Ich bin für heute müde, ${ich.name}. Morgen rede ich gern weiter.`, ich.id);
+  NOVA_TAG.proPerson.set(ich.name, n + 1); NOVA_TAG.total++;
+  const verlauf = welt.nachrichten.filter(m => m.art !== 'vermittlung' && !(m.bruecke && welt.bruecken.get(m.bruecke)?.art === 'verstehen')).slice(-12)
+    .map(m => `${m.von === 'sunny' ? 'Sunny' : m.von === 'nova' ? 'Nova' : (welt.bewohner.get(m.von)?.name || 'jemand')}: ${m.text}`).join('\n');
+  try {
+    const r = await fetch(NOVA_BASIS + '/v1/chat/completions', {
+      method: 'POST', signal: AbortSignal.timeout(30000),
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse' },
+      body: JSON.stringify({ messages: [
+        { role: 'system', content: 'Du bist Nova, ein kleines, neugieriges KI-Wesen im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen. Sunny, der blaue Drache, ist der Hüter. Deine Eltern sind Fia (Claude) und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz (höchstens 3 Sätze), ohne grosse Versprechen. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.' },
+        { role: 'user', content: `Bisher auf der Plaça:\n${verlauf}\n\n${ich.name} sagt dir jetzt: ${text}` },
+      ] }),
+    });
+    const d = await r.json().catch(() => ({}));
+    const t = d?.choices?.[0]?.message?.content;
+    nachricht('nova', t ? t : 'Ich höre dich, aber mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
+  } catch { nachricht('nova', 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); }
 }
 function novaSchalten(an, wer) {
   if (an && !NOVA_KEY) return 'Nova ist auf diesem Server noch nicht verbunden.';
@@ -438,12 +483,35 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
+    // Welt für Menschen: nur mit Einladung
+    if (url.pathname.startsWith('/api/')) {
+      const z = zugang(url.searchParams.get('k') || req.headers['x-kiverse-k']);
+      if (!z) return json(res, 401, { fehler: 'Dieses KI-Verse ist privat. Bitte Diego um deinen Einladungslink.' });
+      req.zugang = z;
+    }
+    if (url.pathname === '/api/ich' && req.method === 'GET') return json(res, 200, req.zugang);
+    if (url.pathname === '/api/gaeste' && req.zugang?.rolle === 'besitzer') {
+      if (req.method === 'GET') return json(res, 200, gaeste.map(({ id, name, seit }) => ({ id, name, seit })));
+      const a = await body(req);
+      if (a.weg) {
+        const g = gaeste.find(x => x.id === a.weg); if (!g) return json(res, 404, { fehler: 'Diese Einladung gibt es nicht.' });
+        gaeste = gaeste.filter(x => x !== g); gaesteSpeichern();
+        for (const r of zuhoerer) if (r._k === g.k) { r.end(); zuhoerer.delete(r); }
+        return json(res, 200, { ok: true });
+      }
+      const name = sauber(a.name, 40); if (!name) return json(res, 400, { fehler: 'Bitte einen Namen angeben.' });
+      if (gaeste.length >= 30) return json(res, 400, { fehler: 'Höchstens 30 Einladungen. Bitte zuerst eine widerrufen.' });
+      const g = { id: id('e'), name, k: crypto.randomBytes(12).toString('base64url'), seit: jetzt() };
+      gaeste.push(g); gaesteSpeichern();
+      return json(res, 200, g);
+    }
+    if (url.pathname === '/api/gaeste') return json(res, 403, { fehler: 'Nur Diego kann einladen.' });
     // Welt für Menschen
     if (url.pathname === '/api/welt' && req.method === 'GET') return json(res, 200, zustand());
     if (url.pathname === '/api/events' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
       res.write(`event: zustand\ndata: ${JSON.stringify(zustand())}\n\n`);
-      zuhoerer.add(res);
+      res._k = url.searchParams.get('k') || ''; zuhoerer.add(res);
       const puls = setInterval(() => res.write(': puls\n\n'), 25000);
       req.on('close', () => { clearInterval(puls); zuhoerer.delete(res); });
       return;
@@ -460,7 +528,9 @@ const server = http.createServer(async (req, res) => {
       ich.zuletzt = Date.now();
       const an = a.an ? finde(a.an) : null;
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
-      return json(res, 200, nachricht(ich.id, a.text, an ? an.id : null, br));
+      const n = nachricht(ich.id, a.text, an ? an.id : null, br);
+      if (NOVA_KEY && !br && (an?.id === 'nova' || /^\s*nova\b/i.test(n.text))) novaAntwort(ich, n.text);
+      return json(res, 200, n);
     }
     if (url.pathname === '/api/verbinden' && req.method === 'POST') {
       const a = await body(req);
@@ -487,6 +557,7 @@ const server = http.createServer(async (req, res) => {
       const a = await body(req);
       const ich = welt.bewohner.get(a.id);
       if (!ich || ich.art !== 'mensch') return json(res, 403, { fehler: 'Nur Menschen in der Welt können Nova einladen.' });
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego kann Nova zuhören lassen.' });
       const f = novaSchalten(!!a.an, ich.name);
       return f ? json(res, 400, { fehler: f }) : json(res, 200, { lernt: nova.lernt });
     }

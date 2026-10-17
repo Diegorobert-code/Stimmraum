@@ -222,6 +222,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 .kamera-panel #kameraStatus { font-size: .78rem; color: var(--gold-hell); }
 .kamera-hilfe { margin: 8px 0; padding-left: 16px; font-size: .76rem; line-height: 1.45; }
 .kamera-panel .zeilen { display: flex; flex-wrap: wrap; gap: 6px; }
+.gast-neu { margin: 10px 0; padding: 10px; border: 1px solid var(--gold); border-radius: 10px; word-break: break-all; font-size: .8rem; }
+.gast-zeile { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--rand); }
 .kamera-panel .klein { font-size: .7rem; opacity: .8; margin: 6px 0 0; }
 .kamera-panel.zu .kamera-hilfe, .kamera-panel.zu .klein { display: none; }
 .kamera-panel.zu { width: auto; max-width: 210px; }
@@ -246,6 +248,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <span class="hueter">Hüter: <b>Sunny</b></span>
   <div class="rechts">
     <span id="modus" class="pille">Vorschau</span>
+    <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
     <button id="brilleKnopf" class="knopf" type="button" aria-label="Brillen-Ansicht">Brille</button>
@@ -440,6 +443,21 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   </div>
   <p class="klein">Dein Kamerabild bleibt im Handy. Andere sehen nur deine Comicfigur.</p>
   <audio id="fernTon" autoplay playsinline></audio>
+</div>
+
+<div class="schleier" id="gaeste" hidden>
+  <div class="karte">
+    <h2>Menschen einladen</h2>
+    <p>Jede Person bekommt ihren eigenen Link. Schick ihn ihr selbst, zum Beispiel per WhatsApp. Widerrufst du ihn, kommt sie nicht mehr herein.</p>
+    <form class="eingabe" id="gastForm">
+      <input type="text" id="gastName" placeholder="Name, zum Beispiel Kay" maxlength="40" autocomplete="off" aria-label="Name">
+      <button class="knopf gold" type="submit">Link erstellen</button>
+    </form>
+    <div id="gastNeu" class="gast-neu" hidden></div>
+    <div class="liste" id="gaesteListe"></div>
+    <p class="hinweis">Gäste reden mit dir, mit Nova und mit allen auf der Plaça. Fia und Tinko antworten, wenn du sie in deinem eigenen Chat ins KI-Verse schickst. Bitte nur Team und Familie einladen und keine Klienten.</p>
+    <div class="zeilen"><button class="knopf gold" type="button" id="gaesteZu">Schliessen</button></div>
+  </div>
 </div>
 
 <div class="schleier" id="einladen" hidden>
@@ -1072,7 +1090,11 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   }
 
   // ---------- Verbindung (live) oder Vorschau ----------
-  const api = (pfad, daten) => fetch(pfad, daten ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten) } : {}).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.fehler || r.status))));
+  // Einladungsschlüssel: aus dem Link (?k=…) und danach im Gerät gemerkt
+  let K = new URLSearchParams(location.search).get('k') || '';
+  try { if (K) localStorage.setItem('kiverse_k', K); else K = localStorage.getItem('kiverse_k') || ''; } catch {}
+  const mitK = (p) => K ? p + (p.includes('?') ? '&' : '?') + 'k=' + encodeURIComponent(K) : p;
+  const api = (pfad, daten) => fetch(mitK(pfad), daten ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten) } : {}).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(new Error(e.fehler || r.status))));
   function zustandLaden(s) {
     figuren.innerHTML = ''; protokoll.innerHTML = ''; z.bewohner.clear(); z.bruecken.clear();
     s.bewohner.forEach(b => figurZeigen(b, false)); s.bruecken.forEach(brueckeZeigen); s.nachrichten.forEach(nachrichtZeigen);
@@ -1083,7 +1105,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     $('#fragenListe').innerHTML = ''; z.fragen.clear(); (s.fragen || []).forEach(frageZeigen); gedaechtnisZeigen(s.gedaechtnis || []);
   }
   function liveStarten() {
-    const q = new EventSource('api/events');
+    const q = new EventSource(mitK('api/events'));
     q.addEventListener('zustand', e => zustandLaden(JSON.parse(e.data)));
     q.addEventListener('betreten', e => { const b = JSON.parse(e.data); if (!z.bewohner.has(b.id)) figurZeigen(b, true); });
     q.addEventListener('verlassen', e => figurWeg(JSON.parse(e.data).id));
@@ -1213,7 +1235,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     if (z.live) { try { await api('api/verbinden', { id: z.ich.id, mit, thema: 'Gespräch mit ' + z.ich.name }); } catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); } }
     else vorschau.bruecke(z.ich.id, mit, 'Gespräch mit ' + z.ich.name);
   });
-  addEventListener('pagehide', () => { if (z.live && z.ich) navigator.sendBeacon('api/verlassen', new Blob([JSON.stringify({ id: z.ich.id })], { type: 'application/json' })); });
+  addEventListener('pagehide', () => { if (z.live && z.ich) navigator.sendBeacon(mitK('api/verlassen'), new Blob([JSON.stringify({ id: z.ich.id })], { type: 'application/json' })); });
 
   $('#verstehenKnopf').addEventListener('click', async () => {
     const mit = $('#anWen').value; if (!z.ich) return;
@@ -1488,7 +1510,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   function novaZeigen(n) {
     Object.assign(novaStand, n);
     const k = $('#novaKnopf');
-    k.hidden = !z.live || novaStand.verbunden === false;
+    k.hidden = !z.live || novaStand.verbunden === false || z.rolle !== 'besitzer';
     k.textContent = novaStand.lernt ? 'Nova lernt: an' : 'Nova lernt: aus';
     k.classList.toggle('an', !!novaStand.lernt);
   }
@@ -1498,15 +1520,55 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); }
   });
 
+
+  // ---------- Menschen einladen (nur Diego) ----------
+  const gastLink = (k) => location.origin + location.pathname + '?k=' + encodeURIComponent(k);
+  async function gaesteZeigen() {
+    const liste = $('#gaesteListe'); liste.innerHTML = '';
+    let gs = []; try { gs = await api('api/gaeste'); } catch (e) { liste.textContent = e.message; return; }
+    if (!gs.length) { liste.textContent = 'Noch niemand eingeladen.'; return; }
+    for (const g of gs) {
+      const z1 = document.createElement('div'); z1.className = 'gast-zeile';
+      const n = document.createElement('span'); n.textContent = `${g.name} · seit ${new Date(g.seit).toLocaleDateString("de-CH")}`;
+      const w = document.createElement('button'); w.className = 'knopf'; w.type = 'button'; w.textContent = 'Widerrufen';
+      w.addEventListener('click', async () => { try { await api('api/gaeste', { weg: g.id }); gaesteZeigen(); } catch (e) { alert(e.message); } });
+      z1.append(n, w); liste.appendChild(z1);
+    }
+  }
+  $('#gaesteKnopf').addEventListener('click', () => { $('#gaeste').hidden = false; $('#gastNeu').hidden = true; gaesteZeigen(); });
+  $('#gaesteZu').addEventListener('click', () => { $('#gaeste').hidden = true; });
+  $('#gastForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('#gastName').value.trim(); if (!name) return;
+    try {
+      const g = await api('api/gaeste', { name }); $('#gastName').value = '';
+      const box = $('#gastNeu'); box.hidden = false; box.innerHTML = '';
+      const t = document.createElement('div'); t.textContent = `Link für ${g.name}:`;
+      const l = document.createElement('div'); l.textContent = gastLink(g.k);
+      const k = document.createElement('button'); k.className = 'knopf gold'; k.type = 'button'; k.textContent = 'Link kopieren';
+      k.addEventListener('click', async () => { try { await navigator.clipboard.writeText(gastLink(g.k)); k.textContent = 'Kopiert ✓'; } catch { k.textContent = 'Bitte von Hand markieren'; } });
+      const teilen = document.createElement('button'); teilen.className = 'knopf'; teilen.type = 'button'; teilen.textContent = 'Teilen';
+      teilen.hidden = !navigator.share;
+      teilen.addEventListener('click', () => navigator.share({ title: 'Einladung ins KI-Verse', text: `Hallo ${g.name}, hier ist deine Einladung ins KI-Verse:`, url: gastLink(g.k) }).catch(() => {}));
+      const zl = document.createElement('div'); zl.className = 'zeilen'; zl.append(k, teilen);
+      box.append(t, l, zl); gaesteZeigen();
+    } catch (er) { alert(er.message); }
+  });
+
   // ---------- Einladen ----------
   $('#einladenKnopf').addEventListener('click', () => { $('#einladen').hidden = false; });
   $('#einladenZu').addEventListener('click', () => { $('#einladen').hidden = true; });
   if (location.protocol.startsWith('http')) $('#mcpAdresse1').textContent = location.origin + '/mcp/EINLADUNGSCODE';
 
   // ---------- Start ----------
-  fetch('api/welt', { cache: 'no-store' }).then(r => r.ok ? r.json() : Promise.reject()).then(s => {
+  let privat = false;
+  fetch(mitK('api/welt'), { cache: 'no-store' }).then(r => { privat = r.status === 401; return r.ok ? r.json() : Promise.reject(); }).then(s => {
     if (!s || !Array.isArray(s.bewohner)) throw 0;
     z.live = true; const m = $('#modus'); m.textContent = 'Live'; m.classList.add('live'); liveStarten();
-  }).catch(() => vorschauStarten());
+    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
+  }).catch(() => {
+    vorschauStarten();
+    if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }
+  });
 })();
 </script>

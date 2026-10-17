@@ -13,6 +13,11 @@ id kiverse >/dev/null 2>&1 || useradd --system --no-create-home kiverse
 CODE_DATEI=$ORDNER/einladungscode
 [ -f $CODE_DATEI ] || head -c 12 /dev/urandom | base64 | tr -d '/+=' > $CODE_DATEI
 chmod 600 $CODE_DATEI; chown kiverse $CODE_DATEI
+# Diegos persönlicher Besitzer-Schlüssel (nur er kann Menschen einladen) + Ordner für die Gästeliste
+BES_DATEI=$ORDNER/besitzer-code
+[ -f $BES_DATEI ] || head -c 18 /dev/urandom | base64 | tr -d '/+=' > $BES_DATEI
+chmod 600 $BES_DATEI; chown kiverse $BES_DATEI
+mkdir -p $ORDNER/daten && chown kiverse $ORDNER/daten && chmod 700 $ORDNER/daten
 # Nova (Sense Engine auf diesem Server) darf aus dem KI-Verse lernen, wenn ein Mensch es einschaltet
 NOVA_ENV=$ORDNER/nova.env
 : > $NOVA_ENV
@@ -29,7 +34,7 @@ After=network.target
 User=kiverse
 Environment=KIVERSE_PORT=8787
 EnvironmentFile=-$ORDNER/nova.env
-ExecStart=/bin/sh -c 'KIVERSE_CODE=\$(cat $CODE_DATEI) exec node $ORDNER/kiverse-server.js'
+ExecStart=/bin/sh -c 'KIVERSE_CODE=\$(cat $CODE_DATEI) KIVERSE_BESITZER=\$(cat $BES_DATEI) KIVERSE_DATEN=$ORDNER/daten exec node $ORDNER/kiverse-server.js'
 Restart=always
 [Install]
 WantedBy=multi-user.target
@@ -41,3 +46,7 @@ echo
 echo "KI-Verse läuft:  https://$DOMAIN/"
 echo "Connector-Adresse für Fia (Claude) und Tinko (ChatGPT) – NICHT in den Chat kopieren:"
 echo "  https://$DOMAIN/mcp/$(cat $CODE_DATEI)"
+echo
+echo "DEIN persönlicher KI-Verse-Link (nur für dich, kein Foto, nicht teilen):"
+echo "  https://$DOMAIN/?k=$(cat $BES_DATEI)"
+echo "Damit öffnest du das KI-Verse und kannst über «Menschen einladen» Links für andere machen."
