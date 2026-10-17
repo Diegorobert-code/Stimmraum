@@ -10,7 +10,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 REPO_RAW="https://raw.githubusercontent.com/Diegorobert-code/Stimmraum/nova-server-klein/server"
-ORIGINS="https://diegorobert-code.github.io,https://drlab.ch,https://www.drlab.ch,https://headless-zewdelhstzx-diegoroberttherapy-1412.wix-site-host.com"
+ORIGINS="https://diegorobert-code.github.io,https://drlab.ch,https://www.drlab.ch,https://headless-zewdelhstzx-diegoroberttherapy-1412.wix-site-host.com,https://raw.githack.com"
 
 echo "== 1/5 System aktualisieren"
 export DEBIAN_FRONTEND=noninteractive
@@ -22,6 +22,9 @@ echo "Claude-Schluessel (beginnt mit sk-ant-) hier einfuegen. Er wird nicht ange
 read -r -s -p "Claude-Schluessel: " CLAUDE_KEY </dev/tty
 echo
 case "$CLAUDE_KEY" in sk-ant-*) ;; *) echo "Das sieht nicht wie ein Claude-Schluessel aus. Bitte neu starten." >&2; exit 1 ;; esac
+echo "Figurenstimmen: ElevenLabs-Schluessel einfuegen (oder einfach Enter, dann sprechen die Apps mit der Handy-Stimme)."
+read -r -s -p "ElevenLabs-Schluessel: " ELEVEN_KEY </dev/tty
+echo
 
 echo "== 3/5 Sense Engine mit eigener Datenbank einrichten"
 API_KEY="$(openssl rand -hex 24)"
@@ -36,9 +39,12 @@ SENSE_ORIGINS=$ORIGINS
 ANTHROPIC_API_KEY=$CLAUDE_KEY
 SENSE_MODELL=claude-haiku-5-5
 SENSE_KI_DECKEL_USD=5.5
+ELEVENLABS_API_KEY=$ELEVEN_KEY
+SENSE_STIMME_MODELL=eleven_flash_v2_5
+SENSE_STIMME_DECKEL_USD=11
 EOF
 chmod 600 /etc/sense-engine.env
-unset CLAUDE_KEY
+unset CLAUDE_KEY ELEVEN_KEY
 cat >/etc/systemd/system/sense-engine.service <<'EOF'
 [Unit]
 Description=Sense Engine - Novas Zuhause

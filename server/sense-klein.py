@@ -9,6 +9,8 @@ Kostenbremse: höchstens SENSE_KI_DECKEL_USD pro Monat, danach sagt Nova müde �
   POST /v1/chat/completions   OpenAI-kompatibel. Header "X-Nova-App" nennt die App.
   POST /erfahrung             {"app": "...", "frage": "...", "antwort": "...", "art": "wunsch"}
   GET  /erfahrung?n=50&art=   die letzten Erfahrungen (art=wunsch: nur Bauwünsche)
+  POST /v1/stimme             {"figur": "otti", "text": "..."} -> MP3 in der Figurenstimme (ElevenLabs Flash, gestreamt)
+                              204 = keine Stimme (Deckel erreicht oder kein Schlüssel): App nimmt die Handy-Stimme
   GET  /health
 
 Schutz: Authorization: Bearer <SENSE_API_KEY>.
@@ -18,6 +20,8 @@ import os
 import sqlite3
 import threading
 import time
+import urllib.error
+import urllib.request
 
 import anthropic
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -30,6 +34,20 @@ DECKEL_USD = float(os.environ.get("SENSE_KI_DECKEL_USD", "5.5"))
 KOSTEN_PATH = os.environ.get("SENSE_KOSTEN", "/var/lib/sense-engine/kosten.json")
 PREIS_EIN, PREIS_AUS = 0.10 / 1e6, 0.50 / 1e6  # USD pro Token (Haiku 5.5)
 MUEDE = "Ich bin für diesen Monat müde. Bald bin ich wieder für dich da."
+ELEVEN_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVEN_URL = os.environ.get("SENSE_ELEVEN_URL", "https://api.elevenlabs.io").rstrip("/")
+STIMME_MODELL = os.environ.get("SENSE_STIMME_MODELL", "eleven_flash_v2_5")
+STIMME_DECKEL_USD = float(os.environ.get("SENSE_STIMME_DECKEL_USD", "11"))
+STIMME_USD_PRO_ZEICHEN = float(os.environ.get("SENSE_STIMME_USD_PRO_1000_ZEICHEN", "0.06")) / 1000
+MAX_STIMME_ZEICHEN = 600
+# Figur -> ElevenLabs voice_id (apps/stimmen/stimmen-uebersicht-2026-10-17.md). Hasi spricht nie.
+STIMMEN = {
+    "otti": "aHb0rsWUX1Fsr1L8EX7f", "fia": "AOb3oqtwzif3fuVea8BR", "kiki": "C4RM6rl4L845nEtYYlZs",
+    "nova": "a9tumF22Oeoaac6X1EpS", "sparky": "c1ABTynwBMf7pMKNi8pp", "jackie": "jTs5ryxjzp1YN6eOBBJD",
+    "flo": "T3WNUkXc6KZpYc72YLCw", "mama affe": "VBjJm8gq4Mnh6nDoGDBt", "granny": "J1qEbxscAwpGDpbcKexg",
+    "carmencita": "IU9bzGhnCqWdEIy5L21d", "wäf wäf": "5Axpbpycg8qWQ7LexavI", "mr. ping": "owHFQyDglDZvoawSEZj8",
+    "coin maker": "Lbm7qDmJUxIxpWx9qhZO", "fompa": "Cx9eG8CNCDtCPeLiemtm", "sunny": "qUshSPhEV0CeAvEdLFJq",
+}
 claude = anthropic.Anthropic()  # Schlüssel aus ANTHROPIC_API_KEY (nur in /etc/sense-engine.env)
 ORIGINS = {o.strip() for o in os.environ.get("SENSE_ORIGINS", "").split(",") if o.strip()}
 MAX_BODY = 500_000
@@ -73,16 +91,17 @@ def _kosten_lesen():
         with open(KOSTEN_PATH) as f:
             k = json.load(f)
         if k.get("monat") == monat:
+            k.setdefault("stimme_usd", 0.0)
             return k
     except (OSError, ValueError):
         pass
-    return {"monat": monat, "usd": 0.0}
+    return {"monat": monat, "usd": 0.0, "stimme_usd": 0.0}
 
 
-def _kosten_dazu(usd):
+def _kosten_dazu(usd, feld="usd"):
     with _lock:
         k = _kosten_lesen()
-        k["usd"] = round(k["usd"] + usd, 6)
+        k[feld] = round(k[feld] + usd, 6)
         with open(KOSTEN_PATH, "w") as f:
             json.dump(k, f)
 
@@ -161,6 +180,44 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             return None
 
+    def _stimme(self, data):
+        figur = str(data.get("figur") or self.headers.get("X-Nova-App") or "nova").strip().lower()
+        text = str(data.get("text", "")).strip()[:MAX_STIMME_ZEICHEN]
+        voice = STIMMEN.get(figur)
+        if not text or not voice:
+            return self._send(400, {"error": "Figur oder Text fehlt"})
+        if not ELEVEN_KEY or _kosten_lesen()["stimme_usd"] >= STIMME_DECKEL_USD:
+            self.send_response(204)
+            self._cors()
+            self.end_headers()
+            return None
+        req = urllib.request.Request(
+            ELEVEN_URL + "/v1/text-to-speech/%s/stream?output_format=mp3_44100_64" % voice,
+            data=json.dumps({"text": text, "model_id": STIMME_MODELL}).encode(),
+            headers={"Content-Type": "application/json", "xi-api-key": ELEVEN_KEY, "Accept": "audio/mpeg"},
+            method="POST",
+        )
+        try:
+            r = urllib.request.urlopen(req, timeout=60)
+        except urllib.error.HTTPError as e:
+            return self._send(502, {"error": "Stimme meldet Fehler %d" % e.code})
+        except Exception:
+            return self._send(502, {"error": "Stimme ist nicht erreichbar"})
+        _kosten_dazu(len(text) * STIMME_USD_PRO_ZEICHEN, "stimme_usd")
+        self.send_response(200)
+        self._cors()
+        self.send_header("Content-Type", "audio/mpeg")
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        with r:
+            while True:
+                stueck = r.read(4096)
+                if not stueck:
+                    break
+                self.wfile.write(stueck)
+                self.wfile.flush()
+        return None
+
     def do_OPTIONS(self):
         self.send_response(204)
         self._cors()
@@ -191,13 +248,16 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        if path not in ("/v1/chat/completions", "/erfahrung"):
+        if path not in ("/v1/chat/completions", "/erfahrung", "/v1/stimme"):
             return self._send(404, {"error": "unbekannt"})
         if not self._authorized():
             return self._send(401, {"error": "Passwort fehlt oder stimmt nicht"})
         data = self._body()
         if not isinstance(data, dict):
             return self._send(400, {"error": "kein gültiges JSON"})
+
+        if path == "/v1/stimme":
+            return self._stimme(data)
 
         if path == "/erfahrung":
             speichern(str(data.get("app", "")), str(data.get("art", "notiz")),
