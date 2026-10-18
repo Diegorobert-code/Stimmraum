@@ -388,7 +388,7 @@ const bildUrl = (bid) => 'api/bild/' + bid;
 let mcpBasis = ''; // https://<domain>, beim ersten KI-Aufruf gemerkt
 function projektKurz(p) {
   return { id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, besitzerName: p.besitzerName,
-    geteilt: p.geteilt, fertig: p.fertig, erstellt: p.erstellt, geaendert: p.geaendert,
+    geteilt: p.geteilt, vorstellung: p.vorstellung || null, fertig: p.fertig, erstellt: p.erstellt, geaendert: p.geaendert,
     chats: p.chats.map(c => ({ id: c.id, titel: c.titel, erstellt: c.erstellt, eintraege: c.eintraege.length })),
     mitglieder: p.mitglieder.map(m => gaeste.find(g => g.id === m)?.name || 'Gast') };
 }
@@ -432,19 +432,36 @@ function eintragen(p, cid, von, text, bild) {
   p.geaendert = jetzt(); werkstattSpeichern();
   return { eintrag: e, chat: c.id };
 }
-function teilen(p, an, wer) {
+// art: 'fackel' (Sunny entzündet die Fackel am Brunnen), 'kino' (nur Trailer im Kino), 'laden' (ohne Werbung, nur bei Hasi)
+const VORSTELLUNG = ['fackel', 'kino', 'laden'];
+function teilen(p, an, wer, art) {
   if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann es teilen.';
   if (p.geteilt === !!an) return null;
-  p.geteilt = !!an; if (!p.geteilt) p.fertig = false; p.geaendert = jetzt(); werkstattSpeichern();
-  if (p.geteilt) {
+  p.geteilt = !!an; p.vorstellung = p.geteilt ? (VORSTELLUNG.includes(art) ? art : 'fackel') : null;
+  if (!p.geteilt) p.fertig = false; p.geaendert = jetzt(); werkstattSpeichern();
+  if (p.geteilt && p.vorstellung === 'kino') sunny(`Im Kino läuft neu der Trailer zu «${p.titel}» von ${p.besitzerName}. Ava hat schon Popcorn.`, 'stern');
+  if (p.geteilt && p.vorstellung === 'fackel') socialPlan(p);
+  if (p.geteilt && p.vorstellung === 'fackel') {
     const i = { id: id('i'), von: 'sunny', text: `Projekt «${p.titel}» (${p.app}) von ${p.besitzerName}${p.beschreibung ? ': ' + p.beschreibung : ''}`, zeit: jetzt() };
     welt.ideen.push(i); if (welt.ideen.length > 100) welt.ideen.shift(); senden('ideen', welt.ideen);
-    sunny(`Neues Projekt im Städtchen: «${p.titel}» von ${p.besitzerName}, für ${p.app}. Ich habe es auf den Ideen-Tisch gelegt.`, 'idee');
+    sunny(`Ich habe die Fackel am Brunnen entzündet: «${p.titel}» von ${p.besitzerName}, für ${p.app}. Es liegt jetzt auf dem Ideen-Tisch.`, 'idee');
     const k = kiosk().find(x => x.id === p.id);
     senden('projekt', { titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: k?.bild || null });
   }
   senden('kiosk', kiosk());
   return null;
+}
+// Zur Fackel gehört ein Social-Media-Plan mit Clips und Ads. Nova schreibt ihn als eigenen Chat ins Projekt
+// (ohne Nova eine Vorlage). Nichts wird veröffentlicht: der Plan ist ein Entwurf für den Besitzer.
+async function socialPlan(p) {
+  const vorlage = `Social-Media-Plan für «${p.titel}» (Entwurf, nichts wird automatisch veröffentlicht)\n\nWoche 1: Teaser-Clip 10 s (Fackel am Brunnen geht an), Story mit Frage an die Leute.\nWoche 2: Clip 20–30 s «So ist es entstanden» aus der Werkstatt, Bild-Post mit dem schönsten Bild.\nWoche 3: Trailer im Kino, kurzer Ausschnitt als Reel, Ad-Entwurf mit einem Satz und einem Bild.\nWoche 4: Rückblick, Danke-Post, Link in Hasis Laden.\n\nAds nur nach eigenem Go und mit festem Budget.`;
+  let text = null;
+  if (NOVA_KEY) try {
+    text = await novaFrage('Schreib einen kurzen Social-Media-Plan über 4 Wochen für ein Projekt aus dem KI-Verse: pro Woche 1 bis 2 Clips (Länge, Inhalt in einem Satz) und ein Ad-Entwurf (ein Satz). Ruhig und warm, keine grossen Versprechen, keine Preise. Nichts wird automatisch veröffentlicht. Höchstens 180 Wörter, ohne Markdown-Tabellen.',
+      `Projekt: ${p.titel}\nFür: ${p.app}\nWorum: ${p.beschreibung || '—'}`);
+  } catch {}
+  const c = chatNeu(p, 'Social-Media-Plan');
+  if (c) eintragen(p, c.id, 'Sunny', text ? 'Social-Media-Plan (Entwurf, nichts wird automatisch veröffentlicht)\n\n' + text : vorlage);
 }
 function fertigMelden(p, an, wer) {
   if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann es in Hasis Kiosk stellen.';
@@ -468,7 +485,7 @@ function mitgliedEinladen(p, name, wer) {
 function kiosk() {
   return projekte.filter(p => p.geteilt).map(p => {
     const bilder = p.chats.flatMap(c => c.eintraege.filter(e => e.bild).map(e => e.bild));
-    return { id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, von: p.besitzerName, fertig: p.fertig, geaendert: p.geaendert, bild: bilder.length ? bildUrl(bilder[bilder.length - 1]) : null };
+    return { id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, von: p.besitzerName, fertig: p.fertig, vorstellung: p.vorstellung || 'fackel', geaendert: p.geaendert, bild: bilder.length ? bildUrl(bilder[bilder.length - 1]) : null };
   }).sort((a, b) => (b.fertig - a.fertig) || b.geaendert.localeCompare(a.geaendert));
 }
 function bildErlaubt(bid, wer) {
@@ -806,7 +823,7 @@ const server = http.createServer(async (req, res) => {
       if (!p) return json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
       if ('chatNeu' in a) { const c = chatNeu(p, a.chatNeu); return c ? json(res, 200, c) : json(res, 400, { fehler: 'Höchstens 30 Chats pro Projekt.' }); }
       if (a.eintrag) { const r = eintragen(p, a.eintrag.chat, name, a.eintrag.text, a.eintrag.bild); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
-      const f = 'teilen' in a ? teilen(p, a.teilen, wer) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
+      const f = 'teilen' in a ? teilen(p, a.teilen, wer, a.art) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
       return f ? json(res, 400, { fehler: f }) : json(res, 200, projektKurz(p));
     }
     if (url.pathname === '/api/kiosk' && req.method === 'GET') return json(res, 200, kiosk());

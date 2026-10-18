@@ -261,6 +261,12 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 .ws-verlauf { flex: 1 1 auto; min-height: 220px; max-height: 46dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 2px;
   background: radial-gradient(ellipse at 50% 120%, rgba(95,224,216,.10), transparent 60%); border-radius: 12px; }
 .ws-leer { margin: auto; text-align: center; color: var(--text-leise); font-size: .9rem; }
+.ws-wahl { display: grid; gap: 8px; border: 1px solid var(--rand); border-radius: 14px; padding: 12px; }
+.ws-wahl .knopf { text-align: left; }
+.feuer-fackel { position: absolute; width: 14px; height: 70px; transform: translate(-50%, 0); border-radius: 4px; background: linear-gradient(90deg, #5a3a1c, #8a5a32 50%, #5a3a1c); box-shadow: 0 0 0 2px #2a1d14; animation: fackelAuf .5s ease-out both; }
+.feuer-fackel::before { content: ''; position: absolute; left: -7px; top: -8px; width: 28px; height: 14px; border-radius: 4px 4px 10px 10px; background: #3a2a1a; border: 2px solid #f2c25b; }
+@keyframes fackelAuf { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.feuer-sunny { position: absolute; width: 70px; height: 70px; border-radius: 50%; border: 3px solid var(--sunny); box-shadow: 0 0 22px rgba(88,183,255,.6); transition: left .9s cubic-bezier(.4,.1,.3,1), top .9s cubic-bezier(.4,.1,.3,1); transform: translate(-50%, -50%); }
 .ws-tuer { display: flex; gap: 8px; flex-wrap: wrap; }
 .ws-tuer input { flex: 1 1 140px; }
 .pille.privat { color: var(--text-leise); }
@@ -581,9 +587,16 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
         <button class="knopf gold" type="submit">Senden</button>
       </form>
       <div class="zeilen" id="wsKnoepfe">
-        <button class="knopf" type="button" id="wsTeilen">Mit dem Städtchen teilen</button>
+        <button class="knopf" type="button" id="wsTeilen">Vorstellen</button>
         <button class="knopf" type="button" id="wsFertig">Fertig, in Hasis Kiosk</button>
         <button class="knopf" type="button" id="wsTuerKnopf">Jemanden einlassen</button>
+      </div>
+      <div class="ws-wahl" id="wsWahl" hidden>
+        <b>Wie soll das Städtchen davon erfahren?</b>
+        <button class="knopf gold" type="button" data-art="fackel">Fackel am Brunnen: Sunny entzündet sie, alle sehen das Projekt, dazu ein Social-Media-Plan mit Clips und Ads</button>
+        <button class="knopf" type="button" data-art="kino">Nur den Trailer im Kino zeigen</button>
+        <button class="knopf" type="button" data-art="laden">Ohne Werbung, nur in Hasis Laden</button>
+        <span class="hinweis">Im Prototyp alles gratis. Was Fackel und Kino später kosten, entscheidet Diego.</span>
       </div>
       <form class="ws-tuer" id="wsTuer" hidden>
         <input type="text" id="wsTuerName" maxlength="40" placeholder="Name der eingeladenen Person" aria-label="Name">
@@ -1728,7 +1741,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       const p = wsLokal.projekte.find(x => x.id === a.projekt);
       if ('chatNeu' in a) { const c = { id: wsId('c'), titel: a.chatNeu || `Chat ${p.chats.length + 1}`, eintraege: [] }; p.chats.push(c); return c; }
       if (a.eintrag) { const c = p.chats.find(x => x.id === a.eintrag.chat) || p.chats.at(-1); const e = { id: wsId('e'), von: z.ich?.name || 'Du', text: a.eintrag.text || '', bild: a.eintrag.bild || null, zeit: new Date().toISOString() }; c.eintraege.push(e); return { eintrag: e }; }
-      if ('teilen' in a) { p.geteilt = !!a.teilen; if (!p.geteilt) p.fertig = false; if (p.geteilt) sunnyFeuer({ titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: p.chats.flatMap(c => c.eintraege).filter(e => e.bild).at(-1)?.bild || null }); return wsKurz(p); }
+      if ('teilen' in a) { p.geteilt = !!a.teilen; p.vorstellung = p.geteilt ? (a.art || 'fackel') : null; if (!p.geteilt) p.fertig = false; if (p.geteilt && p.vorstellung === 'fackel') p.chats.push({ id: wsId('c'), titel: 'Social-Media-Plan', eintraege: [{ id: wsId('e'), von: 'Sunny', bild: null, zeit: new Date().toISOString(), text: `Social-Media-Plan für «${p.titel}» (Entwurf, nichts wird automatisch veröffentlicht)\n\nWoche 1: Teaser-Clip 10 s, die Fackel am Brunnen geht an.\nWoche 2: Clip «So ist es entstanden» aus der Werkstatt.\nWoche 3: Trailer im Kino, Ausschnitt als Reel, Ad-Entwurf.\nWoche 4: Rückblick und Danke, Link in Hasis Laden.` }] });
+        if (p.geteilt && p.vorstellung === 'fackel') sunnyFeuer({ titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: p.chats.flatMap(c => c.eintraege).filter(e => e.bild).at(-1)?.bild || null }); return wsKurz(p); }
       if ('fertig' in a) { if (a.fertig && !p.geteilt) throw new Error('Zuerst teilen, dann kommt es in Hasis Kiosk.'); p.fertig = !!a.fertig; return wsKurz(p); }
       if (a.einladen) throw new Error('Einlassen geht im echten KI-Verse mit eingeladenen Menschen.');
     },
@@ -1762,9 +1776,10 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     wsAnsicht(p);
     $('#wsTitel').textContent = p.titel;
     const st = $('#wsStatus'); st.hidden = false; st.className = 'pille ' + (p.fertig ? 'fertig' : p.geteilt ? 'geteilt' : 'privat');
-    st.textContent = p.fertig ? 'Bei Hasi' : p.geteilt ? 'Geteilt' : 'Privat';
+    st.textContent = p.fertig ? 'Bei Hasi' : p.geteilt ? ({ fackel: 'Mit Fackel vorgestellt', kino: 'Trailer im Kino', laden: 'Ohne Werbung' }[p.vorstellung] || 'Geteilt') : 'Privat';
     $('#wsBeschreibung').textContent = `${p.app}${p.beschreibung ? ' · ' + p.beschreibung : ''}${p.mitglieder?.length ? ' · mit ' + p.mitglieder.join(', ') : ''}`;
-    $('#wsTeilen').textContent = p.geteilt ? 'Nicht mehr teilen' : 'Mit dem Städtchen teilen';
+    $('#wsTeilen').textContent = p.geteilt ? 'Nicht mehr zeigen' : 'Vorstellen';
+    $('#wsWahl').hidden = true;
     $('#wsFertig').textContent = p.fertig ? 'Aus Hasis Kiosk nehmen' : 'Fertig, in Hasis Kiosk';
     $('#wsKnoepfe').hidden = p.meins === false;
     const tabs = $('#wsChats'); tabs.innerHTML = '';
@@ -1830,7 +1845,17 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       wsOeffnen(ws.projekt.id, ws.chat);
     } catch (er) { alert(er.message); }
   });
-  $('#wsTeilen').addEventListener('click', async () => { try { await ws.auftrag({ projekt: ws.projekt.id, teilen: !ws.projekt.geteilt }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); } });
+  $('#wsTeilen').addEventListener('click', async () => {
+    if (!ws.projekt.geteilt) { $('#wsWahl').hidden = !$('#wsWahl').hidden; return; }
+    try { await ws.auftrag({ projekt: ws.projekt.id, teilen: false }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); }
+  });
+  for (const b of document.querySelectorAll('#wsWahl [data-art]')) b.addEventListener('click', async () => {
+    $('#wsWahl').hidden = true;
+    try {
+      await ws.auftrag({ projekt: ws.projekt.id, teilen: true, art: b.dataset.art });
+      if (b.dataset.art === 'fackel') $('#werkstatt').hidden = true; else wsOeffnen(ws.projekt.id, ws.chat);
+    } catch (e) { alert(e.message); }
+  });
   $('#wsFertig').addEventListener('click', async () => { try { await ws.auftrag({ projekt: ws.projekt.id, fertig: !ws.projekt.fertig }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); } });
   $('#wsTuerKnopf').addEventListener('click', () => { $('#wsTuer').hidden = !$('#wsTuer').hidden; });
   $('#wsTuer').addEventListener('submit', async (e) => {
@@ -1858,24 +1883,28 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 
   // ---------- Sunny speit Feuer: aus der kleinen Flamme kommt das neue Projekt ----------
   function sunnyFeuer(p) {
-    const s = $('#sunnyBild').getBoundingClientRect();
-    const mx = s.left + s.width * .78, my = s.top + s.height * .55;
-    const zx = innerWidth / 2, zy = innerHeight * .42;
+    // Sunny fliegt zum Brunnen auf der Plaça, entzündet die Fackel, aus der Flamme steigt das Projekt
+    const s = $('#sunnyBild').getBoundingClientRect(), bu = $('#buehne').getBoundingClientRect();
+    const zx = bu.left + bu.width * .62, zy = bu.top + bu.height * .58;   // Fackel neben dem Brunnen
     const b = document.createElement('div'); b.className = 'feuer-buehne'; document.body.appendChild(b);
     const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!ruhig) for (let i = 0; i < 26; i++) {
+    const fackel = document.createElement('div'); fackel.className = 'feuer-fackel'; fackel.style.left = zx + 'px'; fackel.style.top = zy + 'px'; b.appendChild(fackel);
+    const su = document.createElement('img'); su.className = 'feuer-sunny'; su.src = BILDER.sunny; su.alt = '';
+    su.style.left = (s.left + s.width / 2) + 'px'; su.style.top = (s.top + s.height / 2) + 'px'; b.appendChild(su);
+    requestAnimationFrame(() => requestAnimationFrame(() => { su.style.left = (zx + 70) + 'px'; su.style.top = (zy - 60) + 'px'; }));
+    const mx = zx + 50, my = zy - 52;
+    if (!ruhig) for (let i = 0; i < 22; i++) {
       const f = document.createElement('div'); f.className = 'feuer-funke';
-      const t = i / 26, streu = (Math.random() - .5) * 60;
       f.style.left = mx + 'px'; f.style.top = my + 'px';
-      f.style.setProperty('--dx', (zx - mx) * (.5 + t * .6) + streu + 'px'); f.style.setProperty('--dy', (zy - my) * (.5 + t * .6) + streu * .6 + 'px');
-      f.style.setProperty('--d', (0.7 + Math.random() * .5) + 's'); f.style.setProperty('--s', (1.6 + Math.random() * 2) + '');
-      f.style.animationDelay = (i * 22) + 'ms'; b.appendChild(f);
+      f.style.setProperty('--dx', (zx - mx) + (Math.random() - .5) * 18 + 'px'); f.style.setProperty('--dy', (zy - 6 - my) + (Math.random() - .5) * 14 + 'px');
+      f.style.setProperty('--d', (0.5 + Math.random() * .4) + 's'); f.style.setProperty('--s', (1.2 + Math.random() * 1.2) + '');
+      f.style.animationDelay = (950 + i * 25) + 'ms'; b.appendChild(f);
     }
-    const fl = document.createElement('div'); fl.className = 'feuer-flamme'; fl.style.left = zx + 'px'; fl.style.top = zy + 'px';
+    setTimeout(() => su.remove(), 3600);
+    const fl = document.createElement('div'); fl.className = 'feuer-flamme'; fl.style.left = zx + 'px'; fl.style.top = (zy - 18) + 'px';
     fl.innerHTML = '<svg viewBox="0 0 24 32" width="100%" height="100%"><path d="M12 1C14 8 21 11 21 19a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 2 4 3 4 0-4 1-8 2-11z" fill="url(#flammeVerlauf)"/></svg>';
-    fl.style.animationDelay = ruhig ? '0s' : '.55s'; b.appendChild(fl);
+    fl.style.animationDelay = ruhig ? '0s' : '1.4s'; b.appendChild(fl);
     setTimeout(() => {
-      fl.remove();
       const k = document.createElement('div'); k.className = 'feuer-karte';
       const h = document.createElement('div'); h.className = 'holo';
       const a = document.createElement('div'); a.className = 'app'; a.textContent = 'Neues Projekt · ' + p.app;
@@ -1884,9 +1913,9 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       h.append(a, t, v);
       if (p.bild) { const i = document.createElement('img'); i.alt = ''; i.src = p.bild.startsWith('data:') ? p.bild : mitK(p.bild); h.appendChild(i); }
       k.appendChild(h); b.appendChild(k);
-      const weg = () => { k.classList.add('weg'); setTimeout(() => b.remove(), 900); };
+      const weg = () => { k.classList.add('weg'); setTimeout(() => b.remove(), 2500); };
       k.addEventListener('click', weg); setTimeout(weg, 5200);
-    }, ruhig ? 50 : 1500);
+    }, ruhig ? 50 : 2600);
   }
 
   // ---------- Menschen einladen (nur Diego) ----------
