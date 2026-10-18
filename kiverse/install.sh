@@ -4,7 +4,7 @@
 set -euo pipefail
 QUELLE=https://raw.githubusercontent.com/diegorobert-code/stimmraum/kiverse-server/kiverse
 TMP=$(mktemp -d)
-for f in kiverse-server.js welt.html kiverse-install.sh; do curl -fsSL "$QUELLE/$f?v=$(date +%s)" -o "$TMP/$f"; done
+for f in kiverse-server.js welt.html spiel.html kiverse-install.sh; do curl -fsSL "$QUELLE/$f?v=$(date +%s)" -o "$TMP/$f"; done
 bash "$TMP/kiverse-install.sh"
 rm -rf "$TMP"
 echo

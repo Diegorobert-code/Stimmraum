@@ -252,6 +252,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <span class="hueter">Hüter: <b>Sunny</b></span>
   <div class="rechts">
     <span id="modus" class="pille">Vorschau</span>
+    <button id="spielKnopf" class="knopf gold" type="button" title="Durchs Trickfilm-Städtchen laufen">Spiel</button>
     <button id="abenteuerKnopf" class="knopf gold" type="button" title="Sunny gibt allen ein kleines Abenteuer">Abenteuer</button>
     <button id="geschichteKnopf" class="knopf" type="button" title="Unsere Geschichte, von Nova aus dem Spielen geschrieben">Geschichte</button>
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
@@ -1540,6 +1541,9 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     catch (er) { nachrichtZeigen({ von: 'sunny', text: er.message }); }
   });
 
+
+  // ---------- Spiel (eigene Seite, gleicher Einladungslink) ----------
+  $('#spielKnopf').addEventListener('click', () => { location.href = z.live ? 'spiel' + (K ? '?k=' + encodeURIComponent(K) : '') : 'spiel.html'; });
 
   // ---------- Abenteuer und unsere Geschichte ----------
   z.geschichte = [];

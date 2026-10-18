@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # KI-Verse auf dem Sense-Engine-Server installieren (Ubuntu 24.04).
 # Aufruf auf dem Server: sudo bash kiverse-install.sh
-# Voraussetzung: kiverse-server.js und welt.html liegen im selben Ordner wie dieses Skript.
+# Voraussetzung: kiverse-server.js, welt.html und spiel.html liegen im selben Ordner wie dieses Skript.
 set -euo pipefail
 ORDNER=/opt/kiverse
 IP=$(curl -s https://api.ipify.org || hostname -I | awk '{print $1}')
 DOMAIN=${KIVERSE_DOMAIN:-kiverse-${IP//./-}.sslip.io}
 command -v node >/dev/null || { apt-get update -y && apt-get install -y nodejs; }
 command -v caddy >/dev/null || apt-get install -y caddy
-mkdir -p $ORDNER && cp "$(dirname "$0")"/kiverse-server.js "$(dirname "$0")"/welt.html $ORDNER/
+mkdir -p $ORDNER && cp "$(dirname "$0")"/kiverse-server.js "$(dirname "$0")"/welt.html "$(dirname "$0")"/spiel.html $ORDNER/
 id kiverse >/dev/null 2>&1 || useradd --system --no-create-home kiverse
 CODE_DATEI=$ORDNER/einladungscode
 [ -f $CODE_DATEI ] || head -c 12 /dev/urandom | base64 | tr -d '/+=' > $CODE_DATEI

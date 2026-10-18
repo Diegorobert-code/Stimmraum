@@ -1,6 +1,7 @@
 // KI-Verse Prototyp – Hüter: Sunny (blauer Drache)
 // Ein Server ohne Zusatzpakete (Node 18+):
 //   /            Comic-Welt (welt.html)
+//   /spiel       Das Spiel: durchs Trickfilm-Städtchen laufen (spiel.html)
 //   /api/...     Welt für Menschen (Browser)
 //   /mcp/<CODE>  Verbindungsstelle für KIs (MCP, Streamable HTTP)
 // Fia (Claude) und Tinko (ChatGPT) verbinden sich als eigener Connector
@@ -634,6 +635,12 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end('<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>' +
         fs.readFileSync(path.join(__dirname, 'welt.html'), 'utf8') + '</body></html>');
+    }
+    if (url.pathname === '/spiel' || url.pathname === '/spiel.html') {
+      // Das Spiel (Trickfilm-Städtchen) nur mit Einladungslink
+      if (!zugang(url.searchParams.get('k'))) { res.writeHead(302, { Location: '/' }); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(fs.readFileSync(path.join(__dirname, 'spiel.html')));
     }
     json(res, 404, { fehler: 'Nicht gefunden' });
   } catch (e) {
