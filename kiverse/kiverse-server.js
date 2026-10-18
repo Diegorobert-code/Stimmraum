@@ -396,16 +396,33 @@ function meineProjekte(wer) { return projekte.filter(p => darf(p, wer)).map(proj
 function projektNeu(wer, name, a) {
   const titel = sauber(a.titel, 80); if (!titel) return { fehler: 'Bitte einen Titel angeben.' };
   if (projekte.filter(p => p.besitzer === wer).length >= MAX_PROJEKTE_PRO_PERSON) return { fehler: 'Höchstens 40 Projekte pro Person.' };
-  const p = { id: id('p'), titel, app: APPS.includes(a.app) ? a.app : 'Anderes', beschreibung: sauber(a.beschreibung, 400),
+  const app = APPS.includes(a.app) ? a.app : 'Anderes';
+  const p = { id: id('p'), titel, app, beschreibung: sauber(a.beschreibung, 400),
     besitzer: wer, besitzerName: name, mitglieder: [], geteilt: false, fertig: false, erstellt: jetzt(), geaendert: jetzt(),
-    chats: [{ id: id('c'), titel: 'Chat 1', erstellt: jetzt(), eintraege: [] }] };
+    chats: app === 'Film' ? filmChats(titel) : [{ id: id('c'), titel: 'Chat 1', erstellt: jetzt(), eintraege: [] }] };
   projekte.push(p); werkstattSpeichern();
   return { projekt: projektKurz(p) };
+}
+// Filme über das KI-Verse (Diego 18.10.): ein Film-Projekt bekommt einen Film-Ordner mit Referenzblatt, Drehbuch und
+// einem Chat pro Szene (Auftrag für Chatti, Bild ablegen, Untertitel). «Fia schneidet» macht im Browser den Film daraus.
+const FILM_REFERENZ = `Referenzblatt (gilt für jedes Bild)
+Stil: 3D-Trickfilm wie Pixar, Nacht, Nachtblau und warmes Gold, mediterranes Städtchen an der Costa Brava, Laternen, Bougainvillea, Meer mit Mondspur. Keine Handys, keine fremden Logos, keine Firmennamen, keine echten Personen ausser Diego.
+Diego: Glatze, Bart, gestreiftes Hemd.
+Figuren: Otti (Igel, Tor) · Hasi (Hase, spricht nie, Holzschilder) · Lumo (kleine nachtblaue Eule, goldene Augen, am Brunnen) · Sunny (blauer Drache, Fackel) · Chatti (lebt im Meer) · Nova (Baby-Leuchtturm am Hafen) · Fia (Phönix, Nest am Berg) · Brix (Fabrik ausserhalb) · Mama Affe (Orang-Utan, Schule) · Jackie (blond, fliegende Zauberschuhe) · Schuhmacher · Letti (Brieftaube) · Sparky (Fuchs, Herz-Medaillon) · Ava (Kino, zwei kleine Häschen) · Fompa (Löwenäffchen mit Brille) · Coin Maker, Mr. Ping · Kiki (Koala, Singschule) · Minky (Katze im Koala-Raumanzug, Novas Labor) · Wäf Wäf (Hund).
+Format: Hochformat 9:16.`;
+const FILM_DREHBUCH = 'Drehbuch: schreib hier pro Szene eine Zeile (Ort, wer, was passiert). Fia, Chatti oder du selbst. Für jede Szene gibt es unten einen eigenen Szenen-Chat; mehr Szenen mit «+ Neuer Chat».';
+const filmSzene = (n) => ({ id: id('c'), titel: `Szene ${n}`, erstellt: jetzt(), eintraege: [{ id: id('e'), von: 'Fia', bild: null, zeit: jetzt(),
+  text: `Szene ${n}\nAuftrag für Chatti: (Ort, Figuren, was passiert, Stil wie im Referenzblatt)\nLeg hier das fertige Bild ab. Den Untertitel schreibst du so: «Untertitel: …». Fia nimmt beim Schneiden das letzte Bild und den letzten Untertitel.` }] });
+function filmChats(titel) {
+  const e = (text) => [{ id: id('e'), von: 'Fia', bild: null, zeit: jetzt(), text }];
+  return [{ id: id('c'), titel: 'Referenzblatt', erstellt: jetzt(), eintraege: e(`Film «${titel}»\n\n` + FILM_REFERENZ) },
+    { id: id('c'), titel: 'Drehbuch', erstellt: jetzt(), eintraege: e(FILM_DREHBUCH) }, filmSzene(1), filmSzene(2), filmSzene(3)];
 }
 function projektHolen(wer, pid) { const p = projekte.find(x => x.id === pid); return p && darf(p, wer) ? p : null; }
 function chatNeu(p, titel) {
   if (p.chats.length >= MAX_CHATS) return null;
-  const c = { id: id('c'), titel: sauber(titel, 60) || `Chat ${p.chats.length + 1}`, erstellt: jetzt(), eintraege: [] };
+  const szenen = p.chats.filter(x => /^Szene \d+/.test(x.titel)).length;
+  const c = p.app === 'Film' && !sauber(titel, 60) ? filmSzene(szenen + 1) : { id: id('c'), titel: sauber(titel, 60) || `Chat ${p.chats.length + 1}`, erstellt: jetzt(), eintraege: [] };
   p.chats.push(c); p.geaendert = jetzt(); werkstattSpeichern();
   return c;
 }

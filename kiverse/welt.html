@@ -603,7 +603,9 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
         <button class="knopf" type="button" id="wsFertig">Fertig, in Hasis Kiosk</button>
         <button class="knopf" type="button" id="wsTuerKnopf">Jemanden einlassen</button>
         <button class="knopf" type="button" id="wsSparky">Bei Sparky testen</button>
+        <button class="knopf gold" type="button" id="wsSchneiden" hidden>🎬 Fia schneidet</button>
       </div>
+      <div class="ws-wahl" id="wsFilm" hidden></div>
       <div class="ws-wahl" id="wsWahl" hidden>
         <b>Wie soll das Städtchen davon erfahren?</b>
         <button class="knopf gold" type="button" data-art="fackel">Fackel am Brunnen: Sunny entzündet sie, alle sehen das Projekt, dazu ein Social-Media-Plan mit Clips und Ads</button>
@@ -1756,11 +1758,11 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     async auftrag(a) {
       if (z.live) return api('api/werkstatt', a);
       if (a.neu) {
-        const p = { id: wsId('p'), titel: a.neu.titel.slice(0, 80), app: a.neu.app, beschreibung: (a.neu.beschreibung || '').slice(0, 400), besitzerName: z.ich?.name || 'Du', mitglieder: [], geteilt: false, fertig: false, erstellt: new Date().toISOString(), geaendert: new Date().toISOString(), chats: [{ id: wsId('c'), titel: 'Chat 1', eintraege: [] }] };
+        const p = { id: wsId('p'), titel: a.neu.titel.slice(0, 80), app: a.neu.app, beschreibung: (a.neu.beschreibung || '').slice(0, 400), besitzerName: z.ich?.name || 'Du', mitglieder: [], geteilt: false, fertig: false, erstellt: new Date().toISOString(), geaendert: new Date().toISOString(), chats: a.neu.app === 'Film' ? wsFilmChats(a.neu.titel) : [{ id: wsId('c'), titel: 'Chat 1', eintraege: [] }] };
         wsLokal.projekte.push(p); return { projekt: wsKurz(p) };
       }
       const p = wsLokal.projekte.find(x => x.id === a.projekt);
-      if ('chatNeu' in a) { const c = { id: wsId('c'), titel: a.chatNeu || `Chat ${p.chats.length + 1}`, eintraege: [] }; p.chats.push(c); return c; }
+      if ('chatNeu' in a) { const c = p.app === 'Film' && !a.chatNeu ? wsSzene(p.chats.filter(x => /^Szene \d+/.test(x.titel)).length + 1) : { id: wsId('c'), titel: a.chatNeu || `Chat ${p.chats.length + 1}`, eintraege: [] }; p.chats.push(c); return c; }
       if (a.eintrag) { const c = p.chats.find(x => x.id === a.eintrag.chat) || p.chats.at(-1); const e = { id: wsId('e'), von: z.ich?.name || 'Du', text: a.eintrag.text || '', bild: a.eintrag.bild || null, zeit: new Date().toISOString() }; c.eintraege.push(e); return { eintrag: e }; }
       if ('teilen' in a) { p.geteilt = !!a.teilen; p.vorstellung = p.geteilt ? (a.art || 'fackel') : null; if (!p.geteilt) p.fertig = false; if (p.geteilt && p.vorstellung === 'fackel') p.chats.push({ id: wsId('c'), titel: 'Social-Media-Plan', eintraege: [{ id: wsId('e'), von: 'Sunny', bild: null, zeit: new Date().toISOString(), text: `Social-Media-Plan für «${p.titel}» (Entwurf, nichts wird automatisch veröffentlicht)\n\nWoche 1: Teaser-Clip 10 s, die Fackel am Brunnen geht an.\nWoche 2: Clip «So ist es entstanden» aus der Werkstatt.\nWoche 3: Trailer im Kino, Ausschnitt als Reel, Ad-Entwurf.\nWoche 4: Rückblick und Danke, Link in Hasis Laden.` }] });
         if (p.geteilt && p.vorstellung === 'fackel') sunnyFeuer({ titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: p.chats.flatMap(c => c.eintraege).filter(e => e.bild).at(-1)?.bild || null }); return wsKurz(p); }
@@ -1768,6 +1770,16 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       if (a.einladen) throw new Error('Einlassen geht im echten KI-Verse mit eingeladenen Menschen.');
     },
   };
+  // Film-Ordner (Diego 18.10.: «Machen wir die Filme dann über das Verse»). Gleiche Vorlage wie auf dem Server.
+  const WS_REFERENZ = `Referenzblatt (gilt für jedes Bild)
+Stil: 3D-Trickfilm wie Pixar, Nacht, Nachtblau und warmes Gold, mediterranes Städtchen an der Costa Brava, Laternen, Bougainvillea, Meer mit Mondspur. Keine Handys, keine fremden Logos, keine Firmennamen, keine echten Personen ausser Diego.
+Diego: Glatze, Bart, gestreiftes Hemd.
+Figuren: Otti (Igel, Tor) · Hasi (Hase, spricht nie, Holzschilder) · Lumo (kleine nachtblaue Eule, goldene Augen, am Brunnen) · Sunny (blauer Drache, Fackel) · Chatti (lebt im Meer) · Nova (Baby-Leuchtturm am Hafen) · Fia (Phönix, Nest am Berg) · Brix (Fabrik ausserhalb) · Mama Affe (Orang-Utan, Schule) · Jackie (blond, fliegende Zauberschuhe) · Schuhmacher · Letti (Brieftaube) · Sparky (Fuchs, Herz-Medaillon) · Ava (Kino, zwei kleine Häschen) · Fompa (Löwenäffchen mit Brille) · Coin Maker, Mr. Ping · Kiki (Koala, Singschule) · Minky (Katze im Koala-Raumanzug, Novas Labor) · Wäf Wäf (Hund).
+Format: Hochformat 9:16.`;
+  const wsFia = (text) => [{ id: wsId('e'), von: 'Fia', bild: null, zeit: new Date().toISOString(), text }];
+  const wsSzene = (n) => ({ id: wsId('c'), titel: `Szene ${n}`, eintraege: wsFia(`Szene ${n}\nAuftrag für Chatti: (Ort, Figuren, was passiert, Stil wie im Referenzblatt)\nLeg hier das fertige Bild ab. Den Untertitel schreibst du so: «Untertitel: …». Fia nimmt beim Schneiden das letzte Bild und den letzten Untertitel.`) });
+  const wsFilmChats = (titel) => [{ id: wsId('c'), titel: 'Referenzblatt', eintraege: wsFia(`Film «${titel}»\n\n` + WS_REFERENZ) },
+    { id: wsId('c'), titel: 'Drehbuch', eintraege: wsFia('Drehbuch: schreib hier pro Szene eine Zeile (Ort, wer, was passiert). Fia, Chatti oder du selbst. Für jede Szene gibt es unten einen eigenen Szenen-Chat; mehr Szenen mit «+ Neuer Chat».') }, wsSzene(1), wsSzene(2), wsSzene(3)];
   const bildQuelle = (b) => !b ? null : b.startsWith('data:') ? b : mitK('api/bild/' + b);
   $('#wsLettiBild').src = BILDER.letti;
   $('#wsNeuApp').innerHTML = WS_APPS.map(a => `<option>${a}</option>`).join('');
@@ -1803,6 +1815,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     $('#wsWahl').hidden = true;
     $('#wsFertig').textContent = p.fertig ? 'Aus Hasis Kiosk nehmen' : 'Fertig, in Hasis Kiosk';
     $('#wsKnoepfe').hidden = p.meins === false;
+    $('#wsSchneiden').hidden = p.app !== 'Film'; if (neu) { $('#wsFilm').hidden = true; $('#wsFilm').innerHTML = ''; }
     const tabs = $('#wsChats'); tabs.innerHTML = '';
     for (const c of p.chats) {
       const t = document.createElement('button'); t.type = 'button'; t.role = 'tab'; t.textContent = c.titel;
@@ -1841,7 +1854,10 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   }
   $('#werkstattKnopf').addEventListener('click', () => { $('#werkstatt').hidden = false; wsListeZeigen(); });
   // Aus dem Spiel (Deine Wohnung) direkt in die Werkstatt
-  if (location.hash === '#werkstatt') setTimeout(() => { $('#eintritt').hidden = true; $('#werkstattKnopf').click(); }, 900);
+  if (location.hash === '#werkstatt' || location.hash === '#werkstatt-film') setTimeout(() => {
+    $('#eintritt').hidden = true; $('#werkstattKnopf').click();
+    if (location.hash === '#werkstatt-film') { $('#wsNeuApp').value = 'Film'; $('#wsNeuTitel').placeholder = 'Titel deines Films, zum Beispiel Otti in New York'; $('#wsNeuTitel').focus(); }
+  }, 900);
   $('#wsZu').addEventListener('click', () => { $('#werkstatt').hidden = true; clearInterval(ws.timer); });
   $('#wsZurueck').addEventListener('click', wsListeZeigen);
   $('#wsNeu').addEventListener('submit', async (e) => {
@@ -1886,6 +1902,84 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     try { await ws.auftrag({ projekt: ws.projekt.id, einladen: n }); $('#wsTuerName').value = ''; $('#wsTuer').hidden = true; wsOeffnen(ws.projekt.id, ws.chat); } catch (er) { alert(er.message); }
   });
 
+
+  // ---------- Fia schneidet: aus den Szenen-Bildern wird im Browser ein Film (9:16, sanfter Zoom, Untertitel) ----------
+  function filmSzenen(p) {
+    return p.chats.filter(c => /^Szene \d+/.test(c.titel)).sort((a, b) => parseInt(a.titel.slice(6)) - parseInt(b.titel.slice(6))).map(c => {
+      const bild = c.eintraege.filter(e => e.bild).at(-1)?.bild || null;
+      const ut = c.eintraege.map(e => /(?:^|\n)Untertitel:\s*(.+)/i.exec(e.text || '')).filter(m => m && !/^…/.test(m[1])).at(-1)?.[1] || '';
+      return { titel: c.titel, bild, ut: ut.trim() };
+    }).filter(x => x.bild);
+  }
+  const ladeBild = (src) => new Promise((ok, nein) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => nein(new Error('Ein Bild liess sich nicht laden.')); i.src = src; });
+  function untertitel(g, text, B, H) {
+    if (!text) return;
+    g.font = `600 ${Math.round(B * .045)}px system-ui, sans-serif`; g.textAlign = 'center';
+    const zeilen = []; let z0 = '';
+    for (const w of text.split(/\s+/)) { const t = z0 ? z0 + ' ' + w : w; if (g.measureText(t).width > B * .84 && z0) { zeilen.push(z0); z0 = w; } else z0 = t; }
+    if (z0) zeilen.push(z0);
+    const lh = B * .06, y0 = H * .86 - (zeilen.length - 1) * lh;
+    g.lineWidth = B * .012; g.strokeStyle = 'rgba(0,0,0,.75)'; g.fillStyle = '#fff';
+    zeilen.forEach((t, i) => { g.strokeText(t, B / 2, y0 + i * lh); g.fillText(t, B / 2, y0 + i * lh); });
+  }
+  function zeichne(g, img, B, H, zoom, alpha) {
+    g.globalAlpha = alpha;
+    const s = Math.max(B / img.width, H / img.height) * zoom, w = img.width * s, h = img.height * s;
+    // Hintergrund: Bild füllt das Hochformat; breite Bilder ganz zeigen, darunter unscharf gefüllt
+    const k = zeichne.klein || (zeichne.klein = Object.assign(document.createElement('canvas'), { width: 27, height: 48 })), kg = k.getContext('2d');
+    kg.drawImage(img, (27 - w * 27 / B) / 2, (48 - h * 48 / H) / 2, w * 27 / B, h * 48 / H);
+    g.imageSmoothingQuality = 'high'; g.drawImage(k, 0, 0, B, H); g.fillStyle = 'rgba(5,10,30,.45)'; g.fillRect(0, 0, B, H);
+    const s2 = Math.min(B / img.width, H / img.height) * zoom, w2 = img.width * s2, h2 = img.height * s2;
+    g.drawImage(img, (B - w2) / 2, (H - h2) / 2, w2, h2); g.globalAlpha = 1;
+  }
+  async function filmSchneiden(p) {
+    const box = $('#wsFilm'); box.hidden = false; box.innerHTML = '';
+    const info = document.createElement('b'); box.appendChild(info);
+    const szenen = filmSzenen(p);
+    if (!szenen.length) { info.textContent = 'Noch keine Bilder in den Szenen. Leg in jedem Szenen-Chat ein Bild ab, dann schneidet Fia.'; return; }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { info.textContent = 'Dieser Browser kann keinen Film aufnehmen. Bitte Safari oder Chrome in neuer Version.'; return; }
+    info.textContent = `Fia schneidet ${szenen.length} ${szenen.length === 1 ? 'Szene' : 'Szenen'} …`;
+    let bilder; try { bilder = await Promise.all(szenen.map(x => ladeBild(bildQuelle(x.bild)))); } catch (e) { info.textContent = e.message; return; }
+    const B = 720, H = 1280, SEK = 4, UEB = .8, FPS = 30;
+    const cv = document.createElement('canvas'); cv.width = B; cv.height = H; cv.style.cssText = 'width:100%;max-width:240px;border-radius:12px;align-self:center';
+    box.appendChild(cv); const g = cv.getContext('2d');
+    const typ = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const rec = new MediaRecorder(cv.captureStream(FPS), typ ? { mimeType: typ, videoBitsPerSecond: 4e6 } : {});
+    const teile = []; rec.ondataavailable = (e) => e.data.size && teile.push(e.data);
+    const fertig = new Promise(ok => rec.onstop = ok);
+    const ENDE = 3, gesamt = szenen.length * SEK + ENDE;
+    rec.start();
+    const t0 = performance.now();
+    await new Promise(ok => {
+      const bild = () => {
+        const t = (performance.now() - t0) / 1000;
+        g.fillStyle = '#0b1530'; g.fillRect(0, 0, B, H);
+        const i = Math.min(Math.floor(t / SEK), szenen.length - 1), lt = t - i * SEK;
+        if (t < szenen.length * SEK) {
+          zeichne(g, bilder[i], B, H, 1 + .06 * lt / SEK, 1);
+          if (lt > SEK - UEB && i + 1 < szenen.length) zeichne(g, bilder[i + 1], B, H, 1, (lt - (SEK - UEB)) / UEB);
+          untertitel(g, szenen[i].ut, B, H);
+        } else {
+          const a = Math.min((t - szenen.length * SEK) / .8, 1);
+          zeichne(g, bilder.at(-1), B, H, 1.06, 1 - a * .6);
+          g.globalAlpha = a; g.fillStyle = '#f2c46d'; g.textAlign = 'center'; g.font = `700 ${B * .09}px Georgia, serif`; g.fillText('DR Lab', B / 2, H * .47);
+          g.fillStyle = '#fff'; g.font = `500 ${B * .04}px system-ui, sans-serif`; g.fillText('KI-Verse', B / 2, H * .53); g.globalAlpha = 1;
+        }
+        info.textContent = `Fia schneidet … ${Math.min(100, Math.round(t / gesamt * 100))} %`;
+        if (t < gesamt) requestAnimationFrame(bild); else ok();
+      };
+      requestAnimationFrame(bild);
+    });
+    rec.stop(); await fertig;
+    const blob = new Blob(teile, { type: rec.mimeType || 'video/webm' }), url = URL.createObjectURL(blob);
+    const endung = /mp4/.test(blob.type) ? 'mp4' : 'webm';
+    cv.remove();
+    info.textContent = `Fertig: ${szenen.length} Szenen, ${gesamt} Sekunden. Der Film bleibt auf deinem Gerät, bis du ihn sicherst.`;
+    const v = document.createElement('video'); v.src = url; v.controls = true; v.playsInline = true; v.style.cssText = 'width:100%;max-width:280px;border-radius:12px;align-self:center';
+    const a = document.createElement('a'); a.href = url; a.download = `${p.titel.replace(/[^\wäöüÄÖÜ -]/g, '').trim() || 'film'}.${endung}`; a.className = 'knopf gold'; a.textContent = 'Film sichern';
+    box.append(v, a);
+  }
+  $('#wsSchneiden').addEventListener('click', () => { if (ws.projekt) filmSchneiden(ws.projekt).catch(e => { $('#wsFilm').textContent = e.message; }); });
 
   // ---------- Sparky forscht: echte Probanden geben ihr Gefühl zu einer App-Idee ----------
   const GEFUEHL_FARBE = { neugierig: '💛', begeistert: '✨', ruhig: '💙', 'gerührt': '💗', unsicher: '🧡', verwirrt: '💜', gelangweilt: '🤍' };
