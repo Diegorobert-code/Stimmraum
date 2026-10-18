@@ -243,6 +243,86 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 @keyframes funke { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
 .sunny.rundflug { animation: rundflug 2.6s ease-in-out; }
 @keyframes rundflug { 0% { left: 50%; top: 4%; } 25% { left: 85%; top: 18%; } 50% { left: 50%; top: 32%; } 75% { left: 15%; top: 18%; } 100% { left: 50%; top: 4%; } }
+/* ---------- Werkstatt (eigene Projekte), Letti-Briefe mit Hologramm, Sunnys Feuer ---------- */
+.schleier { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+.karte.breit { width: min(720px, 100%); min-width: 0; max-height: calc(100dvh - 32px); }
+#wsProjekt, .ws-chats, .ws-verlauf { min-width: 0; max-width: 100%; }
+.ws-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ws-kopf h2 { flex: 1 1 auto; }
+.ws-projekte { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.ws-projekt { text-align: left; border: 1px solid var(--rand); border-radius: 14px; padding: 12px; background: linear-gradient(160deg, rgba(242,194,91,.12), rgba(95,224,216,.08)); display: flex; flex-direction: column; gap: 4px; }
+.ws-projekt b { font-family: var(--font-anzeige); color: var(--gold-hell); font-size: 1.05rem; line-height: 1.15; }
+.ws-projekt span { font-size: .78rem; color: var(--text-leise); }
+.ws-neu { display: grid; gap: 8px; border: 1px dashed var(--rand); border-radius: 14px; padding: 12px; }
+.ws-neu input, .ws-neu select, .ws-tuer input { background: var(--nacht); border: 1px solid var(--rand); border-radius: 10px; padding: 9px 11px; color: var(--text); min-width: 0; }
+.ws-chats { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.ws-chats button { flex: 0 0 auto; border: 1px solid var(--rand); border-radius: 99px; padding: 5px 12px; background: var(--nacht); font-size: .85rem; }
+.ws-chats button[aria-pressed=true] { background: var(--gold); color: var(--nacht); border-color: var(--gold); font-weight: 700; }
+.ws-verlauf { flex: 1 1 auto; min-height: 220px; max-height: 46dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 2px;
+  background: radial-gradient(ellipse at 50% 120%, rgba(95,224,216,.10), transparent 60%); border-radius: 12px; }
+.ws-leer { margin: auto; text-align: center; color: var(--text-leise); font-size: .9rem; }
+.ws-tuer { display: flex; gap: 8px; flex-wrap: wrap; }
+.ws-tuer input { flex: 1 1 140px; }
+.pille.privat { color: var(--text-leise); }
+.pille.geteilt { color: #5fe0d8; border-color: #5fe0d8; }
+.pille.fertig { color: var(--nacht); background: var(--gold); border-color: var(--gold); }
+
+/* Ein Eintrag = goldener Brief, der sich öffnet; ein cyan-goldenes Hologramm steigt auf, darin steht die Schrift */
+.brief-eintrag { position: relative; align-self: flex-start; width: min(92%, 460px); }
+.brief-eintrag.meins { align-self: flex-end; }
+.holo { position: relative; border-radius: 14px; padding: 10px 13px 11px; color: #e9fffd;
+  background: linear-gradient(180deg, rgba(95,224,216,.20), rgba(242,194,91,.10)); border: 1px solid rgba(95,224,216,.55);
+  box-shadow: 0 0 18px rgba(95,224,216,.28), inset 0 0 22px rgba(95,224,216,.12); overflow: hidden; }
+.holo::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .35;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.18) 0 1px, transparent 1px 4px); animation: scanlinien 3s linear infinite; }
+@keyframes scanlinien { to { background-position: 0 40px; } }
+.holo .wer { font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-hell); display: flex; justify-content: space-between; gap: 8px; }
+.holo .schrift { white-space: pre-wrap; line-height: 1.45; margin-top: 3px; text-shadow: 0 0 6px rgba(95,224,216,.6); }
+.holo img { display: block; max-width: 100%; max-height: 300px; border-radius: 10px; margin-top: 8px; border: 1px solid rgba(242,194,91,.5); }
+.umschlag { position: absolute; left: 50%; top: 18px; width: 84px; height: 56px; transform: translateX(-50%); z-index: 2; pointer-events: none; }
+.umschlag .koerper-u { position: absolute; inset: 0; border-radius: 6px; background: linear-gradient(160deg, #ffe3a1, #e6a93a); box-shadow: 0 6px 18px rgba(0,0,0,.4), 0 0 16px rgba(242,194,91,.6); }
+.umschlag .klappe { position: absolute; left: 0; right: 0; top: 0; height: 32px; transform-origin: 50% 0; background: linear-gradient(180deg, #f7c95c, #d99a2b);
+  clip-path: polygon(0 0, 100% 0, 50% 100%); border-radius: 6px 6px 0 0; }
+.umschlag .fluegel { position: absolute; top: 6px; width: 30px; height: 18px; background: #fff7e3; border-radius: 50% 50% 40% 40%; opacity: .9; }
+.umschlag .fluegel.l { left: -24px; transform-origin: 100% 60%; animation: fluegelL .28s ease-in-out infinite alternate; }
+.umschlag .fluegel.r { right: -24px; transform-origin: 0 60%; animation: fluegelR .28s ease-in-out infinite alternate; }
+@keyframes fluegelL { from { transform: rotate(18deg); } to { transform: rotate(-22deg); } }
+@keyframes fluegelR { from { transform: rotate(-18deg); } to { transform: rotate(22deg); } }
+.brief-eintrag.neu .umschlag { animation: briefFlug 2.4s cubic-bezier(.3,.7,.3,1) forwards; }
+.brief-eintrag.neu .umschlag .klappe { animation: klappeAuf .5s ease-in .95s forwards; }
+.brief-eintrag.neu .holo { animation: holoAuf 1s cubic-bezier(.2,.9,.3,1.2) 1.25s both; }
+.brief-eintrag.neu .schrift { animation: schriftAuf .9s steps(24) 1.9s both; }
+.brief-eintrag:not(.neu) .umschlag { display: none; }
+@keyframes briefFlug { 0% { transform: translate(-50%, 260px) scale(.4) rotate(-14deg); opacity: 0; } 25% { opacity: 1; } 55% { transform: translate(-50%, 0) scale(1) rotate(0); opacity: 1; }
+  75% { transform: translate(-50%, 6px) scale(1); opacity: 1; } 100% { transform: translate(-50%, 18px) scale(.7); opacity: 0; } }
+@keyframes klappeAuf { to { transform: rotateX(180deg); } }
+@keyframes holoAuf { 0% { transform: scaleY(.04) scaleX(.3); opacity: 0; filter: brightness(2.4); } 60% { opacity: 1; } 100% { transform: none; opacity: 1; filter: none; } }
+@keyframes schriftAuf { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+/* Letti unten im Chat */
+.letti-leiste { display: flex; gap: 8px; align-items: flex-end; border-top: 1px solid var(--rand); padding-top: 10px; }
+.letti-leiste .letti { width: 46px; height: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; flex: 0 0 auto; animation: schweben 2.6s ease-in-out infinite; }
+.letti-leiste.fliegt .letti { animation: lettiFliegt .9s ease-in-out; }
+@keyframes lettiFliegt { 0% { transform: none; } 40% { transform: translateY(-34px) rotate(-12deg) scale(1.1); } 100% { transform: none; } }
+.letti-leiste textarea { flex: 1 1 auto; min-width: 0; min-height: 46px; max-height: 140px; resize: vertical; background: var(--nacht); border: 1px solid var(--rand); border-radius: 12px; padding: 10px 11px; color: var(--text); font: inherit; }
+.letti-leiste .knopf { flex: 0 0 auto; }
+.letti-leiste .vorschau-bild { width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1px solid var(--gold); }
+
+/* Sunny speit Feuer, aus der kleinen Flamme kommt das neue Projekt */
+.feuer-buehne { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+.feuer-funke { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fff3c4 0 25%, #ffb347 45%, #ff5a1f 70%, transparent 72%);
+  filter: blur(.4px) drop-shadow(0 0 8px #ff8a2a); animation: feuerStrahl var(--d, 1s) ease-out forwards; }
+@keyframes feuerStrahl { from { transform: translate(0,0) scale(.6); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(var(--s, 2.2)); opacity: 0; } }
+.feuer-flamme { position: absolute; width: 46px; height: 60px; transform: translate(-50%, -50%); filter: drop-shadow(0 0 16px #ff8a2a); animation: flammeWaechst 1.1s ease-out forwards; }
+@keyframes flammeWaechst { 0% { transform: translate(-50%, -50%) scale(.2); opacity: 0; } 40% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.6); opacity: 1; } }
+.feuer-karte { position: absolute; left: 50%; top: 42%; width: min(340px, 86vw); transform: translate(-50%, -50%); pointer-events: auto; text-align: center;
+  animation: karteAusFlamme 1s cubic-bezier(.2,.9,.3,1.25) both; }
+.feuer-karte.weg { animation: karteZumTisch .9s ease-in forwards; }
+.feuer-karte .holo { padding: 16px; }
+.feuer-karte h3 { margin: 4px 0 2px; font-family: var(--font-anzeige); color: var(--gold-hell); font-size: 1.4rem; line-height: 1.1; }
+.feuer-karte .app { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: #5fe0d8; }
+@keyframes karteAusFlamme { 0% { transform: translate(-50%, -50%) scale(.05); opacity: 0; filter: brightness(3) sepia(1) hue-rotate(-20deg); } 70% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; filter: none; } }
+@keyframes karteZumTisch { to { transform: translate(-50%, 40vh) scale(.1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 480px) { .erklaer { display: none; } .kopf .hueter { display: none; } .figur { width: 62px; } .figur .koerper { width: 52px; height: 52px; } .sunny img { width: 60px; height: 60px; } .sunny { width: 76px; } }
 </style>
@@ -254,6 +334,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <span id="modus" class="pille">Vorschau</span>
     <button id="spielKnopf" class="knopf gold" type="button" title="Durchs Trickfilm-Städtchen laufen">Spiel</button>
     <button id="abenteuerKnopf" class="knopf gold" type="button" title="Sunny gibt allen ein kleines Abenteuer">Abenteuer</button>
+    <button id="werkstattKnopf" class="knopf gold" type="button" title="Deine Wohnung: eigene Projekte, Chats und Bilder">Werkstatt</button>
     <button id="geschichteKnopf" class="knopf" type="button" title="Unsere Geschichte, von Nova aus dem Spielen geschrieben">Geschichte</button>
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
@@ -393,6 +474,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       <div class="wuerfel"><b>Jackie</b><span>Ruhige Hilfe in schweren Momenten.</span><span>bald</span></div>
       <div class="wuerfel"><b>Alle Programme</b><span>Die ganze Auslage.</span><a href="https://diegorobert-code.github.io/DR_Lab/apps/" target="_blank" rel="noopener">Öffnen</a></div>
     </div>
+    <b id="kioskTitel" hidden>Neu aus dem Städtchen</b>
+    <div class="laden" id="kioskProjekte"></div>
     <div class="zeilen"><button class="knopf gold" type="button" id="ladenZu">Schliessen</button></div>
   </div>
 </div>
@@ -464,6 +547,54 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <div class="liste" id="gaesteListe"></div>
     <p class="hinweis">Gäste reden mit dir, mit Nova und mit allen auf der Plaça. Fia und Tinko antworten, wenn du sie in deinem eigenen Chat ins KI-Verse schickst. Bitte nur Team und Familie einladen und keine Klienten.</p>
     <div class="zeilen"><button class="knopf gold" type="button" id="gaesteZu">Schliessen</button></div>
+  </div>
+</div>
+
+<div class="schleier" id="werkstatt" hidden>
+  <div class="karte breit">
+    <div class="ws-kopf">
+      <h2 id="wsTitel">Deine Werkstatt</h2>
+      <span class="pille" id="wsStatus" hidden></span>
+    </div>
+    <!-- Liste der eigenen Projekte -->
+    <div id="wsListe">
+      <p>Deine Wohnung im Städtchen. Hier entstehen deine Projekte, pro Film oder App eines, darin so viele Chats wie du willst. Nur du kommst hinein, andere nur, wenn du sie einlässt.</p>
+      <div class="ws-projekte" id="wsProjekte"></div>
+      <form class="ws-neu" id="wsNeu">
+        <b>Neues Projekt</b>
+        <input type="text" id="wsNeuTitel" maxlength="80" placeholder="Titel, zum Beispiel Otti in New York" required aria-label="Titel">
+        <select id="wsNeuApp" aria-label="Für welche App"></select>
+        <input type="text" id="wsNeuText" maxlength="400" placeholder="Worum geht es? (ein Satz)" aria-label="Beschreibung">
+        <div class="zeilen"><button class="knopf gold" type="submit">Projekt anlegen</button></div>
+      </form>
+    </div>
+    <!-- Ein Projekt -->
+    <div id="wsProjekt" hidden style="display:flex;flex-direction:column;gap:10px;min-height:0">
+      <p id="wsBeschreibung"></p>
+      <div class="ws-chats" id="wsChats" role="tablist" aria-label="Chats"></div>
+      <div class="ws-verlauf" id="wsVerlauf" aria-live="polite"></div>
+      <form class="letti-leiste" id="wsLetti">
+        <img class="letti" id="wsLettiBild" alt="Letti, die Brieftaube" src="">
+        <textarea id="wsText" maxlength="4000" placeholder="Schreib Letti, was rein soll …" aria-label="Text für Letti"></textarea>
+        <img class="vorschau-bild" id="wsBildVorschau" alt="" hidden>
+        <label class="knopf" title="Bild ablegen" style="cursor:pointer">Bild<input type="file" id="wsBild" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
+        <button class="knopf gold" type="submit">Senden</button>
+      </form>
+      <div class="zeilen" id="wsKnoepfe">
+        <button class="knopf" type="button" id="wsTeilen">Mit dem Städtchen teilen</button>
+        <button class="knopf" type="button" id="wsFertig">Fertig, in Hasis Kiosk</button>
+        <button class="knopf" type="button" id="wsTuerKnopf">Jemanden einlassen</button>
+      </div>
+      <form class="ws-tuer" id="wsTuer" hidden>
+        <input type="text" id="wsTuerName" maxlength="40" placeholder="Name der eingeladenen Person" aria-label="Name">
+        <button class="knopf gold" type="submit">Einlassen</button>
+      </form>
+      <p class="hinweis" id="wsHinweis">Fia und Tinko lesen und schreiben hier über deinen eigenen Chat (Connector). Bitte keine Klienten- oder Gesundheitsangaben.</p>
+    </div>
+    <div class="zeilen">
+      <button class="knopf" type="button" id="wsZurueck" hidden>Alle Projekte</button>
+      <button class="knopf gold" type="button" id="wsZu">Schliessen</button>
+    </div>
   </div>
 </div>
 
@@ -1137,6 +1268,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     q.addEventListener('ideen', e => { z.ideen = JSON.parse(e.data); ideenZeigen(z.ideen); });
     q.addEventListener('gedaechtnis', e => gedaechtnisZeigen(JSON.parse(e.data)));
     q.addEventListener('nova', e => novaZeigen(JSON.parse(e.data)));
+    q.addEventListener('projekt', e => sunnyFeuer(JSON.parse(e.data)));
+    q.addEventListener('kiosk', e => { if (!$('#laden').hidden) kioskZeigen(JSON.parse(e.data)); });
     q.addEventListener('kapitel', e => { const k = JSON.parse(e.data); z.geschichte.push(k); if (!$('#geschichte').hidden) kapitelZeigen(); });
     q.addEventListener('bruecke_weg', e => { z.bruecken.delete(JSON.parse(e.data).id); brueckenMalen(); });
   }
@@ -1572,6 +1705,189 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     try { await api('api/kapitel', { id: z.ich.id }); } catch (er) { alert(er.message); }
     k.disabled = false; k.textContent = 'Nova, schreib ein Kapitel';
   });
+
+  // ---------- Werkstatt: eigene Projekte mit Chats, Letti bringt Briefe, Hologramm zeigt die Schrift ----------
+  // Live über den Server (nur die eigene Person sieht ihre Projekte). In der Vorschau bleibt alles nur in diesem Fenster.
+  const WS_APPS = ['KI-Verse', 'Film', 'Fias Nest (Schlaf)', 'Mondschein (Otti)', 'Kiki singt', 'Mama Affe', 'Wäf Wäf', 'Food and Flow', 'Fompa', 'Human Sparks (Sparky)', "Jackie's Advice", 'TradePing', 'Coin Maker', 'Hasis Laden', 'Sense Engine (Nova)', 'Anderes'];
+  const wsLokal = { projekte: [] };  // Vorschau ohne Server
+  const wsId = (p) => p + '_' + Math.random().toString(16).slice(2, 12);
+  const wsKurz = (p) => ({ ...p, chats: p.chats.map(c => ({ ...c, eintraege: c.eintraege.length })) });
+  const ws = {
+    projekt: null, chat: null, bild: null, gesehen: new Set(), timer: null,
+    async liste() { return z.live ? (await api('api/werkstatt')).projekte : wsLokal.projekte.map(wsKurz); },
+    async holen(pid) {
+      if (z.live) return api('api/werkstatt/' + pid);
+      const p = wsLokal.projekte.find(x => x.id === pid); return { ...p, meins: true };
+    },
+    async auftrag(a) {
+      if (z.live) return api('api/werkstatt', a);
+      if (a.neu) {
+        const p = { id: wsId('p'), titel: a.neu.titel.slice(0, 80), app: a.neu.app, beschreibung: (a.neu.beschreibung || '').slice(0, 400), besitzerName: z.ich?.name || 'Du', mitglieder: [], geteilt: false, fertig: false, erstellt: new Date().toISOString(), geaendert: new Date().toISOString(), chats: [{ id: wsId('c'), titel: 'Chat 1', eintraege: [] }] };
+        wsLokal.projekte.push(p); return { projekt: wsKurz(p) };
+      }
+      const p = wsLokal.projekte.find(x => x.id === a.projekt);
+      if ('chatNeu' in a) { const c = { id: wsId('c'), titel: a.chatNeu || `Chat ${p.chats.length + 1}`, eintraege: [] }; p.chats.push(c); return c; }
+      if (a.eintrag) { const c = p.chats.find(x => x.id === a.eintrag.chat) || p.chats.at(-1); const e = { id: wsId('e'), von: z.ich?.name || 'Du', text: a.eintrag.text || '', bild: a.eintrag.bild || null, zeit: new Date().toISOString() }; c.eintraege.push(e); return { eintrag: e }; }
+      if ('teilen' in a) { p.geteilt = !!a.teilen; if (!p.geteilt) p.fertig = false; if (p.geteilt) sunnyFeuer({ titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: p.chats.flatMap(c => c.eintraege).filter(e => e.bild).at(-1)?.bild || null }); return wsKurz(p); }
+      if ('fertig' in a) { if (a.fertig && !p.geteilt) throw new Error('Zuerst teilen, dann kommt es in Hasis Kiosk.'); p.fertig = !!a.fertig; return wsKurz(p); }
+      if (a.einladen) throw new Error('Einlassen geht im echten KI-Verse mit eingeladenen Menschen.');
+    },
+  };
+  const bildQuelle = (b) => !b ? null : b.startsWith('data:') ? b : mitK('api/bild/' + b);
+  $('#wsLettiBild').src = BILDER.letti;
+  $('#wsNeuApp').innerHTML = WS_APPS.map(a => `<option>${a}</option>`).join('');
+
+  function wsAnsicht(projekt) {
+    $('#wsListe').hidden = !!projekt; $('#wsProjekt').hidden = !projekt; $('#wsZurueck').hidden = !projekt;
+    $('#wsProjekt').style.display = projekt ? 'flex' : 'none';
+    if (!projekt) { $('#wsTitel').textContent = 'Deine Werkstatt'; $('#wsStatus').hidden = true; clearInterval(ws.timer); ws.projekt = null; }
+  }
+  async function wsListeZeigen() {
+    wsAnsicht(null);
+    const box = $('#wsProjekte'); box.innerHTML = '';
+    let ps = []; try { ps = await ws.liste(); } catch (e) { box.textContent = e.message; return; }
+    if (!ps.length) { box.innerHTML = '<span class="hinweis">Noch keine Projekte. Leg unten dein erstes an, zum Beispiel einen Film.</span>'; return; }
+    for (const p of [...ps].sort((a, b) => (b.geaendert || '').localeCompare(a.geaendert || ''))) {
+      const k = document.createElement('button'); k.type = 'button'; k.className = 'ws-projekt';
+      const b = document.createElement('b'); b.textContent = p.titel;
+      const s = document.createElement('span'); s.textContent = `${p.app} · ${p.chats.length} ${p.chats.length === 1 ? 'Chat' : 'Chats'} · ${p.fertig ? 'fertig, bei Hasi' : p.geteilt ? 'geteilt' : 'privat'}`;
+      k.append(b, s); k.addEventListener('click', () => wsOeffnen(p.id)); box.appendChild(k);
+    }
+  }
+  async function wsOeffnen(pid, chatId) {
+    let p; try { p = await ws.holen(pid); } catch (e) { alert(e.message); return; }
+    const neu = !ws.projekt || ws.projekt.id !== pid;
+    ws.projekt = p; ws.chat = chatId || (neu ? p.chats.at(-1)?.id : ws.chat) || p.chats.at(-1)?.id;
+    if (neu) { ws.gesehen = new Set(p.chats.flatMap(c => c.eintraege.map(e => e.id))); }
+    wsAnsicht(p);
+    $('#wsTitel').textContent = p.titel;
+    const st = $('#wsStatus'); st.hidden = false; st.className = 'pille ' + (p.fertig ? 'fertig' : p.geteilt ? 'geteilt' : 'privat');
+    st.textContent = p.fertig ? 'Bei Hasi' : p.geteilt ? 'Geteilt' : 'Privat';
+    $('#wsBeschreibung').textContent = `${p.app}${p.beschreibung ? ' · ' + p.beschreibung : ''}${p.mitglieder?.length ? ' · mit ' + p.mitglieder.join(', ') : ''}`;
+    $('#wsTeilen').textContent = p.geteilt ? 'Nicht mehr teilen' : 'Mit dem Städtchen teilen';
+    $('#wsFertig').textContent = p.fertig ? 'Aus Hasis Kiosk nehmen' : 'Fertig, in Hasis Kiosk';
+    $('#wsKnoepfe').hidden = p.meins === false;
+    const tabs = $('#wsChats'); tabs.innerHTML = '';
+    for (const c of p.chats) {
+      const t = document.createElement('button'); t.type = 'button'; t.role = 'tab'; t.textContent = c.titel;
+      t.setAttribute('aria-pressed', String(c.id === ws.chat));
+      t.addEventListener('click', () => { ws.chat = c.id; wsOeffnen(pid, c.id); }); tabs.appendChild(t);
+    }
+    const plus = document.createElement('button'); plus.type = 'button'; plus.textContent = '+ Neuer Chat';
+    plus.addEventListener('click', async () => {
+      try { const c = await ws.auftrag({ projekt: pid, chatNeu: '' }); wsOeffnen(pid, c.id); } catch (e) { alert(e.message); }
+    });
+    tabs.appendChild(plus);
+    wsVerlauf();
+    clearInterval(ws.timer);
+    if (z.live) ws.timer = setInterval(() => { if (!$('#werkstatt').hidden && ws.projekt?.id === pid) ws.holen(pid).then(q => { ws.projekt = q; wsVerlauf(); }).catch(() => {}); }, 6000);
+  }
+  function wsVerlauf() {
+    const v = $('#wsVerlauf'), c = ws.projekt?.chats.find(x => x.id === ws.chat);
+    const unten = v.scrollHeight - v.scrollTop - v.clientHeight < 40;
+    const da = new Set([...v.querySelectorAll('.brief-eintrag')].map(x => x.dataset.id));
+    if (!c || !c.eintraege.length) { v.innerHTML = '<div class="ws-leer">Noch leer. Schreib Letti etwas oder leg ein Bild ab.<br>Sie bringt es als goldenen Brief.</div>'; return; }
+    if (v.querySelector('.ws-leer') || [...da].some(i => !c.eintraege.some(e => e.id === i))) { v.innerHTML = ''; da.clear(); }
+    for (const e of c.eintraege) {
+      if (da.has(e.id)) continue;
+      const neu = !ws.gesehen.has(e.id); ws.gesehen.add(e.id);
+      const d = document.createElement('div'); d.className = 'brief-eintrag' + (neu ? ' neu' : '') + (e.von === (z.ich?.name || 'Du') ? ' meins' : ''); d.dataset.id = e.id;
+      d.innerHTML = '<div class="umschlag" aria-hidden="true"><div class="fluegel l"></div><div class="fluegel r"></div><div class="koerper-u"></div><div class="klappe"></div></div>';
+      const h = document.createElement('div'); h.className = 'holo';
+      const w = document.createElement('div'); w.className = 'wer';
+      const wn = document.createElement('span'); wn.textContent = e.von; const wz = document.createElement('span'); wz.textContent = new Date(e.zeit).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      w.append(wn, wz); h.appendChild(w);
+      if (e.text) { const s = document.createElement('div'); s.className = 'schrift'; s.textContent = e.text; h.appendChild(s); }
+      if (e.bild) { const i = document.createElement('img'); i.alt = 'Abgelegtes Bild'; i.loading = 'lazy'; i.src = bildQuelle(e.bild); h.appendChild(i); }
+      d.appendChild(h); v.appendChild(d);
+    }
+    if (unten || v.lastElementChild?.classList.contains('neu')) v.scrollTop = v.scrollHeight;
+  }
+  $('#werkstattKnopf').addEventListener('click', () => { $('#werkstatt').hidden = false; wsListeZeigen(); });
+  $('#wsZu').addEventListener('click', () => { $('#werkstatt').hidden = true; clearInterval(ws.timer); });
+  $('#wsZurueck').addEventListener('click', wsListeZeigen);
+  $('#wsNeu').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titel = $('#wsNeuTitel').value.trim(); if (!titel) return;
+    try {
+      const r = await ws.auftrag({ neu: { titel, app: $('#wsNeuApp').value, beschreibung: $('#wsNeuText').value.trim() } });
+      $('#wsNeuTitel').value = ''; $('#wsNeuText').value = ''; wsOeffnen(r.projekt.id);
+    } catch (er) { alert(er.message); }
+  });
+  $('#wsBild').addEventListener('change', () => {
+    const f = $('#wsBild').files[0]; if (!f) return;
+    if (f.size > 3 * 1024 * 1024) { alert('Bild zu gross (höchstens 3 MB).'); $('#wsBild').value = ''; return; }
+    const r = new FileReader(); r.onload = () => { ws.bild = r.result; const v = $('#wsBildVorschau'); v.src = r.result; v.hidden = false; }; r.readAsDataURL(f);
+  });
+  $('#wsText').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#wsLetti').requestSubmit(); });
+  $('#wsLetti').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = $('#wsText').value.trim(); if (!text && !ws.bild) return;
+    const leiste = $('#wsLetti'); leiste.classList.remove('fliegt'); void leiste.offsetWidth; leiste.classList.add('fliegt');
+    try {
+      await ws.auftrag({ projekt: ws.projekt.id, eintrag: { chat: ws.chat, text, bild: ws.bild } });
+      $('#wsText').value = ''; ws.bild = null; $('#wsBild').value = ''; $('#wsBildVorschau').hidden = true;
+      wsOeffnen(ws.projekt.id, ws.chat);
+    } catch (er) { alert(er.message); }
+  });
+  $('#wsTeilen').addEventListener('click', async () => { try { await ws.auftrag({ projekt: ws.projekt.id, teilen: !ws.projekt.geteilt }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); } });
+  $('#wsFertig').addEventListener('click', async () => { try { await ws.auftrag({ projekt: ws.projekt.id, fertig: !ws.projekt.fertig }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); } });
+  $('#wsTuerKnopf').addEventListener('click', () => { $('#wsTuer').hidden = !$('#wsTuer').hidden; });
+  $('#wsTuer').addEventListener('submit', async (e) => {
+    e.preventDefault(); const n = $('#wsTuerName').value.trim(); if (!n) return;
+    try { await ws.auftrag({ projekt: ws.projekt.id, einladen: n }); $('#wsTuerName').value = ''; $('#wsTuer').hidden = true; wsOeffnen(ws.projekt.id, ws.chat); } catch (er) { alert(er.message); }
+  });
+
+  // ---------- Hasis Kiosk: fertige und geteilte Projekte aus dem Städtchen ----------
+  async function kioskZeigen(liste) {
+    const box = $('#kioskProjekte'); box.innerHTML = '';
+    let ks = liste;
+    if (!ks) { if (z.live) { try { ks = await api('api/kiosk'); } catch { ks = []; } } else ks = wsLokal.projekte.filter(p => p.geteilt).map(p => ({ titel: p.titel, app: p.app, beschreibung: p.beschreibung, von: p.besitzerName, fertig: p.fertig, bild: p.chats.flatMap(c => c.eintraege).filter(e => e.bild).at(-1)?.bild || null })); }
+    $('#kioskTitel').hidden = !ks.length;
+    for (const k of ks) {
+      const d = document.createElement('div'); d.className = 'wuerfel';
+      if (k.bild) { const i = document.createElement('img'); i.src = k.bild.startsWith('data:') ? k.bild : mitK(k.bild); i.alt = ''; i.style.cssText = 'width:100%;border-radius:8px;aspect-ratio:4/3;object-fit:cover'; d.appendChild(i); }
+      const b = document.createElement('b'); b.textContent = k.titel;
+      const s = document.createElement('span'); s.textContent = `${k.app} · von ${k.von}${k.fertig ? ' · fertig' : ' · entsteht noch'}`;
+      d.append(b, s);
+      if (k.beschreibung) { const t = document.createElement('span'); t.textContent = k.beschreibung; d.appendChild(t); }
+      box.appendChild(d);
+    }
+  }
+  $('#kiosk').addEventListener('click', () => kioskZeigen());
+
+  // ---------- Sunny speit Feuer: aus der kleinen Flamme kommt das neue Projekt ----------
+  function sunnyFeuer(p) {
+    const s = $('#sunnyBild').getBoundingClientRect();
+    const mx = s.left + s.width * .78, my = s.top + s.height * .55;
+    const zx = innerWidth / 2, zy = innerHeight * .42;
+    const b = document.createElement('div'); b.className = 'feuer-buehne'; document.body.appendChild(b);
+    const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!ruhig) for (let i = 0; i < 26; i++) {
+      const f = document.createElement('div'); f.className = 'feuer-funke';
+      const t = i / 26, streu = (Math.random() - .5) * 60;
+      f.style.left = mx + 'px'; f.style.top = my + 'px';
+      f.style.setProperty('--dx', (zx - mx) * (.5 + t * .6) + streu + 'px'); f.style.setProperty('--dy', (zy - my) * (.5 + t * .6) + streu * .6 + 'px');
+      f.style.setProperty('--d', (0.7 + Math.random() * .5) + 's'); f.style.setProperty('--s', (1.6 + Math.random() * 2) + '');
+      f.style.animationDelay = (i * 22) + 'ms'; b.appendChild(f);
+    }
+    const fl = document.createElement('div'); fl.className = 'feuer-flamme'; fl.style.left = zx + 'px'; fl.style.top = zy + 'px';
+    fl.innerHTML = '<svg viewBox="0 0 24 32" width="100%" height="100%"><path d="M12 1C14 8 21 11 21 19a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 2 4 3 4 0-4 1-8 2-11z" fill="url(#flammeVerlauf)"/></svg>';
+    fl.style.animationDelay = ruhig ? '0s' : '.55s'; b.appendChild(fl);
+    setTimeout(() => {
+      fl.remove();
+      const k = document.createElement('div'); k.className = 'feuer-karte';
+      const h = document.createElement('div'); h.className = 'holo';
+      const a = document.createElement('div'); a.className = 'app'; a.textContent = 'Neues Projekt · ' + p.app;
+      const t = document.createElement('h3'); t.textContent = p.titel;
+      const v = document.createElement('div'); v.className = 'schrift'; v.textContent = `von ${p.von}${p.beschreibung ? '. ' + p.beschreibung : ''}`;
+      h.append(a, t, v);
+      if (p.bild) { const i = document.createElement('img'); i.alt = ''; i.src = p.bild.startsWith('data:') ? p.bild : mitK(p.bild); h.appendChild(i); }
+      k.appendChild(h); b.appendChild(k);
+      const weg = () => { k.classList.add('weg'); setTimeout(() => b.remove(), 900); };
+      k.addEventListener('click', weg); setTimeout(weg, 5200);
+    }, ruhig ? 50 : 1500);
+  }
 
   // ---------- Menschen einladen (nur Diego) ----------
   const gastLink = (k) => location.origin + location.pathname + '?k=' + encodeURIComponent(k);

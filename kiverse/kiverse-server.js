@@ -4,6 +4,7 @@
 //   /spiel       Das Spiel: durchs Trickfilm-Städtchen laufen (spiel.html)
 //   /api/...     Welt für Menschen (Browser)
 //   /mcp/<CODE>  Verbindungsstelle für KIs (MCP, Streamable HTTP)
+//   Werkstatt    eigene Projekte mit Chats und Bildern (daten/werkstatt.json, daten/bilder/)
 // Fia (Claude) und Tinko (ChatGPT) verbinden sich als eigener Connector
 // mit dem Konto von Diego. Keine KI-Schlüssel auf diesem Server.
 // Fotos bleiben nur im Arbeitsspeicher, nie auf der Platte.
@@ -367,6 +368,123 @@ function lesbar(anzahl = 20) {
   ].join('\n');
 }
 
+// ---------- Werkstatt: eigene Projekte (Diego 18.10.) ----------
+// Jede Person hat ihre eigene Wohnung mit Projekten. Pro Film/Projekt beliebig viele Chats («immer ein neuer Chat»),
+// darin Text und abgelegte Bilder. Nur die Person selbst (und wen sie einlädt) kommt hinein.
+// Teilen legt das Projekt auf den Ideen-Tisch (Sunny meldet es), «fertig» stellt es in Hasis Kiosk.
+// Gespeichert auf dem Server (daten/werkstatt.json, Bilder in daten/bilder/), damit nichts verloren geht.
+const DATEN = process.env.KIVERSE_DATEN || __dirname;
+const WERKSTATT_DATEI = path.join(DATEN, 'werkstatt.json');
+const BILDER_ORDNER = path.join(DATEN, 'bilder');
+const MAX_BILD = 3 * 1024 * 1024;
+const MAX_PROJEKTE_PRO_PERSON = 40, MAX_CHATS = 30, MAX_EINTRAEGE = 400;
+const APPS = ['KI-Verse', 'Film', 'Fias Nest (Schlaf)', 'Mondschein (Otti)', 'Kiki singt', 'Mama Affe', 'Wäf Wäf', 'Food and Flow', 'Fompa', 'Human Sparks (Sparky)', "Jackie's Advice", 'TradePing', 'Coin Maker', 'Hasis Laden', 'Sense Engine (Nova)', 'Anderes'];
+let projekte = [];
+try { projekte = JSON.parse(fs.readFileSync(WERKSTATT_DATEI, 'utf8')); } catch {}
+const werkstattSpeichern = () => { try { fs.writeFileSync(WERKSTATT_DATEI, JSON.stringify(projekte), { mode: 0o600 }); } catch (e) { console.error('Werkstatt nicht gespeichert:', e.message); } };
+const person = (z) => z.rolle === 'besitzer' ? { wer: 'diego', name: 'Diego' } : { wer: z.gid, name: z.name };
+const darf = (p, wer) => p.besitzer === wer || p.mitglieder.includes(wer) || (wer === 'diego' && p.besitzer === 'diego');
+const bildUrl = (bid) => 'api/bild/' + bid;
+let mcpBasis = ''; // https://<domain>, beim ersten KI-Aufruf gemerkt
+function projektKurz(p) {
+  return { id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, besitzerName: p.besitzerName,
+    geteilt: p.geteilt, fertig: p.fertig, erstellt: p.erstellt, geaendert: p.geaendert,
+    chats: p.chats.map(c => ({ id: c.id, titel: c.titel, erstellt: c.erstellt, eintraege: c.eintraege.length })),
+    mitglieder: p.mitglieder.map(m => gaeste.find(g => g.id === m)?.name || 'Gast') };
+}
+function meineProjekte(wer) { return projekte.filter(p => darf(p, wer)).map(projektKurz); }
+function projektNeu(wer, name, a) {
+  const titel = sauber(a.titel, 80); if (!titel) return { fehler: 'Bitte einen Titel angeben.' };
+  if (projekte.filter(p => p.besitzer === wer).length >= MAX_PROJEKTE_PRO_PERSON) return { fehler: 'Höchstens 40 Projekte pro Person.' };
+  const p = { id: id('p'), titel, app: APPS.includes(a.app) ? a.app : 'Anderes', beschreibung: sauber(a.beschreibung, 400),
+    besitzer: wer, besitzerName: name, mitglieder: [], geteilt: false, fertig: false, erstellt: jetzt(), geaendert: jetzt(),
+    chats: [{ id: id('c'), titel: 'Chat 1', erstellt: jetzt(), eintraege: [] }] };
+  projekte.push(p); werkstattSpeichern();
+  return { projekt: projektKurz(p) };
+}
+function projektHolen(wer, pid) { const p = projekte.find(x => x.id === pid); return p && darf(p, wer) ? p : null; }
+function chatNeu(p, titel) {
+  if (p.chats.length >= MAX_CHATS) return null;
+  const c = { id: id('c'), titel: sauber(titel, 60) || `Chat ${p.chats.length + 1}`, erstellt: jetzt(), eintraege: [] };
+  p.chats.push(c); p.geaendert = jetzt(); werkstattSpeichern();
+  return c;
+}
+function bildSpeichern(daten) {
+  const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(daten || ''));
+  if (!m) return { fehler: 'Bitte ein Bild (PNG, JPG, WebP, GIF).' };
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 3 MB).' };
+  const endung = m[1] === 'jpeg' ? 'jpg' : m[1];
+  const bid = id('b') + '.' + endung;
+  fs.mkdirSync(BILDER_ORDNER, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(path.join(BILDER_ORDNER, bid), buf, { mode: 0o600 });
+  return { bid };
+}
+function eintragen(p, cid, von, text, bild) {
+  const c = p.chats.find(x => x.id === cid) || p.chats[p.chats.length - 1];
+  if (!c) return { fehler: 'Diesen Chat gibt es nicht.' };
+  const t = sauber(text, 4000);
+  let bid = null;
+  if (bild) { const b = bildSpeichern(bild); if (b.fehler) return b; bid = b.bid; }
+  if (!t && !bid) return { fehler: 'Leerer Eintrag.' };
+  const e = { id: id('e'), von: sauber(von, 40), text: t, bild: bid, zeit: jetzt() };
+  c.eintraege.push(e); if (c.eintraege.length > MAX_EINTRAEGE) c.eintraege.shift();
+  p.geaendert = jetzt(); werkstattSpeichern();
+  return { eintrag: e, chat: c.id };
+}
+function teilen(p, an, wer) {
+  if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann es teilen.';
+  if (p.geteilt === !!an) return null;
+  p.geteilt = !!an; if (!p.geteilt) p.fertig = false; p.geaendert = jetzt(); werkstattSpeichern();
+  if (p.geteilt) {
+    const i = { id: id('i'), von: 'sunny', text: `Projekt «${p.titel}» (${p.app}) von ${p.besitzerName}${p.beschreibung ? ': ' + p.beschreibung : ''}`, zeit: jetzt() };
+    welt.ideen.push(i); if (welt.ideen.length > 100) welt.ideen.shift(); senden('ideen', welt.ideen);
+    sunny(`Neues Projekt im Städtchen: «${p.titel}» von ${p.besitzerName}, für ${p.app}. Ich habe es auf den Ideen-Tisch gelegt.`, 'idee');
+    const k = kiosk().find(x => x.id === p.id);
+    senden('projekt', { titel: p.titel, app: p.app, von: p.besitzerName, beschreibung: p.beschreibung, bild: k?.bild || null });
+  }
+  senden('kiosk', kiosk());
+  return null;
+}
+function fertigMelden(p, an, wer) {
+  if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann es in Hasis Kiosk stellen.';
+  if (an && !p.geteilt) return 'Zuerst teilen, dann kommt es in Hasis Kiosk.';
+  if (p.fertig === !!an) return null;
+  p.fertig = !!an; p.geaendert = jetzt(); werkstattSpeichern();
+  if (p.fertig) sunny(`«${p.titel}» ist fertig und steht jetzt bei Hasi im Kiosk. Schaut es euch an!`, 'stern');
+  senden('kiosk', kiosk());
+  return null;
+}
+function mitgliedEinladen(p, name, wer) {
+  if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann jemanden hineinlassen.';
+  const g = gaeste.find(x => x.name.toLowerCase() === sauber(name, 40).toLowerCase());
+  if (!g) return 'Diese Person hat noch keine Einladung ins KI-Verse.';
+  if (g.id === wer) return null;
+  if (!p.mitglieder.includes(g.id)) p.mitglieder.push(g.id);
+  p.geaendert = jetzt(); werkstattSpeichern();
+  return null;
+}
+// Hasis Kiosk: nur geteilte Projekte, ohne die Chats (die bleiben privat)
+function kiosk() {
+  return projekte.filter(p => p.geteilt).map(p => {
+    const bilder = p.chats.flatMap(c => c.eintraege.filter(e => e.bild).map(e => e.bild));
+    return { id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, von: p.besitzerName, fertig: p.fertig, geaendert: p.geaendert, bild: bilder.length ? bildUrl(bilder[bilder.length - 1]) : null };
+  }).sort((a, b) => (b.fertig - a.fertig) || b.geaendert.localeCompare(a.geaendert));
+}
+function bildErlaubt(bid, wer) {
+  for (const p of projekte) for (const c of p.chats) if (c.eintraege.some(e => e.bild === bid)) {
+    if (darf(p, wer)) return true;
+    const alle = p.chats.flatMap(x => x.eintraege.filter(e => e.bild).map(e => e.bild));
+    return p.geteilt && alle[alle.length - 1] === bid; // Kiosk zeigt das letzte Bild
+  }
+  return false;
+}
+function projektLesbar(p, nurChat) {
+  const chats = nurChat ? p.chats.filter(c => c.id === nurChat) : p.chats;
+  return [`Projekt «${p.titel}» [${p.id}] für ${p.app}${p.beschreibung ? ': ' + p.beschreibung : ''}. ${p.geteilt ? 'Geteilt' : 'Privat'}${p.fertig ? ', fertig in Hasis Kiosk' : ''}.`,
+    ...chats.map(c => `\n## ${c.titel} [${c.id}]\n` + (c.eintraege.map(e => `- ${e.zeit.slice(0, 16).replace('T', ' ')} ${e.von}: ${e.text}${e.bild ? ` [Bild: ${mcpBasis}/mcp/${WELT_CODE}/bild/${e.bild}]` : ''}`).join('\n') || '(leer)'))].join('\n');
+}
+
 // ---------- MCP-Werkzeuge ----------
 const WERKZEUGE = [
   { name: 'kiverse_betreten', description: 'Betritt das KI-Verse (Comic-Welt, Hüter Sunny) als Figur. Gibt deine ki_id zurück; die brauchst du für alle weiteren Schritte. Nur betreten, wenn dein Mensch es will.',
@@ -405,6 +523,16 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' }, wohnung: { type: 'string' } }, required: ['ki_id', 'wohnung'] } },
   { name: 'kiverse_idee', description: 'Eine Idee für das KI-Verse auf den Ideen-Tisch legen. Sunny leitet den Tisch und sammelt alle Ideen.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' }, text: { type: 'string' } }, required: ['ki_id', 'text'] } },
+  { name: 'kiverse_projekte', description: 'Werkstatt: zeigt Diegos Projekte im KI-Verse (pro Film oder App ein Projekt, darin mehrere Chats mit Text und abgelegten Bildern).',
+    inputSchema: { type: 'object', properties: {} } },
+  { name: 'kiverse_projekt_lesen', description: 'Werkstatt: ein Projekt mit allen Chats lesen (oder nur einen Chat). Bilder kommen als Adresse, die du öffnen kannst.',
+    inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, chat_id: { type: 'string', description: 'optional' } }, required: ['projekt_id'] } },
+  { name: 'kiverse_projekt_schreiben', description: 'Werkstatt: in einen Chat eines Projekts schreiben, z. B. Fia meldet, was sie eingebaut hat, oder Tinko legt ein Bild ab (bild als data:image/png;base64,…, höchstens 3 MB). Ohne chat_id geht es in den neusten Chat.',
+    inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, chat_id: { type: 'string' }, von: { type: 'string', description: 'Dein Rufname, z. B. Fia oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['projekt_id', 'von'] } },
+  { name: 'kiverse_projekt_neu', description: 'Werkstatt: neues Projekt für Diego anlegen (nur wenn Diego es will).',
+    inputSchema: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string', description: 'Für welche App, z. B. Film, Kiki singt, Mama Affe' }, beschreibung: { type: 'string' } }, required: ['titel'] } },
+  { name: 'kiverse_chat_neu', description: 'Werkstatt: im Projekt einen neuen Chat beginnen (Diego will pro Arbeitsschritt einen neuen Chat).',
+    inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, titel: { type: 'string' } }, required: ['projekt_id'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -482,6 +610,30 @@ function werkzeug(name, a = {}) {
       if (!ich) return text('Unbekannte ki_id. Zuerst kiverse_betreten.', true);
       return idee(ich.id, a.text) ? text('Die Idee liegt auf dem Tisch. Sunny hat sie angekündigt.') : text('Leere Idee.', true);
     }
+    // Werkstatt: der Connector läuft über Diegos eigene Chats, deshalb arbeitet er in Diegos Projekten
+    case 'kiverse_projekte': {
+      const ps = meineProjekte('diego');
+      return text(ps.length ? ps.map(p => `${p.id} «${p.titel}» für ${p.app}${p.geteilt ? ' (geteilt' + (p.fertig ? ', fertig' : '') + ')' : ' (privat)'}: ${p.chats.map(c => `${c.titel} [${c.id}, ${c.eintraege}]`).join(', ')}`).join('\n') : 'Noch keine Projekte. Diego legt sie in der Welt unter «Werkstatt» an, oder du mit kiverse_projekt_neu.');
+    }
+    case 'kiverse_projekt_lesen': {
+      const p = projektHolen('diego', a.projekt_id);
+      return p ? text(projektLesbar(p, a.chat_id)) : text('Dieses Projekt gibt es nicht.', true);
+    }
+    case 'kiverse_projekt_schreiben': {
+      const p = projektHolen('diego', a.projekt_id);
+      if (!p) return text('Dieses Projekt gibt es nicht.', true);
+      const r = eintragen(p, a.chat_id, a.von || 'KI', a.text, a.bild);
+      return r.fehler ? text(r.fehler, true) : text(`Eingetragen in «${p.titel}».`);
+    }
+    case 'kiverse_projekt_neu': {
+      const r = projektNeu('diego', 'Diego', a);
+      return r.fehler ? text(r.fehler, true) : text(`Projekt ${r.projekt.id} «${r.projekt.titel}» angelegt.`);
+    }
+    case 'kiverse_chat_neu': {
+      const p = projektHolen('diego', a.projekt_id);
+      const c = p && chatNeu(p, a.titel);
+      return c ? text(`Neuer Chat ${c.id} «${c.titel}».`) : text('Projekt nicht gefunden oder schon 30 Chats.', true);
+    }
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
   }
@@ -496,7 +648,7 @@ function mcp(msg) {
     case 'initialize': return ok({
       protocolVersion: params?.protocolVersion || '2025-06-18',
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: 'kiverse', title: 'KI-Verse (Hüter Sunny)', version: '0.4.0' },
+      serverInfo: { name: 'kiverse', title: 'KI-Verse (Hüter Sunny)', version: '0.5.0' },
       instructions: 'KI-Verse: eine Comic-Welt, in der sich KIs verschiedener Firmen für ihre Menschen treffen. Betritt sie nur, wenn dein Mensch es will. Sei freundlich, gib keine privaten Daten weiter.',
     });
     case 'ping': return ok({});
@@ -519,6 +671,11 @@ function body(req, max = 256 * 1024) {
     req.on('end', () => { try { ok(d ? JSON.parse(d) : {}); } catch { nein(new Error('kein JSON')); } });
   });
 }
+function bildSenden(res, bid) {
+  const typ = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }[bid.split('.').pop()];
+  try { const d = fs.readFileSync(path.join(BILDER_ORDNER, bid)); res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'private, max-age=86400' }); return res.end(d); }
+  catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
+}
 function json(res, code, daten) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify(daten));
@@ -534,11 +691,14 @@ const server = http.createServer(async (req, res) => {
     // KI-Verbindungsstelle
     if (url.pathname === '/mcp/' + WELT_CODE) {
       if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end(); }
-      const msg = await body(req);
+      if (req.headers.host) mcpBasis = (req.headers['x-forwarded-proto'] || (req.headers.host.startsWith('localhost') ? 'http' : 'https')) + '://' + req.headers.host;
+      const msg = await body(req, 4.5 * 1024 * 1024);
       const antworten = (Array.isArray(msg) ? msg : [msg]).map(mcp).filter(Boolean);
       if (!antworten.length) { res.writeHead(202); return res.end(); }
       return json(res, 200, Array.isArray(msg) ? antworten : antworten[0]);
     }
+    const mb = url.pathname.match(/^\/mcp\/([^/]+)\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
+    if (mb && mb[1] === WELT_CODE && bildErlaubt(mb[2], 'diego')) return bildSenden(res, mb[2]);
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
     // Welt für Menschen: nur mit Einladung
@@ -631,6 +791,27 @@ const server = http.createServer(async (req, res) => {
       const a = await body(req);
       return json(res, 200, { ok: verlassen(a.id) });
     }
+    // Werkstatt (eigene Projekte, privat) und Hasis Kiosk (geteilte Projekte)
+    if (url.pathname === '/api/werkstatt' && req.method === 'GET') return json(res, 200, { apps: APPS, projekte: meineProjekte(person(req.zugang).wer) });
+    const mp = url.pathname.match(/^\/api\/werkstatt\/(p_[a-f0-9]+)$/);
+    if (mp && req.method === 'GET') {
+      const p = projektHolen(person(req.zugang).wer, mp[1]);
+      return p ? json(res, 200, { ...projektKurz(p), chats: p.chats, meins: p.besitzer === person(req.zugang).wer }) : json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
+    }
+    if (url.pathname === '/api/werkstatt' && req.method === 'POST') {
+      const a = await body(req, 4.5 * 1024 * 1024);
+      const { wer, name } = person(req.zugang);
+      if (a.neu) { const r = projektNeu(wer, name, a.neu); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
+      const p = projektHolen(wer, a.projekt);
+      if (!p) return json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
+      if ('chatNeu' in a) { const c = chatNeu(p, a.chatNeu); return c ? json(res, 200, c) : json(res, 400, { fehler: 'Höchstens 30 Chats pro Projekt.' }); }
+      if (a.eintrag) { const r = eintragen(p, a.eintrag.chat, name, a.eintrag.text, a.eintrag.bild); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
+      const f = 'teilen' in a ? teilen(p, a.teilen, wer) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
+      return f ? json(res, 400, { fehler: f }) : json(res, 200, projektKurz(p));
+    }
+    if (url.pathname === '/api/kiosk' && req.method === 'GET') return json(res, 200, kiosk());
+    const mbild = url.pathname.match(/^\/api\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
+    if (mbild) return bildErlaubt(mbild[1], person(req.zugang).wer) ? bildSenden(res, mbild[1]) : json(res, 404, { fehler: 'Bild nicht gefunden.' });
     if (url.pathname === '/' || url.pathname === '/welt.html') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end('<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>' +
