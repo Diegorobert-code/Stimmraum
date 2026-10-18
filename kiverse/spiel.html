@@ -11,6 +11,11 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--nacht); color: var(--text); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
 canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+/* Handy-Modus: Kamera hinten als Hintergrund (KI-Blick), nur im Gerät */
+#arVideo { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; display: none; }
+html.ar, html.ar body { background: transparent; }
+html.ar #arVideo { display: block; }
+#schrittAnzeige[hidden] { display: none; }
 .anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; z-index: 5; }
 .pille { background: rgba(11, 20, 48, .7); border: 1px solid var(--rand); border-radius: 999px; padding: 4px 12px; font-weight: 700; color: var(--gold-hell); pointer-events: auto; }
 .pille button { all: unset; cursor: pointer; }
@@ -60,8 +65,11 @@ body.kino .balken { height: 9vh; }
 <div class="anzeige">
   <span class="pille" id="funkenAnzeige">✦ 0 / 12</span>
   <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
+  <span class="pille" id="schrittAnzeige" hidden>👣 0</span>
+  <span class="pille"><button type="button" id="handyKnopf">📱 Handy</button></span>
   <span class="pille"><button type="button" id="zurWelt">KI-Verse</button></span>
 </div>
+<video id="arVideo" playsinline muted autoplay></video>
 <div id="stick" hidden><i></i></div>
 <div id="hoch" hidden aria-label="springen">⤒</div>
 <button id="rein" type="button" hidden>Rein</button>
@@ -81,7 +89,7 @@ body.kino .balken { height: 9vh; }
     <p class="leise">Wer bist du heute?</p>
     <div class="wahl" id="wahl"></div>
     <button class="knopf gold" type="button" id="los" style="font-size:18px;padding:12px 30px">Durchs Tor</button>
-    <p class="leise" style="margin-top:12px">Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten und Leertaste.</p>
+    <p class="leise" style="margin-top:12px">Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten und Leertaste. Am Handy oben «📱 Handy»: mitlaufen, dich selbst sehen, KI-Blick durch die Kamera.</p>
   </div>
 </div>
 <div class="laden" id="laden">Das Städtchen wird gebaut ...</div>
@@ -102,7 +110,10 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(11);
 
 // ---------- Renderer, Szene, Licht ----------
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setClearColor(0x000000, 1);
+// Was im KI-Blick (Kamera hinten) verschwindet: Himmel, Meer, Mondspur, Gassenboden. Die echte Welt scheint durch.
+const AR_WEG = [];
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -181,7 +192,7 @@ const STEIN = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#c8b694'; g.f
     vertexShader: 'varying vec3 p; void main(){ p = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: 'uniform vec3 oben; uniform vec3 mitte; uniform vec3 unten; varying vec3 p; void main(){ float h = p.y; vec3 c = h > 0.15 ? mix(mitte, oben, smoothstep(0.15, 0.7, h)) : mix(unten, mitte, smoothstep(-0.05, 0.15, h)); gl_FragColor = vec4(c, 1.0); }',
   }));
-  szene.add(himmel);
+  szene.add(himmel); AR_WEG.push(himmel);
   const pos = [];
   for (let i = 0; i < 1400; i++) { const a = zufall() * Math.PI * 2, h = .08 + zufall() * .9, r = 800; pos.push(Math.cos(a) * r * Math.sqrt(1 - h * h), h * r, Math.sin(a) * r * Math.sqrt(1 - h * h)); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -194,11 +205,11 @@ const STEIN = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#c8b694'; g.f
 // ---------- Meer mit Wellen und Mondspur ----------
 const meerGeo = new THREE.PlaneGeometry(900, 900, 90, 90); meerGeo.rotateX(-Math.PI / 2);
 const meer = new THREE.Mesh(meerGeo, new THREE.MeshStandardMaterial({ color: 0x0f2c66, roughness: .18, metalness: .55 }));
-meer.position.set(458, -1.3, -100); szene.add(meer);
+meer.position.set(458, -1.3, -100); szene.add(meer); AR_WEG.push(meer);
 const meerBasis = Float32Array.from(meerGeo.attributes.position.array);
 const spurMat = new THREE.MeshBasicMaterial({ map: canvasTextur(64, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, 'rgba(255,220,140,0)'); v.addColorStop(.6, 'rgba(255,220,140,.5)'); v.addColorStop(1, 'rgba(255,220,140,.05)'); g.fillStyle = v; g.fillRect(0, 0, b, h); for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,240,200,.5)'; g.fillRect(zufall() * b, zufall() * h, 6 + zufall() * 20, 2); } }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
 const spur = new THREE.Mesh(new THREE.PlaneGeometry(16, 500), spurMat);
-spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.add(spur);
+spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.add(spur); AR_WEG.push(spur);
 // gegenüberliegende Küste mit Lichtern (wie auf Tinkos Bild)
 {
   const kueste = new THREE.Mesh(new THREE.ConeGeometry(140, 70, 10, 1), new THREE.MeshStandardMaterial({ color: 0x14244e, roughness: 1, flatShading: true }));
@@ -212,7 +223,7 @@ spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.
 const LAENGE = 330;
 {
   const boden = new THREE.Mesh(new THREE.PlaneGeometry(30, LAENGE + 60), new THREE.MeshStandardMaterial({ map: PFLASTER, roughness: .42, metalness: .12, color: 0xffd9a8 }));
-  boden.rotation.x = -Math.PI / 2; boden.position.set(-7, 0, -LAENGE / 2 + 10); boden.receiveShadow = true; szene.add(boden);
+  boden.rotation.x = -Math.PI / 2; boden.position.set(-7, 0, -LAENGE / 2 + 10); boden.receiveShadow = true; szene.add(boden); AR_WEG.push(boden);
   const mauer = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, LAENGE + 40), new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }));
   mauer.position.set(8.6, -.75, -LAENGE / 2 + 10); mauer.receiveShadow = true; szene.add(mauer);
   const pfosten = new THREE.CylinderGeometry(.06, .06, 1, 6), pm = new THREE.MeshStandardMaterial({ color: 0x2b2f45, metalness: .6, roughness: .4 });
@@ -708,6 +719,22 @@ for (let i = 0; i < 12; i++) {
 }
 
 // ---------- Spieler ----------
+// Der Baum mitten auf der Gasse (Diego 18.10. 23:32): in der echten Welt steht hier vielleicht nichts, in der KI-Welt wächst ein
+// leuchtender Baum, und die Gasse geht dahinter weiter. Die KI-Welt ist ein Paralleluniversum, keine 1:1-Abbildung.
+const KI_BAUM = { x: .5, z: -24 };
+const kiBaumBlaetter = [];
+{
+  const stamm = new THREE.Mesh(new THREE.CylinderGeometry(.28, .42, 3.4, 10), new THREE.MeshStandardMaterial({ color: 0x5a3d26, roughness: 1 }));
+  stamm.position.set(KI_BAUM.x, 1.7, KI_BAUM.z); stamm.castShadow = true; szene.add(stamm);
+  const farben = [0x6fd3ff, 0x9a7bff, 0xffd36b, 0x7cffc4];
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.9 + zufall() * .5, 1), new THREE.MeshStandardMaterial({ color: farben[i % 4], emissive: farben[i % 4], emissiveIntensity: .55, roughness: .4, flatShading: true }));
+    const a = i / 9 * Math.PI * 2; b.position.set(KI_BAUM.x + Math.cos(a) * 1.1, 4 + zufall() * 1.4, KI_BAUM.z + Math.sin(a) * 1.1); b.userData.y = b.position.y; b.userData.p = i;
+    szene.add(b); kiBaumBlaetter.push(b);
+  }
+  const l = new THREE.PointLight(0x9fd8ff, 6, 14, 1.6); l.position.set(KI_BAUM.x, 4.5, KI_BAUM.z); szene.add(l);
+}
+
 let spieler;
 const sp = { pos: new THREE.Vector3(0, 0, 18), richtung: Math.PI, vy: 0, tempo: 0, amBoden: true, sprung: 0, fliegend: false };
 const zustand = { modus: 'start', funken: 0, besucht: new Set(), erlebt: [], innen: null, ende: false, zeit: 0, intro: 0, partikel: [] };
@@ -866,14 +893,20 @@ function schritt() {
   rauch.forEach(({ w, x, z, p }) => { const t = (zeit * .18 + p) % 1; w.position.set(x + t * 3, 13.5 + t * 9, z + Math.sin(t * 6 + p * 9) * .6); w.scale.setScalar(1.5 + t * 4); w.material.opacity = .4 * Math.sin(t * Math.PI); });
   if (zahnrad) zahnrad.rotation.x = zeit * .8;
   if (leuchtStrahl) leuchtStrahl.rotation.y = zeit * .9;
+  kiBaumBlaetter.forEach(b => { b.position.y = b.userData.y + Math.sin(zeit * 1.2 + b.userData.p) * .15; b.rotation.y = zeit * .3 + b.userData.p; });
   if (fackelFlamme) fackelFlamme.scale.setScalar(2 + Math.sin(zeit * 13) * .25 + Math.sin(zeit * 7.3) * .2);
   // Mondspur liegt immer zwischen Betrachter und Mond auf dem Wasser
   spur.position.set(Math.max(10, kamPos.x + 10), -1.05, kamPos.z); spur.rotation.y = Math.atan2(-mondN.x, -mondN.z);
 
   if (zustand.modus === 'spiel' && !zustand.innen) {
-    const vor = eingabe.y + (tasten.ArrowUp || tasten.w ? 1 : 0) - (tasten.ArrowDown || tasten.s ? 1 : 0);
+    let vor = eingabe.y + (tasten.ArrowUp || tasten.w ? 1 : 0) - (tasten.ArrowDown || tasten.s ? 1 : 0);
     const dreh = eingabe.x + (tasten.ArrowRight || tasten.d ? 1 : 0) - (tasten.ArrowLeft || tasten.a ? 1 : 0);
     sp.richtung -= Math.max(-1, Math.min(1, dreh)) * dt * 2.4;
+    // Mitlaufen: das Handy gibt die Richtung (leicht verzögert), jeder echte Schritt schiebt die Figur ein Stück weiter
+    if (handy.mitlaufen) {
+      const r = handyRichtung(); if (r != null) sp.richtung = winkelLerp(sp.richtung, r, Math.min(1, dt * 3));
+      if (handy.weg > 0) { vor = Math.max(vor, .6); handy.weg -= Math.abs(sp.tempo) * dt; }
+    }
     sp.tempo = lerp(sp.tempo, Math.max(-.5, Math.min(1, vor)) * 7.5, Math.min(1, dt * 6));
   } else if (zustand.modus === 'intro') { sp.tempo = zustand.intro > 1.5 ? 3.2 : 0; sp.richtung = Math.PI; }
   else sp.tempo = lerp(sp.tempo, 0, Math.min(1, dt * 6));
@@ -882,6 +915,7 @@ function schritt() {
   sp.pos.x = Math.max(-6.2, Math.min(aufSteg ? 22 : 7.6, sp.pos.x));
   sp.pos.z = Math.max(-LAENGE + 8, Math.min(20, sp.pos.z));
   if (zustand.modus === 'spiel' && sp.pos.z > 6.8 && sp.pos.z < 9.2) sp.pos.x = Math.max(-2.2, Math.min(2.2, sp.pos.x));
+  const dK = Math.hypot(sp.pos.x - KI_BAUM.x, sp.pos.z - KI_BAUM.z); if (dK < 1.6) { const f = 1.6 / Math.max(.01, dK); sp.pos.x = KI_BAUM.x + (sp.pos.x - KI_BAUM.x) * f; sp.pos.z = KI_BAUM.z + (sp.pos.z - KI_BAUM.z) * f; }
   const dB = Math.hypot(sp.pos.x, sp.pos.z + 42); if (dB < 3.6) { const f = 3.6 / Math.max(.01, dB); sp.pos.x *= f; sp.pos.z = -42 + (sp.pos.z + 42) * f; }
   sp.vy -= 22 * dt; sp.pos.y += sp.vy * dt;
   if (sp.pos.y <= 0) { sp.pos.y = 0; sp.vy = 0; sp.amBoden = true; sp.sprung = 0; } else sp.amBoden = false;
@@ -905,6 +939,13 @@ function schritt() {
   }
   if (zustand.ende && zustand.endeT < 6) zustand.endeT += dt;
   kamera.position.copy(kamPos); kamera.lookAt(kamBlick);
+  // KI-Blick: Kamera in Augenhöhe, das Handy ist das Fenster in die KI-Welt
+  if (handy.ar && !kamZiel.aktiv && zustand.modus === 'spiel') {
+    kamera.position.set(sp.pos.x, sp.pos.y + 1.7, sp.pos.z);
+    if (handyQuaternion(qZiel)) { handy.qGlatt.slerp(qZiel, Math.min(1, dt * 7)); kamera.quaternion.copy(handy.qGlatt); }
+  }
+  if (spieler) spieler.visible = !(handy.ar && !kamZiel.aktiv);
+  if (handy.selfie) selfieMalen();
   mondLicht.target.position.copy(sp.pos); mondLicht.position.copy(sp.pos).addScaledVector(mondN, 80);
   lichterNachfuehren(sp.pos);
   // Sunny folgt in Wellen, beim Ende Ehrenrunde
@@ -941,7 +982,7 @@ function schritt() {
     if (sprecher) { const s = aufBildschirm(sprecher.x, sprecher.hoehe || 3.4, sprecher.z); if (s.sichtbar) { blaseEl.hidden = false; blaseEl.textContent = sprecher.satz; blaseEl.style.left = Math.max(120, Math.min(innerWidth - 120, s.x)) + 'px'; blaseEl.style.top = Math.max(90, s.y) + 'px'; } }
   } else $('#rein').hidden = true;
 
-  if (composer) composer.render(); else renderer.render(szene, kamera);
+  if (composer && !handy.ar) composer.render(); else renderer.render(szene, kamera);
   if (!window.__filmDt) requestAnimationFrame(schritt);
 }
 
@@ -970,7 +1011,108 @@ $('#los').onclick = anfangen;
 anzeigen();
 $('#laden').hidden = true;
 requestAnimationFrame(schritt);
-window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, rausGehen, springen, anfangen, schritt, tasten };
+// ---------- Handy-Modus (Diego 18.10. 23:32): mitlaufen, sich selbst in der Welt sehen, KI-Blick durch die Kamera ----------
+// Kamera und Bewegungssensor bleiben im Gerät: kein Bild wird gespeichert oder gesendet.
+// Die KI-Welt ist ein Paralleluniversum: ein echter Schritt ist hier ein Stück Gasse (SCHRITT_WEG), echte Hindernisse zählen nicht.
+const SCHRITT_WEG = 2.2;
+const handy = { mitlaufen: false, ar: false, selfie: false, strom: null, ori: null, r0: null, basis: 0, weg: 0, schritte: 0, glatt: 9.81, oben: false, letzter: 0, qGlatt: new THREE.Quaternion(), selfieTex: null, alteKarte: null, video: null };
+const qZiel = new THREE.Quaternion(), qHilf = new THREE.Quaternion(), qVorne = new THREE.Quaternion(-Math.sqrt(.5), 0, 0, Math.sqrt(.5)), eulerH = new THREE.Euler(), achseZ = new THREE.Vector3(0, 0, 1), achseY = new THREE.Vector3(0, 1, 0), vorneV = new THREE.Vector3();
+const winkelLerp = (a, b, t) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
+function geraetQuaternion(q) {
+  const o = handy.ori; if (!o || o.alpha == null) return false;
+  const rad = Math.PI / 180, dreh = (screen.orientation?.angle ?? window.orientation ?? 0) * rad;
+  eulerH.set(o.beta * rad, o.alpha * rad, -o.gamma * rad, 'YXZ'); q.setFromEuler(eulerH); q.multiply(qVorne); q.multiply(qHilf.setFromAxisAngle(achseZ, -dreh));
+  return true;
+}
+// Blickrichtung des Handys als Spielrichtung (sin r, cos r); beim Einschalten zeigt das Handy dorthin, wo die Figur schaut
+function handyRichtung() {
+  if (!geraetQuaternion(qZiel)) return null;
+  vorneV.set(0, 0, -1).applyQuaternion(qZiel); const r = Math.atan2(vorneV.x, vorneV.z);
+  if (handy.r0 == null) { handy.r0 = r; handy.basis = sp.richtung; }
+  return handy.basis + (r - handy.r0);
+}
+function handyQuaternion(q) {
+  if (!geraetQuaternion(q)) return false;
+  if (handy.r0 == null) handyRichtung();
+  q.premultiply(qHilf.setFromAxisAngle(achseY, handy.basis - handy.r0)); return true;
+}
+addEventListener('deviceorientation', e => { if (e.alpha != null) handy.ori = e; });
+addEventListener('devicemotion', e => {
+  if (!handy.mitlaufen) return; const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
+  handy.glatt = lerp(handy.glatt, Math.hypot(a.x, a.y, a.z), .25);
+  const jetzt = performance.now();
+  if (!handy.oben && handy.glatt > 11.2 && jetzt - handy.letzter > 300) {
+    handy.oben = true; handy.letzter = jetzt; handy.schritte++; handy.weg = Math.min(handy.weg + SCHRITT_WEG, SCHRITT_WEG * 3);
+    $('#schrittAnzeige').textContent = '👣 ' + handy.schritte;
+  } else if (handy.glatt < 10.3) handy.oben = false;
+});
+async function sensorenErlauben() {
+  for (const E of [window.DeviceOrientationEvent, window.DeviceMotionEvent]) if (E && typeof E.requestPermission === 'function') {
+    if (await E.requestPermission() !== 'granted') throw new Error('Bewegung ist nicht erlaubt. In Safari: aA, dann Website-Einstellungen, Bewegung und Ausrichtung erlauben.');
+  }
+}
+function kameraAus() { handy.strom?.getTracks().forEach(t => t.stop()); handy.strom = null; $('#arVideo').srcObject = null; }
+async function kameraAn(seite) {
+  kameraAus();
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Dieser Browser kann die Kamera nicht öffnen.');
+  handy.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: seite, width: { ideal: 1280 } }, audio: false });
+  const v = $('#arVideo'); v.srcObject = handy.strom; await v.play().catch(() => {}); return v;
+}
+async function mitlaufenSetzen(an) {
+  if (an) await sensorenErlauben();
+  handy.mitlaufen = an; handy.r0 = null; handy.weg = 0; $('#schrittAnzeige').hidden = !an;
+  $('#stick').style.opacity = an ? .35 : '';
+}
+// Selfie: das eigene Gesicht live im goldenen Rahmen auf dem Kopf der Figur
+function selfieMalen() {
+  const v = $('#arVideo'), t = handy.selfieTex; if (!t || v.readyState < 2) return;
+  const c = t.image, g = c.getContext('2d'), w = c.width, m = Math.min(v.videoWidth, v.videoHeight);
+  g.clearRect(0, 0, w, w); g.save(); g.beginPath(); g.arc(w / 2, w / 2, w / 2 - 10, 0, Math.PI * 2); g.clip();
+  g.translate(w, 0); g.scale(-1, 1); g.drawImage(v, (v.videoWidth - m) / 2, (v.videoHeight - m) / 2, m, m, 0, 0, w, w); g.restore();
+  g.lineWidth = 12; g.strokeStyle = '#f2c25b'; g.beginPath(); g.arc(w / 2, w / 2, w / 2 - 8, 0, Math.PI * 2); g.stroke();
+  t.needsUpdate = true;
+}
+function kopfSprite() { return spieler?.children.find(c => c.isSprite); }
+async function selfieSetzen(an) {
+  const k = kopfSprite();
+  if (an) {
+    if (handy.ar) await kiBlickSetzen(false);
+    await kameraAn('user');
+    handy.selfieTex = handy.selfieTex || new THREE.CanvasTexture(Object.assign(document.createElement('canvas'), { width: 256, height: 256 }));
+    handy.selfieTex.colorSpace = THREE.SRGBColorSpace;
+    if (k) { handy.alteKarte = handy.alteKarte || k.material.map; k.material.map = handy.selfieTex; k.material.needsUpdate = true; }
+    $('#arVideo').style.visibility = 'hidden';
+  } else {
+    kameraAus(); if (k && handy.alteKarte) { k.material.map = handy.alteKarte; k.material.needsUpdate = true; }
+  }
+  handy.selfie = an;
+}
+async function kiBlickSetzen(an) {
+  if (an) {
+    if (handy.selfie) await selfieSetzen(false);
+    if (!handy.mitlaufen) await mitlaufenSetzen(true);
+    await kameraAn('environment'); $('#arVideo').style.visibility = '';
+    handyQuaternion(handy.qGlatt);
+  } else kameraAus();
+  handy.ar = an;
+  AR_WEG.forEach(m => { m.visible = !an; });
+  szene.fog = an ? null : new THREE.FogExp2(NEBEL_NACHT, 0.0075);
+  renderer.setClearColor(0x000000, an ? 0 : 1);
+  document.documentElement.classList.toggle('ar', an);
+}
+function handyKarte(fehler) {
+  const umschalten = (f) => async () => { try { await f(); handyKarte(); } catch (e) { handyKarte(e.message || 'Das ging nicht.'); } };
+  karte('Handy', (fehler ? '⚠ ' + fehler + '\n\n' : '') +
+    'Die KI-Welt ist wie ein Paralleluniversum: Sie folgt deinem Handy, ist aber kein Abbild deiner Strasse. Ein echter Schritt ist hier ein Stück Gasse, mal länger, mal kürzer. Pass draussen auf, wohin du gehst.\n\n' +
+    'Kamera und Bewegung bleiben in deinem Handy. Es wird nichts gespeichert oder gesendet.',
+    [[handy.mitlaufen ? '👣 Mitlaufen aus' : '👣 Mitlaufen: Handy drehen und gehen', umschalten(() => handy.ar ? kiBlickSetzen(false).then(() => mitlaufenSetzen(false)) : mitlaufenSetzen(!handy.mitlaufen)), !handy.mitlaufen],
+     [handy.selfie ? '🤳 Mich ausblenden' : '🤳 Mich in der Welt sehen (Selfie-Kamera)', umschalten(() => selfieSetzen(!handy.selfie))],
+     [handy.ar ? '🌍 KI-Blick aus' : '🌍 KI-Blick: die KI-Welt durch die Kamera', umschalten(() => kiBlickSetzen(!handy.ar))],
+     ['Weiter', () => { $('#karte').hidden = true; }, true]]);
+}
+$('#handyKnopf').onclick = () => handyKarte();
+
+window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, rausGehen, springen, anfangen, schritt, tasten, handy, kiBlickSetzen, mitlaufenSetzen, selfieSetzen };
 </script>
 <script>
   // Falls die 3D-Bibliothek nicht lädt (kein Internet), freundlich Bescheid geben
