@@ -481,6 +481,58 @@ function mitgliedEinladen(p, name, wer) {
   p.geaendert = jetzt(); werkstattSpeichern();
   return null;
 }
+// ---------- Sparky forscht: echte Probanden (Diego 18.10.) ----------
+// Der Besitzer bittet Sparky, eine App-Idee testen zu lassen. Eingeladene Menschen probieren sie aus und sagen selbst,
+// wie sie sich dabei fühlen (nur mit Einwilligung, keine Gesundheitsdaten, keine Messwerte).
+const GEFUEHLE = ['neugierig', 'begeistert', 'ruhig', 'gerührt', 'unsicher', 'verwirrt', 'gelangweilt'];
+function studieSetzen(p, a, wer) {
+  if (p.besitzer !== wer) return 'Nur wer das Projekt besitzt, kann Sparky fragen.';
+  if (!a) { if (p.studie) p.studie.offen = false; werkstattSpeichern(); return null; }
+  const frage = sauber(a.frage, 300) || `Wie fühlst du dich mit «${p.titel}»?`;
+  // Probandenplätze (Diego 18.10.): Platz buchen = Einwilligung, am Anfang 5. Bezahlung nur vorgemerkt, nichts wird ausbezahlt.
+  const plaetze = Math.min(Math.max(parseInt(a.plaetze, 10) || 5, 1), 20);
+  p.studie = { offen: true, frage, link: /^https:\/\//.test(a.link || '') ? sauber(a.link, 300) : '', start: jetzt(), plaetze,
+    probanden: p.studie?.probanden || [], antworten: p.studie?.antworten || [] };
+  p.geaendert = jetzt(); werkstattSpeichern();
+  sunny(`Sparky sucht Probanden: «${p.titel}» von ${p.besitzerName}. Wer mag, probiert es aus und sagt, wie es sich anfühlt. In der Werkstatt unter «Sparky forscht».`, 'herz');
+  return null;
+}
+function studienOffen(wer) {
+  return projekte.filter(p => p.studie?.offen).map(p => ({ id: p.id, titel: p.titel, app: p.app, beschreibung: p.beschreibung, von: p.besitzerName, frage: p.studie.frage, link: p.studie.link,
+    meins: p.besitzer === wer, schonGeantwortet: p.studie.antworten.some(x => x.wer === wer), antworten: p.studie.antworten.length,
+    plaetze: p.studie.plaetze || 5, gebucht: (p.studie.probanden || []).length, binDabei: (p.studie.probanden || []).some(x => x.wer === wer) }));
+}
+function studieAntworten(pid, wer, name, a) {
+  const p = projekte.find(x => x.id === pid);
+  if (!p?.studie?.offen) return 'Diese Studie ist nicht offen.';
+  const st = p.studie; st.probanden = st.probanden || [];
+  if (a.abmelden) { // Einwilligung zurückziehen: Platz und Antwort werden gelöscht
+    st.probanden = st.probanden.filter(x => x.wer !== wer); st.antworten = st.antworten.filter(x => x.wer !== wer);
+    p.geaendert = jetzt(); werkstattSpeichern(); return null;
+  }
+  if (a.buchen) {
+    if (a.einwilligung !== true) return 'Einen Platz gibt es nur mit Einwilligung.';
+    if (p.besitzer === wer) return 'Bei der eigenen Idee kannst du nicht Proband sein.';
+    if (st.probanden.some(x => x.wer === wer)) return null;
+    if (st.probanden.length >= (st.plaetze || 5)) return 'Alle Plätze sind schon gebucht.';
+    st.probanden.push({ wer, name, einwilligung: jetzt() });
+    p.geaendert = jetzt(); werkstattSpeichern(); return null;
+  }
+  if (!st.probanden.some(x => x.wer === wer)) return 'Bitte zuerst einen Probandenplatz buchen.';
+  if (!GEFUEHLE.includes(a.gefuehl)) return 'Bitte ein Gefühl wählen.';
+  p.studie.antworten = p.studie.antworten.filter(x => x.wer !== wer);
+  p.studie.antworten.push({ wer, name, gefuehl: a.gefuehl, text: sauber(a.text, 500), zeit: jetzt() });
+  p.geaendert = jetzt(); werkstattSpeichern();
+  return null;
+}
+function studieAuswertung(p) {
+  if (!p.studie) return null;
+  const zaehler = {}; for (const x of p.studie.antworten) zaehler[x.gefuehl] = (zaehler[x.gefuehl] || 0) + 1;
+  return { offen: p.studie.offen, frage: p.studie.frage, link: p.studie.link, anzahl: p.studie.antworten.length, gefuehle: zaehler,
+    plaetze: p.studie.plaetze || 5, probanden: (p.studie.probanden || []).map(x => x.name),
+    stimmen: p.studie.antworten.map(x => ({ name: x.name, gefuehl: x.gefuehl, text: x.text, zeit: x.zeit })) };
+}
+
 // Hasis Kiosk: nur geteilte Projekte, ohne die Chats (die bleiben privat)
 function kiosk() {
   return projekte.filter(p => p.geteilt).map(p => {
@@ -634,7 +686,9 @@ function werkzeug(name, a = {}) {
     }
     case 'kiverse_projekt_lesen': {
       const p = projektHolen('diego', a.projekt_id);
-      return p ? text(projektLesbar(p, a.chat_id)) : text('Dieses Projekt gibt es nicht.', true);
+      if (!p) return text('Dieses Projekt gibt es nicht.', true);
+      const st = studieAuswertung(p);
+      return text(projektLesbar(p, a.chat_id) + (st ? `\n\n## Sparkys Studie (${st.offen ? 'offen' : 'geschlossen'}, ${st.anzahl} Probanden)\nFrage: ${st.frage}\nGefühle: ${Object.entries(st.gefuehle).map(([g, n]) => g + ' ' + n).join(', ') || '—'}\n` + st.stimmen.map(x => `- ${x.name}: ${x.gefuehl}${x.text ? ' – ' + x.text : ''}`).join('\n') : ''));
     }
     case 'kiverse_projekt_schreiben': {
       const p = projektHolen('diego', a.projekt_id);
@@ -813,7 +867,7 @@ const server = http.createServer(async (req, res) => {
     const mp = url.pathname.match(/^\/api\/werkstatt\/(p_[a-f0-9]+)$/);
     if (mp && req.method === 'GET') {
       const p = projektHolen(person(req.zugang).wer, mp[1]);
-      return p ? json(res, 200, { ...projektKurz(p), chats: p.chats, meins: p.besitzer === person(req.zugang).wer }) : json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
+      return p ? json(res, 200, { ...projektKurz(p), chats: p.chats, meins: p.besitzer === person(req.zugang).wer, studie: studieAuswertung(p) }) : json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
     }
     if (url.pathname === '/api/werkstatt' && req.method === 'POST') {
       const a = await body(req, 4.5 * 1024 * 1024);
@@ -823,10 +877,15 @@ const server = http.createServer(async (req, res) => {
       if (!p) return json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
       if ('chatNeu' in a) { const c = chatNeu(p, a.chatNeu); return c ? json(res, 200, c) : json(res, 400, { fehler: 'Höchstens 30 Chats pro Projekt.' }); }
       if (a.eintrag) { const r = eintragen(p, a.eintrag.chat, name, a.eintrag.text, a.eintrag.bild); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
-      const f = 'teilen' in a ? teilen(p, a.teilen, wer, a.art) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
+      const f = 'studie' in a ? studieSetzen(p, a.studie, wer) : 'teilen' in a ? teilen(p, a.teilen, wer, a.art) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
       return f ? json(res, 400, { fehler: f }) : json(res, 200, projektKurz(p));
     }
     if (url.pathname === '/api/kiosk' && req.method === 'GET') return json(res, 200, kiosk());
+    if (url.pathname === '/api/studien' && req.method === 'GET') return json(res, 200, { gefuehle: GEFUEHLE, studien: studienOffen(person(req.zugang).wer) });
+    if (url.pathname === '/api/studie' && req.method === 'POST') {
+      const a = await body(req); const { wer, name } = person(req.zugang);
+      const f = studieAntworten(a.projekt, wer, name, a); return f ? json(res, 400, { fehler: f }) : json(res, 200, { ok: true });
+    }
     const mbild = url.pathname.match(/^\/api\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
     if (mbild) return bildErlaubt(mbild[1], person(req.zugang).wer) ? bildSenden(res, mbild[1]) : json(res, 404, { fehler: 'Bild nicht gefunden.' });
     if (url.pathname === '/' || url.pathname === '/welt.html') {

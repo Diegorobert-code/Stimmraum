@@ -263,6 +263,14 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 .ws-leer { margin: auto; text-align: center; color: var(--text-leise); font-size: .9rem; }
 .ws-wahl { display: grid; gap: 8px; border: 1px solid var(--rand); border-radius: 14px; padding: 12px; }
 .ws-wahl .knopf { text-align: left; }
+.ws-studien { display: grid; gap: 8px; border: 1px solid rgba(255,138,176,.5); border-radius: 14px; padding: 12px; background: linear-gradient(160deg, rgba(255,138,176,.12), rgba(242,194,91,.06)); }
+.studie { display: grid; gap: 6px; border-top: 1px solid var(--rand); padding-top: 8px; }
+.studie b { color: var(--gold-hell); }
+.gefuehle { display: flex; flex-wrap: wrap; gap: 6px; }
+.gefuehle button { border: 1px solid var(--rand); border-radius: 99px; padding: 4px 10px; background: var(--nacht); font-size: .85rem; }
+.gefuehle button[aria-pressed=true] { background: #ff8ab0; color: var(--nacht); border-color: #ff8ab0; font-weight: 700; }
+.balken { display: grid; grid-template-columns: 90px 1fr 24px; gap: 6px; align-items: center; font-size: .85rem; }
+.balken i { display: block; height: 10px; border-radius: 99px; background: linear-gradient(90deg, #ff8ab0, #f2c25b); }
 .feuer-fackel { position: absolute; width: 14px; height: 70px; transform: translate(-50%, 0); border-radius: 4px; background: linear-gradient(90deg, #5a3a1c, #8a5a32 50%, #5a3a1c); box-shadow: 0 0 0 2px #2a1d14; animation: fackelAuf .5s ease-out both; }
 .feuer-fackel::before { content: ''; position: absolute; left: -7px; top: -8px; width: 28px; height: 14px; border-radius: 4px 4px 10px 10px; background: #3a2a1a; border: 2px solid #f2c25b; }
 @keyframes fackelAuf { from { transform: translate(-50%, 30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
@@ -566,6 +574,10 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <div id="wsListe">
       <p>Deine Wohnung im Städtchen. Hier entstehen deine Projekte, pro Film oder App eines, darin so viele Chats wie du willst. Nur du kommst hinein, andere nur, wenn du sie einlässt.</p>
       <div class="ws-projekte" id="wsProjekte"></div>
+      <div class="ws-studien" id="wsStudien" hidden>
+        <b>Sparky forscht: hilf mit</b>
+        <div id="wsStudienListe" style="display:grid;gap:8px"></div>
+      </div>
       <form class="ws-neu" id="wsNeu">
         <b>Neues Projekt</b>
         <input type="text" id="wsNeuTitel" maxlength="80" placeholder="Titel, zum Beispiel Otti in New York" required aria-label="Titel">
@@ -590,6 +602,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
         <button class="knopf" type="button" id="wsTeilen">Vorstellen</button>
         <button class="knopf" type="button" id="wsFertig">Fertig, in Hasis Kiosk</button>
         <button class="knopf" type="button" id="wsTuerKnopf">Jemanden einlassen</button>
+        <button class="knopf" type="button" id="wsSparky">Bei Sparky testen</button>
       </div>
       <div class="ws-wahl" id="wsWahl" hidden>
         <b>Wie soll das Städtchen davon erfahren?</b>
@@ -598,6 +611,14 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
         <button class="knopf" type="button" data-art="laden">Ohne Werbung, nur in Hasis Laden</button>
         <span class="hinweis">Im Prototyp alles gratis. Was Fackel und Kino später kosten, entscheidet Diego.</span>
       </div>
+      <form class="ws-wahl" id="wsSparkyForm" hidden>
+        <b>Sparky sucht Probanden</b>
+        <input type="text" id="wsSparkyFrage" maxlength="300" placeholder="Was sollen sie ausprobieren? (zum Beispiel: Öffne die App und sing ein Lied)" aria-label="Frage an die Probanden" style="background:var(--nacht);border:1px solid var(--rand);border-radius:10px;padding:9px 11px;color:var(--text)">
+        <input type="url" id="wsSparkyLink" maxlength="300" placeholder="Link zur App (optional, https://…)" aria-label="Link" style="background:var(--nacht);border:1px solid var(--rand);border-radius:10px;padding:9px 11px;color:var(--text)">
+        <span class="hinweis">Alle eingeladenen Menschen sehen die Bitte in ihrer Werkstatt. Sie sagen selbst, wie sie sich fühlen. Keine Messwerte, keine Gesundheitsdaten.</span>
+        <div class="zeilen"><button class="knopf gold" type="submit">Sparky losschicken</button></div>
+      </form>
+      <div class="ws-wahl" id="wsAuswertung" hidden></div>
       <form class="ws-tuer" id="wsTuer" hidden>
         <input type="text" id="wsTuerName" maxlength="40" placeholder="Name der eingeladenen Person" aria-label="Name">
         <button class="knopf gold" type="submit">Einlassen</button>
@@ -1757,7 +1778,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     if (!projekt) { $('#wsTitel').textContent = 'Deine Werkstatt'; $('#wsStatus').hidden = true; clearInterval(ws.timer); ws.projekt = null; }
   }
   async function wsListeZeigen() {
-    wsAnsicht(null);
+    wsAnsicht(null); studienZeigen();
     const box = $('#wsProjekte'); box.innerHTML = '';
     let ps = []; try { ps = await ws.liste(); } catch (e) { box.textContent = e.message; return; }
     if (!ps.length) { box.innerHTML = '<span class="hinweis">Noch keine Projekte. Leg unten dein erstes an, zum Beispiel einen Film.</span>'; return; }
@@ -1793,7 +1814,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       try { const c = await ws.auftrag({ projekt: pid, chatNeu: '' }); wsOeffnen(pid, c.id); } catch (e) { alert(e.message); }
     });
     tabs.appendChild(plus);
-    wsVerlauf();
+    wsVerlauf(); auswertungZeigen(p);
     clearInterval(ws.timer);
     if (z.live) ws.timer = setInterval(() => { if (!$('#werkstatt').hidden && ws.projekt?.id === pid) ws.holen(pid).then(q => { ws.projekt = q; wsVerlauf(); }).catch(() => {}); }, 6000);
   }
@@ -1863,6 +1884,75 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   $('#wsTuer').addEventListener('submit', async (e) => {
     e.preventDefault(); const n = $('#wsTuerName').value.trim(); if (!n) return;
     try { await ws.auftrag({ projekt: ws.projekt.id, einladen: n }); $('#wsTuerName').value = ''; $('#wsTuer').hidden = true; wsOeffnen(ws.projekt.id, ws.chat); } catch (er) { alert(er.message); }
+  });
+
+
+  // ---------- Sparky forscht: echte Probanden geben ihr Gefühl zu einer App-Idee ----------
+  const GEFUEHL_FARBE = { neugierig: '💛', begeistert: '✨', ruhig: '💙', 'gerührt': '💗', unsicher: '🧡', verwirrt: '💜', gelangweilt: '🤍' };
+  async function studienZeigen() {
+    const box = $('#wsStudienListe'); box.innerHTML = '';
+    if (!z.live) { $('#wsStudien').hidden = true; return; }
+    let d; try { d = await api('api/studien'); } catch { $('#wsStudien').hidden = true; return; }
+    const fremde = d.studien.filter(x => !x.meins);
+    $('#wsStudien').hidden = !fremde.length;
+    for (const st of fremde) {
+      const e = document.createElement('div'); e.className = 'studie';
+      const t = document.createElement('b'); t.textContent = `${st.titel} (${st.app}, von ${st.von})`;
+      const f = document.createElement('span'); f.textContent = st.frage;
+      const pl = document.createElement('span'); pl.className = 'hinweis'; pl.textContent = `Probandenplätze: ${st.gebucht} von ${st.plaetze} gebucht. Bezahlte Plätze: Betrag folgt.`;
+      e.append(t, f, pl);
+      if (!st.binDabei) { // Schritt 1: Platz buchen, die Einwilligung gehört zur Buchung
+        const ein = document.createElement('label'); ein.className = 'einw'; const cb = document.createElement('input'); cb.type = 'checkbox';
+        const et = document.createElement('span'); et.style.flex = '1'; et.textContent = 'Ich mache freiwillig mit. Sparky darf mein Gefühl und meinen Satz mit Namen an ' + st.von + ' weitergeben. Ich kann mich jederzeit abmelden, dann wird alles gelöscht.';
+        ein.style.flexDirection = 'row'; ein.append(cb, et);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf gold'; b.textContent = 'Probandenplatz buchen';
+        b.disabled = st.gebucht >= st.plaetze; if (b.disabled) b.textContent = 'Alle Plätze gebucht';
+        b.addEventListener('click', async () => {
+          if (!cb.checked) { alert('Einen Platz gibt es nur mit Einwilligung.'); return; }
+          try { await api('api/studie', { projekt: st.id, buchen: true, einwilligung: true }); studienZeigen(); } catch (er) { alert(er.message); }
+        });
+        e.append(ein, b); box.appendChild(e); continue;
+      }
+      if (st.link) { const l = document.createElement('a'); l.href = st.link; l.target = '_blank'; l.rel = 'noopener'; l.textContent = 'Ausprobieren'; l.style.color = 'var(--sunny)'; e.appendChild(l); }
+      if (st.schonGeantwortet) { const ok = document.createElement('span'); ok.className = 'hinweis'; ok.textContent = 'Danke, Sparky hat dein Gefühl. Du kannst es jederzeit neu sagen.'; e.appendChild(ok); }
+      const g = document.createElement('div'); g.className = 'gefuehle'; let wahl = null;
+      for (const name of d.gefuehle) { const b = document.createElement('button'); b.type = 'button'; b.textContent = (GEFUEHL_FARBE[name] || '') + ' ' + name; b.setAttribute('aria-pressed', 'false'); b.addEventListener('click', () => { wahl = name; g.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }); g.appendChild(b); }
+      const txt = document.createElement('input'); txt.type = 'text'; txt.maxLength = 500; txt.placeholder = 'Ein Satz dazu (optional)'; txt.style.cssText = 'background:var(--nacht);border:1px solid var(--rand);border-radius:10px;padding:8px 10px;color:var(--text)';
+      const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'knopf'; ab.textContent = 'Abmelden und löschen';
+      ab.addEventListener('click', async () => { try { await api('api/studie', { projekt: st.id, abmelden: true }); studienZeigen(); } catch (er) { alert(er.message); } });
+      const los = document.createElement('button'); los.type = 'button'; los.className = 'knopf gold'; los.textContent = 'Gefühl an Sparky';
+      los.addEventListener('click', async () => {
+        if (!wahl) { alert('Bitte ein Gefühl wählen.'); return; }
+        try { await api('api/studie', { projekt: st.id, einwilligung: true, gefuehl: wahl, text: txt.value.trim() }); studienZeigen(); } catch (er) { alert(er.message); }
+      });
+      e.append(g, txt, los, ab); box.appendChild(e);
+    }
+  }
+  function auswertungZeigen(p) {
+    const box = $('#wsAuswertung'); const st = p.studie;
+    $('#wsSparky').textContent = st?.offen ? 'Sparkys Studie beenden' : 'Bei Sparky testen';
+    if (!st) { box.hidden = true; return; }
+    box.hidden = false; box.innerHTML = '';
+    const h = document.createElement('b'); h.textContent = `Sparkys Studie ${st.offen ? '(läuft)' : '(beendet)'}: ${st.anzahl} ${st.anzahl === 1 ? 'Proband' : 'Probanden'}`;
+    const f = document.createElement('span'); f.className = 'hinweis'; f.textContent = st.frage;
+    const pl = document.createElement('span'); pl.className = 'hinweis'; pl.textContent = `Plätze: ${st.probanden.length} von ${st.plaetze} gebucht${st.probanden.length ? ' (' + st.probanden.join(', ') + ')' : ''}.`;
+    box.append(h, f, pl);
+    const max = Math.max(1, ...Object.values(st.gefuehle));
+    for (const [g, n] of Object.entries(st.gefuehle).sort((a, b) => b[1] - a[1])) {
+      const r = document.createElement('div'); r.className = 'balken';
+      const a = document.createElement('span'); a.textContent = (GEFUEHL_FARBE[g] || '') + ' ' + g; const i = document.createElement('i'); i.style.width = (n / max * 100) + '%'; const c = document.createElement('span'); c.textContent = n;
+      r.append(a, i, c); box.appendChild(r);
+    }
+    for (const x of st.stimmen.filter(x => x.text)) { const s2 = document.createElement('span'); s2.textContent = `${x.name} (${x.gefuehl}): ${x.text}`; box.appendChild(s2); }
+  }
+  $('#wsSparky').addEventListener('click', async () => {
+    if (!z.live) { alert('Sparky sucht echte Probanden im KI-Verse auf dem Server, nicht in der Vorschau.'); return; }
+    if (ws.projekt.studie?.offen) { try { await ws.auftrag({ projekt: ws.projekt.id, studie: false }); wsOeffnen(ws.projekt.id, ws.chat); } catch (e) { alert(e.message); } return; }
+    $('#wsSparkyForm').hidden = !$('#wsSparkyForm').hidden;
+  });
+  $('#wsSparkyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try { await ws.auftrag({ projekt: ws.projekt.id, studie: { frage: $('#wsSparkyFrage').value.trim(), link: $('#wsSparkyLink').value.trim() } }); $('#wsSparkyForm').hidden = true; wsOeffnen(ws.projekt.id, ws.chat); } catch (er) { alert(er.message); }
   });
 
   // ---------- Hasis Kiosk: fertige und geteilte Projekte aus dem Städtchen ----------
