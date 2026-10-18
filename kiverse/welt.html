@@ -1819,6 +1819,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     if (unten || v.lastElementChild?.classList.contains('neu')) v.scrollTop = v.scrollHeight;
   }
   $('#werkstattKnopf').addEventListener('click', () => { $('#werkstatt').hidden = false; wsListeZeigen(); });
+  // Aus dem Spiel (Deine Wohnung) direkt in die Werkstatt
+  if (location.hash === '#werkstatt') setTimeout(() => { $('#eintritt').hidden = true; $('#werkstattKnopf').click(); }, 900);
   $('#wsZu').addEventListener('click', () => { $('#werkstatt').hidden = true; clearInterval(ws.timer); });
   $('#wsZurueck').addEventListener('click', wsListeZeigen);
   $('#wsNeu').addEventListener('submit', async (e) => {
