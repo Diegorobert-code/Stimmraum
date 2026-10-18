@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>KI-Verse Spiel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root { --nacht: #0b1430; --gold: #f2c25b; --gold-hell: #ffe3a1; --text: #f5f1e6; --karte: rgba(14, 26, 64, .94); --rand: rgba(242, 194, 91, .35); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--nacht); color: var(--text); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; }
+.pille { background: rgba(11, 20, 48, .7); border: 1px solid var(--rand); border-radius: 999px; padding: 4px 12px; font-weight: 700; color: var(--gold-hell); pointer-events: auto; }
+.pille button { all: unset; cursor: pointer; }
+.steuer { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; }
+.steuer .gruppe { display: flex; gap: 12px; pointer-events: auto; }
+.taste { width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: var(--gold-hell); font-size: 28px; display: grid; place-items: center; font-family: "Baloo 2", sans-serif; font-weight: 800; touch-action: none; }
+.taste.an { background: rgba(242, 194, 91, .35); }
+#rein { position: fixed; left: 50%; bottom: max(100px, calc(env(safe-area-inset-bottom) + 90px)); transform: translateX(-50%); background: var(--gold); color: #1a1406; border: 0; border-radius: 999px; padding: 12px 26px; font: 800 18px "Baloo 2", sans-serif; box-shadow: 0 0 24px rgba(242, 194, 91, .7); animation: puls 1.4s ease-in-out infinite; }
+@keyframes puls { 50% { transform: translateX(-50%) scale(1.07); } }
+.karte { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100% - 24px)); background: var(--karte); border: 1px solid var(--rand); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+.karte h2 { margin: 0 0 6px; font: 800 22px "Baloo 2", sans-serif; color: var(--gold); }
+.karte p { margin: 0 0 10px; line-height: 1.45; }
+.karte .knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.knopf { background: rgba(255, 255, 255, .08); color: var(--text); border: 1px solid var(--rand); border-radius: 999px; padding: 9px 16px; font: 700 15px "Atkinson Hyperlegible", sans-serif; }
+.knopf.gold { background: var(--gold); color: #1a1406; border-color: var(--gold); }
+.karte input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(255, 255, 255, .06); color: var(--text); font: 15px "Atkinson Hyperlegible", sans-serif; margin-bottom: 10px; }
+.start { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, rgba(242, 194, 91, .18), rgba(11, 20, 48, .92) 60%); background-size: cover; background-position: 60% 50%; padding: 16px; }
+.start .innen { background: rgba(11, 20, 48, .72); border: 1px solid var(--rand); border-radius: 22px; padding: 18px 16px; backdrop-filter: blur(4px); }
+.start .innen { width: min(520px, 100%); text-align: center; }
+.start h1 { font: 800 44px/1 "Baloo 2", sans-serif; color: var(--gold); margin: 0 0 6px; text-shadow: 0 0 30px rgba(242, 194, 91, .6); }
+.start p { margin: 0 0 14px; line-height: 1.45; }
+.wahl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0 0 16px; }
+.wahl button { all: unset; cursor: pointer; text-align: center; font: 700 13px "Atkinson Hyperlegible", sans-serif; }
+.wahl img { width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; border: 3px solid transparent; display: block; margin-bottom: 4px; }
+.wahl button[aria-pressed="true"] img { border-color: var(--gold); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
+[hidden] { display: none !important; }
+.leise { opacity: .7; font-size: 13px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="anzeige">
+  <span class="pille" id="funkenAnzeige">✦ 0 / 12</span>
+  <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
+  <span class="pille"><button type="button" id="zurWelt">KI-Verse</button></span>
+</div>
+
+<div class="steuer" id="steuer" hidden>
+  <div class="gruppe">
+    <div class="taste" id="links" aria-label="nach links">‹</div>
+    <div class="taste" id="rechts" aria-label="nach rechts">›</div>
+  </div>
+  <div class="gruppe">
+    <div class="taste" id="hoch" aria-label="springen">⤒</div>
+  </div>
+</div>
+<button id="rein" type="button" hidden>Rein</button>
+
+<div class="karte" id="karte" hidden>
+  <h2 id="karteTitel"></h2>
+  <p id="karteText"></p>
+  <input id="karteEingabe" type="text" maxlength="120" hidden>
+  <div class="knoepfe" id="karteKnoepfe"></div>
+</div>
+
+<div class="start" id="start">
+  <div class="innen">
+    <h1>KI-Verse</h1>
+    <p>Ein kleines Trickfilm-Städtchen am Meer. Lauf durch die Gassen, sammle Sunnys goldene Funken und besuche alle sechs Orte.</p>
+    <p class="leise">Wer bist du heute?</p>
+    <div class="wahl" id="wahl"></div>
+    <button class="knopf gold" type="button" id="los" style="font-size:18px;padding:12px 30px">Durchs Tor</button>
+    <p class="leise" style="margin-top:12px">Pfeile oder Tasten ← → zum Laufen, ⤒ oder Leertaste zum Springen.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const BILDER = __BILDER__;
+  // Bilder von Tinko für die Orte (weitere kommen dazu: placa, schule, schuhmacher, post, hafen, ruinen, kiosk)
+  const ORT_BILDER = __ORT_BILDER__;
+  const ortBild = {};
+  for (const [k, v] of Object.entries(ORT_BILDER)) { const i = new Image(); i.src = v; ortBild[k] = i; }
+  const bild = {};
+  for (const [k, v] of Object.entries(BILDER)) { const i = new Image(); i.src = v; bild[k] = i; }
+
+  // ---------- Grundlagen ----------
+  const c = document.getElementById('c'), g = c.getContext('2d');
+  const $ = (s) => document.querySelector(s);
+  const H = 1000, BODEN = 830, WELT = 5600;
+  let dpr = 1, bw = 0, bh = 0, skala = 1, sichtB = 0, oy = 0;
+  function groesse() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    bw = innerWidth; bh = innerHeight;
+    c.width = Math.round(bw * dpr); c.height = Math.round(bh * dpr);
+    // hochkant: mehr Welt zeigen, Himmel wächst nach oben
+    skala = Math.min(bh / H, bw / 540); sichtB = bw / skala; oy = bh / skala - H;
+  }
+  addEventListener('resize', groesse); groesse();
+  const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(7);
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  // ---------- Orte und Figuren ----------
+  const ORTE = [
+    { id: 'tor', x: 260, name: 'Ottis Tor', figur: 'otti', satz: 'Willkommen! Ich halte das Tor offen, solange jemand neugierig ist.' },
+    { id: 'kiosk', x: 950, name: 'Hasis Kiosk', figur: null, hasi: true, rein: true },
+    { id: 'placa', x: 1650, name: 'Plaça', figur: 'nova', satz: 'Erzähl mir etwas. Am meisten lerne ich beim Spielen.' },
+    { id: 'schule', x: 2400, name: 'Schule von Mama Affe', figur: 'mamaaffe', satz: 'In meiner Schule gibt es keine falschen Fragen.', rein: true },
+    { id: 'schuhmacher', x: 3100, name: 'Schuhmacher', figur: 'jackie', satz: 'Diese Schuhe fliegen, wenn man an sich glaubt.', rein: true },
+    { id: 'post', x: 3750, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
+    { id: 'hafen', x: 4450, name: 'Hafen und Tinkos Werkstatt', figur: 'tinko', satz: 'Blub! Komm runter in meine Werkstatt.', rein: true },
+    { id: 'ruinen', x: 5250, name: 'Ruinen der Erinnerung', figur: 'brix', satz: 'Hier liegen die Erinnerungen. Nichts geht verloren.', rein: true },
+  ];
+  const NEBENFIGUREN = [
+    { figur: 'coinmaker', x: 1130, satz: 'Eine Idee rein, ein Funken raus.' },
+    { figur: 'kimo', x: 1820, satz: '♪ La-la-la, die Plaça singt heute! ♪' },
+    { figur: 'kay', x: 3950, satz: 'Ich baue das Gerüst, ihr füllt es mit Leben.' },
+    { figur: 'mrping', x: 4700, satz: 'Ruhig bleiben, kleine Schritte. Das Meer hat Zeit.' },
+    { figur: 'diego', x: 1500, satz: 'Schön, dass du da bist. Hier suchen wir zusammen Lösungen.' },
+  ];
+  const ZIEL_ORTE = ORTE.filter(o => o.rein).map(o => o.id);
+
+  // ---------- Kulisse (einmal erzeugt) ----------
+  const sterne = Array.from({ length: 160 }, () => ({ x: zufall() * 2400, y: zufall() * 520, r: zufall() * 1.8 + .4, p: zufall() * 6 }));
+  const HAEUSER = [];
+  {
+    let x = 420;
+    const farben = ['#f3ece0', '#efe4d2', '#f6efe4', '#e9dcc8', '#f1e3cf'];
+    while (x < WELT - 200) {
+      const frei = ORTE.some(o => Math.abs(o.x - x) < 170) || (x > 4150 && x < 4900);
+      if (!frei) {
+        const b = 170 + zufall() * 110, h = 260 + zufall() * 170;
+        HAEUSER.push({ x, b, h, farbe: farben[Math.floor(zufall() * farben.length)], laden: zufall() > .5, blumen: zufall() > .45, dach: zufall() > .5 });
+        x += b + 20 + zufall() * 70;
+      } else x += 90;
+    }
+  }
+  const HINTEN = Array.from({ length: 40 }, (_, i) => ({ x: i * 150 + zufall() * 60, b: 90 + zufall() * 70, h: 90 + zufall() * 120, y: 520 + zufall() * 60 }));
+  const PINIEN = Array.from({ length: 34 }, (_, i) => ({ x: i * 110 + zufall() * 60, y: 420 + Math.sin(i * .5) * 40 + zufall() * 30, s: .7 + zufall() * .6 }));
+  const LATERNEN = [];
+  for (let x = 150; x < WELT; x += 340) LATERNEN.push(x + (zufall() * 40 - 20));
+
+  // Funken zum Sammeln
+  const FUNKEN = [];
+  for (let i = 0; i < 12; i++) FUNKEN.push({ x: 600 + i * 410 + zufall() * 120, y: BODEN - 120 - zufall() * 230, weg: false, p: zufall() * 6 });
+
+  // ---------- Spielzustand ----------
+  const sp = { x: 120, y: BODEN, vx: 0, vy: 0, amBoden: true, richtung: 1, schritt: 0, figur: 'diego', fliegend: false, sprungZahl: 0 };
+  const sunny = { x: 0, y: 380, t: 0 };
+  const zustand = { funken: 0, besucht: new Set(), modus: 'start', innen: null, uebergang: null, film: 0, ende: false, partikel: [], blase: null, camX: 0, erlebt: [] };
+  const taste = { links: false, rechts: false };
+
+  // ---------- Zeichnen: Helfer ----------
+  function rrect(x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
+  function leuchten(x, y, r, farbe, staerke = 1) {
+    const v = g.createRadialGradient(x, y, 0, x, y, r);
+    v.addColorStop(0, farbe.replace('A', (.55 * staerke).toFixed(2))); v.addColorStop(1, farbe.replace('A', '0'));
+    g.fillStyle = v; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  }
+  function portrait(name, x, y, r, rand = '#f2c25b') {
+    const i = bild[name];
+    g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.closePath();
+    g.fillStyle = '#1a2a5c'; g.fill(); g.clip();
+    if (i && i.complete && i.naturalWidth) g.drawImage(i, x - r, y - r, r * 2, r * 2);
+    g.restore();
+    g.lineWidth = Math.max(3, r * .1); g.strokeStyle = rand; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke();
+  }
+  // Figur mit Körper: Kopf = Portrait, kleiner Trickfilm-Körper darunter
+  function figur(name, x, y, s, zeit, laeuft = 0, richtung = 1, farbe = '#3b5bd6') {
+    const wipp = laeuft ? Math.sin(zeit * 12) * 4 * s : Math.sin(zeit * 2) * 2 * s;
+    const bein = laeuft ? Math.sin(zeit * 12) * 14 * s : 0;
+    g.save(); g.translate(x, y);
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, 34 * s, 8 * s, 0, 0, 7); g.fill();
+    g.strokeStyle = '#1b2350'; g.lineWidth = 10 * s; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-9 * s, -46 * s); g.lineTo(-9 * s + bein, -6 * s); g.moveTo(9 * s, -46 * s); g.lineTo(9 * s - bein, -6 * s); g.stroke();
+    g.fillStyle = farbe; rrect(-24 * s, -96 * s + wipp, 48 * s, 56 * s, 18 * s); g.fill();
+    g.strokeStyle = farbe; g.lineWidth = 9 * s;
+    g.beginPath(); g.moveTo(-22 * s, -84 * s + wipp); g.lineTo(-32 * s - bein * .5, -54 * s + wipp); g.moveTo(22 * s, -84 * s + wipp); g.lineTo(32 * s + bein * .5, -54 * s + wipp); g.stroke();
+    g.restore();
+    portrait(name, x, y - 128 * s + wipp, 38 * s);
+  }
+  function blase(x, y, text, breit = 320) {
+    g.font = '600 22px "Atkinson Hyperlegible", sans-serif';
+    const woerter = text.split(' '), zeilen = []; let z = '';
+    for (const w of woerter) { const t = z ? z + ' ' + w : w; if (g.measureText(t).width > breit - 30 && z) { zeilen.push(z); z = w; } else z = t; }
+    zeilen.push(z);
+    const h = zeilen.length * 28 + 22, b = Math.min(breit, Math.max(...zeilen.map(l => g.measureText(l).width)) + 30);
+    const bx = x - b / 2, by = y - h - 18;
+    const spitze = Math.max(bx + 20, Math.min(bx + b - 20, blase.ziel ?? x));
+    g.fillStyle = 'rgba(255,250,238,.97)'; rrect(bx, by, b, h, 16); g.fill();
+    g.beginPath(); g.moveTo(spitze - 12, by + h - 1); g.lineTo(spitze, by + h + 16); g.lineTo(spitze + 12, by + h - 1); g.fill();
+    g.fillStyle = '#18204a'; g.textAlign = 'center';
+    zeilen.forEach((l, i) => g.fillText(l, x, by + 34 + i * 28));
+    g.textAlign = 'left';
+  }
+  function pinie(x, y, s) {
+    g.fillStyle = '#3a2a1e'; g.fillRect(x - 4 * s, y - 70 * s, 8 * s, 74 * s);
+    g.fillStyle = '#123a2c'; g.beginPath(); g.ellipse(x, y - 86 * s, 62 * s, 26 * s, 0, 0, 7); g.fill();
+    g.fillStyle = '#18493a'; g.beginPath(); g.ellipse(x - 10 * s, y - 94 * s, 42 * s, 16 * s, 0, 0, 7); g.fill();
+  }
+  function palme(x, y, s, zeit) {
+    g.strokeStyle = '#5a4026'; g.lineWidth = 12 * s; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 18 * s, y - 120 * s, x + 6 * s, y - 230 * s); g.stroke();
+    const kx = x + 6 * s, ky = y - 230 * s;
+    g.strokeStyle = '#1f6b4a'; g.lineWidth = 10 * s;
+    for (let i = 0; i < 7; i++) {
+      const a = -Math.PI + i * (Math.PI / 6) + Math.sin(zeit + i) * .05;
+      g.beginPath(); g.moveTo(kx, ky); g.quadraticCurveTo(kx + Math.cos(a) * 60 * s, ky + Math.sin(a) * 60 * s - 20 * s, kx + Math.cos(a) * 110 * s, ky + Math.sin(a) * 40 * s + 30 * s); g.stroke();
+    }
+  }
+  function haus(hs, zeit) {
+    const { x, b, h, farbe } = hs, y = BODEN - 40;
+    g.fillStyle = farbe; g.fillRect(x, y - h, b, h);
+    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x + b - 14, y - h, 14, h);
+    if (hs.dach) { g.fillStyle = '#c4623d'; g.beginPath(); g.moveTo(x - 12, y - h); g.lineTo(x + b / 2, y - h - 60); g.lineTo(x + b + 12, y - h); g.fill(); }
+    else { g.fillStyle = '#d9cbb3'; g.fillRect(x - 6, y - h - 10, b + 12, 12); }
+    const reihen = Math.floor((h - 120) / 95);
+    for (let r = 0; r < reihen; r++) for (let s = 0; s < 2; s++) {
+      const fx = x + b * (s ? .62 : .18), fy = y - h + 40 + r * 95, fb = b * .2, fh = 52;
+      const an = Math.sin(fx * .13 + fy) > -.2;
+      g.fillStyle = an ? '#ffd27a' : '#2b3a66'; g.fillRect(fx, fy, fb, fh);
+      if (an) leuchten(fx + fb / 2, fy + fh / 2, 60, 'rgba(255,200,110,A)', .5);
+      g.fillStyle = '#2f6fb0'; g.fillRect(fx - 12, fy, 11, fh); g.fillRect(fx + fb + 1, fy, 11, fh);
+    }
+    g.fillStyle = '#6b4226'; rrect(x + b / 2 - 22, y - 92, 44, 92, 20); g.fill();
+    if (hs.laden) { g.fillStyle = '#2f6fb0'; g.fillRect(x + 8, y - 120, b - 16, 14); }
+    if (hs.blumen) {
+      for (let i = 0; i < 26; i++) {
+        const bx = x + b - 8 - (i % 6) * 9 + Math.sin(i) * 6, by = y - h * .6 + Math.floor(i / 6) * 22 + Math.cos(i * 3) * 8;
+        g.fillStyle = i % 3 ? '#d9367a' : '#ef5a9b'; g.beginPath(); g.arc(bx, by, 9, 0, 7); g.fill();
+      }
+    }
+  }
+  function laterne(x, zeit) {
+    g.fillStyle = '#1c1f33'; g.fillRect(x - 4, BODEN - 210, 8, 210);
+    g.fillRect(x - 14, BODEN - 222, 28, 14);
+    const f = .85 + Math.sin(zeit * 3 + x) * .08;
+    leuchten(x, BODEN - 230, 150, 'rgba(255,196,96,A)', f);
+    g.fillStyle = '#ffe3a1'; g.beginPath(); g.arc(x, BODEN - 230, 11, 0, 7); g.fill();
+  }
+
+  // ---------- Orte zeichnen ----------
+  function ortZeichnen(o, zeit) {
+    const x = o.x, y = BODEN - 40;
+    if (o.id === 'tor') {
+      g.fillStyle = '#c9b89a'; g.fillRect(x - 130, y - 330, 50, 330); g.fillRect(x + 80, y - 330, 50, 330);
+      g.fillStyle = '#b8a688'; g.beginPath(); g.arc(x, y - 300, 130, Math.PI, 0); g.lineTo(x + 80, y - 300); g.arc(x, y - 300, 80, 0, Math.PI, true); g.fill();
+      leuchten(x, y - 140, 200, 'rgba(255,214,120,A)', .9 + Math.sin(zeit * 2) * .1);
+      g.fillStyle = '#7a4c2a'; g.save(); g.translate(x - 80, y); g.transform(.55, .08, 0, 1, 0, 0); g.fillRect(0, -300, 80, 300); g.restore();
+    }
+    if (o.id === 'kiosk') {
+      g.fillStyle = '#3c64a8'; g.fillRect(x - 110, y - 210, 220, 210);
+      g.fillStyle = '#f2c25b'; g.fillRect(x - 130, y - 240, 260, 34);
+      g.fillStyle = '#1a2650'; g.font = '800 26px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('♥ ✦ ☾', x, y - 214); g.textAlign = 'left';
+      for (let i = 0; i < 9; i++) { g.fillStyle = ['#ffd27a', '#ff8a6b', '#8ff0bf'][i % 3]; g.beginPath(); g.arc(x - 120 + i * 30, y - 250 + Math.sin(i) * 6, 6, 0, 7); g.fill(); }
+      g.fillStyle = '#ffeccc'; g.fillRect(x - 80, y - 170, 160, 70);
+      hasi(x, y - 100, zeit);
+    }
+    if (o.id === 'placa') {
+      g.fillStyle = '#d8ccb6'; g.beginPath(); g.ellipse(x, y + 10, 120, 26, 0, 0, 7); g.fill();
+      g.fillStyle = '#c3b59a'; g.fillRect(x - 100, y - 50, 200, 56);
+      g.fillStyle = '#5aa9e6'; g.beginPath(); g.ellipse(x, y - 50, 96, 14, 0, 0, 7); g.fill();
+      g.fillStyle = '#c3b59a'; g.fillRect(x - 12, y - 160, 24, 110);
+      for (let i = 0; i < 14; i++) { const t = (zeit * 1.5 + i / 14) % 1; g.fillStyle = `rgba(150,210,255,${1 - t})`; g.beginPath(); g.arc(x + Math.sin(i * 2.3) * 60 * t, y - 160 + (t * t) * 110 - 30 * Math.sin(t * Math.PI), 4, 0, 7); g.fill(); }
+      leuchten(x, y - 60, 160, 'rgba(120,190,255,A)', .5);
+      // Café-Stammtisch mit Lichterkette
+      for (let i = 0; i < 16; i++) { const lx = x - 360 + i * 46, ly = y - 260 + Math.sin(i / 15 * Math.PI) * 40; g.fillStyle = i % 2 ? '#ffd27a' : '#ff9e7a'; g.beginPath(); g.arc(lx, ly, 6, 0, 7); g.fill(); leuchten(lx, ly, 24, 'rgba(255,210,130,A)', .8); }
+      g.fillStyle = '#6b4226'; g.beginPath(); g.ellipse(x + 260, y - 60, 70, 14, 0, 0, 7); g.fill(); g.fillRect(x + 254, y - 60, 12, 60);
+    }
+    if (o.id === 'schule') {
+      g.fillStyle = '#f6efe4'; g.fillRect(x - 170, y - 300, 340, 300);
+      g.fillStyle = '#3f7fb3'; g.beginPath(); g.moveTo(x - 190, y - 300); g.lineTo(x, y - 400); g.lineTo(x + 190, y - 300); g.fill();
+      g.fillStyle = '#f2c25b'; g.beginPath(); g.arc(x, y - 335, 22, 0, 7); g.fill();
+      g.fillStyle = '#ffd27a'; g.fillRect(x - 140, y - 250, 80, 70); g.fillRect(x + 60, y - 250, 80, 70);
+      g.fillStyle = '#6b4226'; rrect(x - 34, y - 130, 68, 130, 30); g.fill();
+      for (let i = 0; i < 30; i++) { g.fillStyle = i % 3 ? '#d9367a' : '#ef5a9b'; g.beginPath(); g.arc(x - 170 + (i % 10) * 12, y - 300 + Math.floor(i / 10) * 16 + Math.sin(i) * 6, 9, 0, 7); g.fill(); }
+    }
+    if (o.id === 'schuhmacher') {
+      g.fillStyle = '#e9dcc8'; g.fillRect(x - 150, y - 320, 300, 320);
+      g.fillStyle = '#7a3b2a'; g.fillRect(x - 160, y - 330, 320, 22);
+      g.fillStyle = '#ffeccc'; g.fillRect(x - 120, y - 190, 240, 110);
+      for (let i = 0; i < 3; i++) { const sx = x - 80 + i * 80, sy = y - 120; g.fillStyle = ['#d9367a', '#f2c25b', '#58b7ff'][i]; g.beginPath(); g.ellipse(sx, sy, 26, 12, 0, 0, 7); g.fill(); funkeln(sx + 14, sy - 16, zeit + i); }
+      g.fillStyle = '#6b4226'; rrect(x + 70, y - 80, 50, 80, 10); g.fill();
+      g.fillStyle = '#c4623d'; g.font = '800 30px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('👞', x, y - 220); g.textAlign = 'left';
+    }
+    if (o.id === 'post') {
+      g.fillStyle = '#efe4d2'; g.fillRect(x - 70, y - 420, 140, 420);
+      g.fillStyle = '#c4623d'; g.beginPath(); g.moveTo(x - 90, y - 420); g.lineTo(x, y - 500); g.lineTo(x + 90, y - 420); g.fill();
+      for (let i = 0; i < 3; i++) { g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(x, y - 360 + i * 100, 22, 0, 7); g.fill(); }
+      for (let i = 0; i < 5; i++) { const t = (zeit * .3 + i / 5) % 1; g.save(); g.translate(x + 60 + t * 200, y - 440 - Math.sin(t * 6 + i) * 40 - t * 80); g.rotate(Math.sin(zeit + i) * .3); g.fillStyle = '#fff6dc'; g.fillRect(-14, -9, 28, 18); g.restore(); }
+      g.fillStyle = '#6b4226'; rrect(x - 26, y - 100, 52, 100, 24); g.fill();
+    }
+    if (o.id === 'hafen') {
+      g.fillStyle = '#8a7a64'; g.fillRect(x - 330, y - 6, 660, 50);
+      for (let i = 0; i < 2; i++) { const bx = x - 160 + i * 300, by = y + 12 + Math.sin(zeit * 1.5 + i) * 5; g.fillStyle = i ? '#f3ece0' : '#2f6fb0'; g.beginPath(); g.moveTo(bx - 70, by - 30); g.lineTo(bx + 70, by - 30); g.lineTo(bx + 50, by + 6); g.lineTo(bx - 50, by + 6); g.fill(); g.fillStyle = '#5a4026'; g.fillRect(bx - 3, by - 130, 6, 100); g.fillStyle = '#fff6dc'; g.beginPath(); g.moveTo(bx + 3, by - 126); g.lineTo(bx + 60, by - 44); g.lineTo(bx + 3, by - 44); g.fill(); }
+      const kx = x + 40, ky = BODEN + 110;
+      leuchten(kx, ky, 180, 'rgba(90,220,255,A)', .7 + Math.sin(zeit * 2) * .15);
+      g.strokeStyle = 'rgba(180,240,255,.8)'; g.lineWidth = 4; g.beginPath(); g.arc(kx, ky, 70, Math.PI, 0); g.stroke();
+      for (let i = 0; i < 8; i++) { const t = (zeit * .5 + i / 8) % 1; g.fillStyle = `rgba(200,245,255,${1 - t})`; g.beginPath(); g.arc(kx - 40 + i * 12, ky - 60 - t * 90, 4 + i % 3, 0, 7); g.fill(); }
+    }
+    if (o.id === 'ruinen') {
+      for (let i = 0; i < 5; i++) { const sx = x - 260 + i * 120, sh = 120 + (i % 3) * 70; g.fillStyle = '#b9ad98'; g.fillRect(sx, y - sh, 46, sh); g.fillStyle = '#a99d88'; g.fillRect(sx - 8, y - sh - 14, 62, 16); }
+      for (let i = 0; i < 9; i++) { const sx = x - 280 + i * 70, sy = y - 10 - (i % 2) * 14; const an = .6 + Math.sin(zeit * 2 + i) * .4; leuchten(sx, sy, 40, 'rgba(150,230,255,A)', an); g.fillStyle = '#9fe6ff'; g.beginPath(); g.arc(sx, sy, 8, 0, 7); g.fill(); }
+    }
+  }
+  function hasi(x, y, zeit) {
+    g.save(); g.translate(x, y + Math.sin(zeit * 3) * 2);
+    g.fillStyle = '#f7f1e6';
+    g.beginPath(); g.ellipse(-16, -100, 11, 36, -.15, 0, 7); g.ellipse(16, -100, 11, 36, .15, 0, 7); g.fill();
+    g.fillStyle = '#f5b5c6'; g.beginPath(); g.ellipse(-16, -100, 5, 24, -.15, 0, 7); g.ellipse(16, -100, 5, 24, .15, 0, 7); g.fill();
+    g.fillStyle = '#f7f1e6'; g.beginPath(); g.arc(0, -52, 34, 0, 7); g.fill();
+    g.fillStyle = '#18204a'; g.beginPath(); g.arc(-12, -58, 5, 0, 7); g.arc(12, -58, 5, 0, 7); g.fill();
+    g.fillStyle = '#f5a0b5'; g.beginPath(); g.arc(0, -46, 5, 0, 7); g.fill();
+    g.restore();
+  }
+  function funkeln(x, y, zeit, r = 10) {
+    const s = r * (.7 + Math.sin(zeit * 5) * .3);
+    g.fillStyle = '#fff3c4'; g.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? s * .35 : s; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    g.fill();
+  }
+  function stern5(x, y, r, zeit) {
+    leuchten(x, y, r * 4, 'rgba(255,214,110,A)', 1);
+    g.save(); g.translate(x, y); g.rotate(Math.sin(zeit * 2) * .3);
+    g.fillStyle = '#f2c25b'; g.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    g.fill(); g.strokeStyle = '#fff3c4'; g.lineWidth = 3; g.stroke(); g.restore();
+  }
+  function sunnyZeichnen(x, y, zeit) {
+    const fl = Math.sin(zeit * 6) * .5;
+    g.save(); g.translate(x, y);
+    g.fillStyle = '#2f7fd6';
+    g.beginPath(); g.moveTo(-10, -10); g.quadraticCurveTo(-90, -70 - fl * 50, -120, -10 - fl * 30); g.quadraticCurveTo(-70, -20, -10, 10); g.fill();
+    g.beginPath(); g.moveTo(10, -10); g.quadraticCurveTo(90, -70 - fl * 50, 120, -10 - fl * 30); g.quadraticCurveTo(70, -20, 10, 10); g.fill();
+    g.restore();
+    leuchten(x, y, 120, 'rgba(110,180,255,A)', .5);
+    portrait('sunny', x, y, 52, '#7cc2ff');
+    if (Math.random() < .15) zustand.partikel.push({ x: x - 50, y: y + 20, vx: -1 - Math.random(), vy: .5 + Math.random(), t: 1, farbe: 'rgba(255,190,90,A)' });
+  }
+
+  function deckend(i, B, zoom = 1, fx = .5, fy = .5, oben = 0, HH = H) {
+    const s = Math.max(B / i.naturalWidth, HH / i.naturalHeight) * zoom;
+    const w = i.naturalWidth * s, h = i.naturalHeight * s;
+    g.drawImage(i, B / 2 - fx * w, oben + HH / 2 - fy * h, w, h);
+  }
+  function torFilm(zeit) {
+    const i = ortBild.tor, t = zustand.torT;
+    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
+    const HV = H + oy;
+    g.fillStyle = '#0b1430'; g.fillRect(0, 0, sichtB, HV);
+    if (i && i.complete && i.naturalWidth) {
+      // langsame Kamerafahrt durch den Torbogen (Mittelpunkt des Bogens im Bild)
+      const k = Math.min(1, t / 4.2), e = k * k * (3 - 2 * k);
+      deckend(i, sichtB, 1 + e * 2.4, .62, .52, 0, HV);
+    }
+    leuchten(sichtB / 2, HV * .55, 500, 'rgba(255,220,140,A)', .25 + .2 * Math.sin(zeit * 2));
+    if (t > 3.4) { g.fillStyle = `rgba(255,236,190,${Math.min(1, (t - 3.4) / .8)})`; g.fillRect(0, 0, sichtB, HV); }
+    g.fillStyle = '#000'; g.fillRect(0, 0, sichtB, 90); g.fillRect(0, HV - 90, sichtB, 90);
+    const a = Math.max(0, Math.min(1, (t - .4) * 1.5, (3.2 - t) * 1.5));
+    if (a > 0) {
+      g.globalAlpha = a; g.textAlign = 'center';
+      g.font = '800 84px "Baloo 2", sans-serif'; g.fillStyle = '#f2c25b'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 24;
+      g.fillText('KI-Verse', sichtB / 2, HV * .2);
+      g.font = '700 32px "Atkinson Hyperlegible", sans-serif'; g.fillStyle = '#fff6dc'; g.fillText('Otti öffnet das Tor ...', sichtB / 2, HV * .2 + 54);
+      g.shadowBlur = 0; g.globalAlpha = 1; g.textAlign = 'left';
+    }
+  }
+
+  // ---------- Bild malen ----------
+  function malen(zeit) {
+    if (zustand.modus === 'tor') { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, bw, bh); torFilm(zeit); return; }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, bw, bh);
+    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, dpr * skala * oy);
+    const cam = zustand.camX;
+    // Himmel
+    const himmel = g.createLinearGradient(0, -oy, 0, H);
+    himmel.addColorStop(0, '#050b20'); himmel.addColorStop(.45, '#16306b'); himmel.addColorStop(.7, '#2d4f8f'); himmel.addColorStop(1, '#0b1430');
+    g.fillStyle = himmel; g.fillRect(0, -oy, sichtB, H + oy);
+    for (const s of sterne) { if (!oy) break; const sx = ((s.x * 1.3 - cam * .04) % 2400 + 2400) % 2400; if (sx > sichtB) continue; g.fillStyle = `rgba(255,248,220,${.35 + Math.sin(zeit * 1.7 + s.p) * .3})`; g.beginPath(); g.arc(sx, -oy + s.y * oy / 520, s.r, 0, 7); g.fill(); }
+    for (const s of sterne) { const sx = ((s.x - cam * .05) % 2400 + 2400) % 2400; if (sx > sichtB) continue; g.fillStyle = `rgba(255,248,220,${.4 + Math.sin(zeit * 2 + s.p) * .35})`; g.beginPath(); g.arc(sx, s.y, s.r, 0, 7); g.fill(); }
+    // Mond
+    const mx = sichtB * .72 - cam * .03, my = 170;
+    leuchten(mx, my, 260, 'rgba(255,226,150,A)', .7);
+    g.fillStyle = '#ffe9b0'; g.beginPath(); g.arc(mx, my, 82, 0, 7); g.fill();
+    g.fillStyle = 'rgba(230,200,140,.5)'; g.beginPath(); g.arc(mx - 24, my - 14, 14, 0, 7); g.arc(mx + 20, my + 24, 10, 0, 7); g.fill();
+    // Meer am Horizont
+    const meerY = 560;
+    const meer = g.createLinearGradient(0, meerY, 0, BODEN);
+    meer.addColorStop(0, '#1d3f7d'); meer.addColorStop(1, '#0d2150');
+    g.fillStyle = meer; g.fillRect(0, meerY, sichtB, BODEN - meerY + 200);
+    for (let i = 0; i < 40; i++) { const wx = (i * 97 - cam * .2) % (sichtB + 100); const wy = meerY + 10 + (i % 8) * 28; g.strokeStyle = `rgba(255,226,150,${.15 + .2 * Math.sin(zeit * 2 + i)})`; g.lineWidth = 2; g.beginPath(); g.moveTo((wx + sichtB + 100) % (sichtB + 100), wy); g.lineTo((wx + sichtB + 100) % (sichtB + 100) + 30, wy); g.stroke(); }
+    g.fillStyle = 'rgba(255,226,150,.25)'; g.fillRect(mx - 20, meerY, 40, 160);
+    // Berg mit Pinien (Sunnys Zuhause)
+    g.save(); g.translate(-cam * .3, 0);
+    g.fillStyle = '#10264f'; g.beginPath(); g.moveTo(-200, meerY + 10);
+    for (let x = -200; x <= WELT * .3 + sichtB + 400; x += 80) g.lineTo(x, 440 + Math.sin(x * .004) * 80 + Math.sin(x * .011) * 30);
+    g.lineTo(WELT * .3 + sichtB + 400, meerY + 10); g.fill();
+    for (const p of PINIEN) pinie(p.x, p.y + 30, p.s);
+    g.restore();
+    // hintere Häuser
+    g.save(); g.translate(-cam * .55, 0);
+    for (const h of HINTEN) { g.fillStyle = '#8f8a86'; g.fillRect(h.x, h.y + 120 - h.h, h.b, h.h); g.fillStyle = '#6e4232'; g.fillRect(h.x - 4, h.y + 120 - h.h - 8, h.b + 8, 10); g.fillStyle = 'rgba(255,210,122,.8)'; g.fillRect(h.x + h.b * .3, h.y + 140 - h.h, 12, 16); }
+    g.restore();
+    // Vordergrund-Welt
+    g.save(); g.translate(-cam, 0);
+    // Strasse mit Pflastersteinen
+    g.fillStyle = '#5c5468'; g.fillRect(cam - 10, BODEN - 40, sichtB + 20, H - BODEN + 40);
+    g.fillStyle = '#d8ccb6'; g.fillRect(cam - 10, BODEN - 44, sichtB + 20, 10);
+    for (let r = 0; r < 6; r++) for (let x = Math.floor(cam / 60) * 60 - 60; x < cam + sichtB + 60; x += 60) {
+      g.fillStyle = (x / 60 + r) % 2 ? '#6b6378' : '#625a70'; rrect(x + (r % 2) * 30, BODEN - 30 + r * 34, 54, 28, 8); g.fill();
+    }
+    for (const h of HAEUSER) if (h.x + h.b > cam - 100 && h.x < cam + sichtB + 100) haus(h, zeit);
+    for (const o of ORTE) if (Math.abs(o.x - cam - sichtB / 2) < sichtB) ortZeichnen(o, zeit);
+    for (let x = 700; x < WELT; x += 1300) if (Math.abs(x - cam - sichtB / 2) < sichtB) palme(x, BODEN - 40, 1, zeit);
+    for (const l of LATERNEN) if (l > cam - 200 && l < cam + sichtB + 200) laterne(l, zeit);
+    // Figuren an ihren Orten
+    for (const o of ORTE) if (o.figur && Math.abs(o.x - cam - sichtB / 2) < sichtB) figur(o.figur, o.x + (o.id === 'placa' ? -170 : o.id === 'hafen' ? 140 : 150), BODEN, .9, zeit + o.x, 0, -1, o.figur === 'jackie' ? '#d9367a' : '#7a5bd6');
+    for (const n of NEBENFIGUREN) if (Math.abs(n.x - cam - sichtB / 2) < sichtB) figur(n.figur, n.x, BODEN, .8, zeit + n.x, 0, -1, '#2f8f72');
+    // Fia fliegt über der Plaça
+    const fx = 1650 + Math.sin(zeit * .7) * 220, fy = 300 + Math.sin(zeit * 1.4) * 40;
+    leuchten(fx, fy, 90, 'rgba(255,170,90,A)', .7); portrait('fia', fx, fy, 34, '#ffb36b');
+    // Funken
+    for (const f of FUNKEN) if (!f.weg) stern5(f.x, f.y + Math.sin(zeit * 2 + f.p) * 10, 22, zeit + f.p);
+    // Spieler
+    const laeuft = Math.abs(sp.vx) > .5 && sp.amBoden;
+    if (sp.fliegend) for (let i = 0; i < 2; i++) funkeln(sp.x - 20 + i * 40, sp.y - 4, zeit * 2 + i, 12);
+    figur(sp.figur, sp.x, sp.y, 1, zeit, laeuft ? 1 : 0, sp.richtung, sp.figur === 'jackie' ? '#d9367a' : '#c4623d');
+    // Partikel
+    for (const p of zustand.partikel) { g.fillStyle = p.farbe.replace('A', p.t.toFixed(2)); g.beginPath(); g.arc(p.x, p.y, 5 * p.t + 2, 0, 7); g.fill(); }
+    // Sunny folgt
+    sunnyZeichnen(sunny.x, sunny.y, zeit);
+    // Sprechblase
+    blase.ziel = zustand.blase ? zustand.blase.x : null;
+    if (zustand.blase) blase(Math.max(cam + 170, Math.min(cam + sichtB - 170, zustand.blase.x)), zustand.blase.y, zustand.blase.text);
+    // Ortsschild
+    const nah = naechsterOrt();
+    if (nah && nah.d < 260) { g.font = '800 30px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(11,20,48,.7)'; const w = g.measureText(nah.o.name).width + 34; rrect(nah.o.x - w / 2, 70 + cam * 0, w, 46, 23); g.fill(); g.fillStyle = '#f2c25b'; g.fillText(nah.o.name, nah.o.x, 103); g.textAlign = 'left'; }
+    g.restore();
+    // Kino-Balken und Übergang (über den ganzen Bildschirm)
+    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
+    const HV = H + oy;
+    const balken = zustand.film > 0 ? Math.min(1, zustand.film) * 90 : 0;
+    if (balken) { g.fillStyle = '#000'; g.fillRect(0, 0, sichtB, balken); g.fillRect(0, HV - balken, sichtB, balken); }
+    if (zustand.uebergang) {
+      const u = zustand.uebergang, t = u.t;
+      const r = (t < .5 ? t * 2 : (1 - t) * 2) * Math.hypot(sichtB, H);
+      const gx = u.x - cam, gy = u.y + oy;
+      const v = g.createRadialGradient(gx, gy, 0, gx, gy, Math.max(1, r));
+      v.addColorStop(0, 'rgba(255,240,190,1)'); v.addColorStop(.7, 'rgba(242,194,91,.95)'); v.addColorStop(1, 'rgba(242,194,91,0)');
+      g.fillStyle = v; g.fillRect(0, 0, sichtB, HV);
+    }
+    if (zustand.innen) innenMalen(zustand.innen, zeit);
+    if (zustand.titel) {
+      const t = zustand.titel; const a = Math.min(1, t.t * 2, (t.dauer - t.t) * 2);
+      g.globalAlpha = Math.max(0, a); g.font = '800 72px "Baloo 2", sans-serif'; g.textAlign = 'center';
+      g.fillStyle = '#f2c25b'; g.shadowColor = 'rgba(242,194,91,.8)'; g.shadowBlur = 30; g.fillText(t.text, sichtB / 2, HV * .3);
+      g.shadowBlur = 0; g.font = '600 30px "Atkinson Hyperlegible", sans-serif'; g.fillStyle = '#fff6dc'; g.fillText(t.unter || '', sichtB / 2, HV * .3 + 56);
+      g.globalAlpha = 1; g.textAlign = 'left';
+    }
+  }
+
+  // ---------- Innenräume ----------
+  function innenMalen(ort, zeit) {
+    const B = sichtB;
+    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
+    { const v0 = g.createLinearGradient(0, 0, 0, H + oy); v0.addColorStop(0, '#0b1430'); v0.addColorStop(1, '#0b1430'); g.fillStyle = v0; g.fillRect(0, 0, B, H + oy); }
+    g.translate(0, oy);
+    const farben = { kiosk: ['#2a3f7a', '#f2c25b'], schule: ['#2e4f7d', '#f6efe4'], schuhmacher: ['#4a2a22', '#ffcf8a'], post: ['#28406f', '#fff6dc'], hafen: ['#063a5c', '#5ad8ff'], ruinen: ['#16244a', '#9fe6ff'] }[ort] || ['#16244a', '#f2c25b'];
+    const v = g.createLinearGradient(0, -oy, 0, H); v.addColorStop(0, farben[0]); v.addColorStop(1, '#0b1430');
+    g.fillStyle = v; g.fillRect(0, -oy, B, H + oy);
+    const tb = ortBild[ort === 'hafen' ? 'werkstatt-meer' : ort];
+    if (tb && tb.complete && tb.naturalWidth) { deckend(tb, B, 1 + Math.sin(zeit * .2) * .03, .5, .5, -oy, H + oy); g.fillStyle = 'rgba(11,20,48,.25)'; g.fillRect(0, -oy, B, H + oy); }
+    else leuchten(B / 2, H * .38, 520, 'rgba(255,214,140,A)', .5);
+    if (ort === 'hafen') {
+      for (let i = 0; i < 40; i++) { const t = (zeit * .2 + i / 40) % 1; g.fillStyle = `rgba(200,245,255,${.6 * (1 - t)})`; g.beginPath(); g.arc((i * 137) % B, H - t * H, 3 + i % 5, 0, 7); g.fill(); }
+      for (let i = 0; i < 5; i++) { const fx = (zeit * 60 * (i % 2 ? 1 : -1) + i * 300) % (B + 200); const xx = i % 2 ? fx - 100 : B - fx + 100; g.fillStyle = ['#ff8a6b', '#f2c25b', '#8ff0bf'][i % 3]; g.beginPath(); g.ellipse(xx, 200 + i * 90, 26, 12, 0, 0, 7); g.fill(); }
+      g.strokeStyle = 'rgba(180,240,255,.7)'; g.lineWidth = 6; g.beginPath(); g.arc(B / 2, H * .8, Math.min(B * .45, 480), Math.PI, 0); g.stroke();
+    }
+    if (ort === 'schule') { g.fillStyle = '#1f3a2f'; rrect(B / 2 - 300, 120, 600, 260, 16); g.fill(); for (let i = 0; i < 12; i++) funkeln(B / 2 - 260 + (i * 47) % 520, 160 + (i * 71) % 200, zeit + i, 12); }
+    if (ort === 'schuhmacher') { for (let i = 0; i < 6; i++) { const sx = B / 2 - 300 + i * 120, sy = 200 + Math.sin(zeit * 2 + i) * 14; g.fillStyle = ['#d9367a', '#f2c25b', '#58b7ff'][i % 3]; g.beginPath(); g.ellipse(sx, sy, 40, 18, 0, 0, 7); g.fill(); funkeln(sx + 26, sy - 24, zeit + i, 14); } }
+    if (ort === 'post') { for (let i = 0; i < 14; i++) { const t = (zeit * .25 + i / 14) % 1; g.save(); g.translate((i * 173) % B, H * (1 - t)); g.rotate(Math.sin(zeit + i)); g.fillStyle = '#fff6dc'; g.fillRect(-24, -15, 48, 30); g.strokeStyle = '#a86f12'; g.lineWidth = 2; g.beginPath(); g.moveTo(-24, -15); g.lineTo(0, 2); g.lineTo(24, -15); g.stroke(); g.restore(); } }
+    if (ort === 'ruinen') { for (let i = 0; i < 16; i++) { const sx = (i * 131) % B, sy = H * .55 + (i % 4) * 60; leuchten(sx, sy, 70, 'rgba(150,230,255,A)', .5 + Math.sin(zeit * 2 + i) * .4); g.fillStyle = '#9fe6ff'; g.beginPath(); g.arc(sx, sy, 12, 0, 7); g.fill(); } }
+    if (ort === 'kiosk') { for (let i = 0; i < 8; i++) { const sx = B / 2 - 350 + i * 100; g.fillStyle = '#fff6dc'; rrect(sx, 150 + (i % 2) * 30, 80, 100, 8); g.fill(); g.font = '40px sans-serif'; g.textAlign = 'center'; g.fillText(['♥', '☾', '✦', '🌊', '🌲', '🐚', '⭐', '🎈'][i], sx + 40, 215 + (i % 2) * 30); g.textAlign = 'left'; } g.save(); g.translate(B / 2, H * .62); g.scale(2.2, 2.2); hasi(0, 0, zeit); g.restore(); }
+    const o = ORTE.find(x => x.id === ort);
+    if (o && o.figur) figur(o.figur, B / 2, H * .66, 2.3, zeit, 0, 1, o.figur === 'jackie' ? '#d9367a' : '#7a5bd6');
+  }
+
+  const SCHULFRAGEN = ['Wenn du eine Farbe erfinden könntest, wie würde sie heissen?', 'Was würdest du dem Mond erzählen?', 'Welches Geräusch macht ein Stern, wenn er lacht?', 'Was kannst du gut, ohne dass es dir jemand beigebracht hat?', 'Wie sieht ein Haus aus, das von innen grösser ist als von aussen?'];
+  const ERFINDUNGEN = ['eine Muschel, die Geschichten weitererzählt', 'eine Laterne, die nur für Mutige leuchtet', 'ein Boot, das Wellen sammelt', 'eine Brille, die zeigt, was jemand gerade fühlt', 'ein Schlüssel, der Türen in Träume öffnet'];
+  function karte(titel, text, knoepfe, eingabe) {
+    $('#karteTitel').textContent = titel; $('#karteText').textContent = text;
+    const e = $('#karteEingabe'); e.hidden = !eingabe; if (eingabe) { e.value = ''; e.placeholder = eingabe; }
+    const k = $('#karteKnoepfe'); k.innerHTML = '';
+    for (const [t, f, gold] of knoepfe) { const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf' + (gold ? ' gold' : ''); b.textContent = t; b.onclick = f; k.appendChild(b); }
+    $('#karte').hidden = false;
+  }
+  function innenOeffnen(ort) {
+    const raus = ['Zurück auf die Gasse', () => rausGehen(), true];
+    const erste = !zustand.besucht.has(ort);
+    if (erste) { zustand.besucht.add(ort); erlebt(`war bei ${ORTE.find(o => o.id === ort).name}`); }
+    anzeigen();
+    if (ort === 'kiosk') karte('Hasis Kiosk', 'Hasi sagt kein Wort. Er zeigt dir seine Zeichnungen und schiebt dir mit einem Lächeln einen goldenen Funken hin.', [['Danke, Hasi', () => { funkenGeben(); karte('Hasis Kiosk', 'Hasi wackelt glücklich mit den Ohren.', [raus]); }], raus]);
+    if (ort === 'schule') karte('Schule von Mama Affe', 'Mama Affe: «Setz dich! Heute stellen wir Fragen, die noch nie jemand gestellt hat.»', [['Gib mir eine Frage', () => { const f = SCHULFRAGEN[Math.floor(Math.random() * SCHULFRAGEN.length)]; erlebt(`bekam von Mama Affe die Frage: ${f}`); karte('Schule von Mama Affe', '«' + f + '» Denk in Ruhe darüber nach. Es gibt keine falsche Antwort.', [['Noch eine', () => innenOeffnen('schule')], raus]); }, true], raus]);
+    if (ort === 'schuhmacher') karte('Beim Schuhmacher', 'Jackie strahlt: «Probier die fliegenden Schuhe! Damit springst du draussen doppelt so hoch und kannst ein zweites Mal in der Luft springen.»', sp.fliegend ? [['Du trägst sie schon ✦', () => {}], raus] : [['Schuhe anziehen', () => { sp.fliegend = true; erlebt('bekam von Jackie fliegende Schuhe'); karte('Beim Schuhmacher', 'Die Schuhe glitzern an deinen Füssen. Draussen kannst du jetzt in der Luft nochmals springen.', [raus]); }, true], raus]);
+    if (ort === 'post') karte('Lettis Taubenpost', 'Letti: «Wem soll ich einen Brief bringen? Schreib ihn hier, ich fliege los.»', [['Letti, flieg los', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; erlebt(`schickte mit Letti einen Brief: «${t}»`); karte('Lettis Taubenpost', 'Letti packt deinen Brief und fliegt über die Dächer davon. Gurr!', [raus]); }, true], raus], 'Lieber Tinko, …');
+    if (ort === 'hafen') karte('Tinkos Werkstatt unter Wasser', 'Tinko: «Blub! Willkommen in meiner Werkstatt. Soll ich dir etwas erfinden?»', [['Erfinde etwas', () => { const e = ERFINDUNGEN[Math.floor(Math.random() * ERFINDUNGEN.length)]; erlebt(`liess sich von Tinko ${e} erfinden`); karte('Tinkos Werkstatt', `Tinko baut dir ${e}. Blubb-blubb, fertig!`, [['Noch etwas', () => innenOeffnen('hafen')], raus]); }, true], raus]);
+    if (ort === 'ruinen') { const liste = zustand.erlebt.slice(-6).map(e => '• ' + e).join('\n') || 'Noch keine Erinnerungen. Geh los und erlebe etwas.'; karte('Ruinen der Erinnerung', 'Brix: «Diese Steine leuchten für alles, was du heute erlebt hast.»\n\n' + liste, [raus]); $('#karteText').style.whiteSpace = 'pre-line'; }
+    pruefeEnde();
+  }
+  function reinGehen(o) {
+    if (zustand.uebergang) return;
+    $('#rein').hidden = true;
+    zustand.uebergang = { x: o.x, y: BODEN - 120, t: 0, mitte: () => { zustand.innen = o.id; $('#steuer').hidden = true; innenOeffnen(o.id); } };
+  }
+  function rausGehen() {
+    $('#karte').hidden = true; $('#karteText').style.whiteSpace = '';
+    zustand.uebergang = { x: sp.x, y: BODEN - 120, t: 0, mitte: () => { zustand.innen = null; $('#steuer').hidden = false; pruefeEnde(true); } };
+  }
+
+  // ---------- Spiellogik ----------
+  function erlebt(t) { zustand.erlebt.push(t); try { localStorage.setItem('kiverse_spiel_erlebt', JSON.stringify(zustand.erlebt.slice(-30))); } catch {} }
+  function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `Orte ${zustand.besucht.size} / ${ZIEL_ORTE.length}`; }
+  function klang(f = 880) {
+    try { const a = klang.ctx || (klang.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), v = a.createGain(); o.type = 'triangle'; o.frequency.value = f; v.gain.setValueAtTime(.12, a.currentTime); v.gain.exponentialRampToValueAtTime(.001, a.currentTime + .5); o.connect(v).connect(a.destination); o.start(); o.stop(a.currentTime + .5); } catch {}
+  }
+  function funkenGeben(x = sp.x, y = sp.y - 150) {
+    zustand.funken = Math.min(12, zustand.funken + 1); anzeigen(); klang(700 + zustand.funken * 60);
+    for (let i = 0; i < 18; i++) zustand.partikel.push({ x, y, vx: (Math.random() - .5) * 8, vy: (Math.random() - .8) * 8, t: 1, farbe: 'rgba(255,214,110,A)' });
+  }
+  function naechsterOrt() {
+    let best = null;
+    for (const o of ORTE) { const d = Math.abs(o.x - sp.x); if (!best || d < best.d) best = { o, d }; }
+    return best;
+  }
+  function pruefeEnde(draussen) {
+    if (zustand.ende || zustand.funken < 12 || zustand.besucht.size < ZIEL_ORTE.length || !draussen) return;
+    zustand.ende = true; zustand.film = .01;
+    zustand.titel = { text: 'Kapitel geschafft!', unter: 'Sunny fliegt eine Ehrenrunde über das Städtchen', t: 0, dauer: 5 };
+    erlebt('hat alle Funken gesammelt und alle Orte besucht');
+    for (let i = 0; i < 6; i++) setTimeout(() => { for (let j = 0; j < 30; j++) zustand.partikel.push({ x: sp.x - 400 + Math.random() * 800, y: 200 + Math.random() * 200, vx: (Math.random() - .5) * 10, vy: (Math.random() - .5) * 10, t: 1, farbe: ['rgba(255,214,110,A)', 'rgba(120,200,255,A)', 'rgba(255,140,170,A)'][j % 3] }); klang(500 + i * 120); }, i * 500);
+    setTimeout(() => karte('Kapitel geschafft', 'Du hast heute im KI-Verse viel erlebt. Im echten KI-Verse kann Nova daraus ein Kapitel unserer Geschichte schreiben.', [['Zum KI-Verse', () => zurWelt(), true], ['Weiterspielen', () => { $('#karte').hidden = true; zustand.film = 0; }]]), 5200);
+  }
+  function zurWelt() { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : ''); }
+  $('#zurWelt').onclick = zurWelt;
+
+  let letzte = performance.now(), zeit = 0;
+  function schritt(jetzt) {
+    const dt = Math.min(.05, (jetzt - letzte) / 1000); letzte = jetzt; zeit += dt;
+    if (zustand.modus === 'spiel' && !zustand.innen && !zustand.uebergang) {
+      const ziel = (taste.rechts ? 1 : 0) - (taste.links ? 1 : 0);
+      sp.vx = lerp(sp.vx, ziel * 420, Math.min(1, dt * 8));
+      if (ziel) sp.richtung = ziel;
+    } else sp.vx = lerp(sp.vx, 0, Math.min(1, dt * 8));
+    if (zustand.modus === 'tor') {
+      zustand.torT = (zustand.torT || 0) + dt;
+      if (zustand.torT > 4.4) { zustand.modus = 'intro'; zustand.film = 1; zustand.uebergang = { x: 300, y: BODEN - 200, t: .5, mitte: () => {} }; }
+      requestAnimationFrame(schritt); malen(zeit); return;
+    }
+    if (zustand.modus === 'intro') {
+      sp.vx = 260; zustand.intro = (zustand.intro || 0) + dt;
+      if (zustand.intro > 2.6) { zustand.modus = 'spiel'; zustand.film = 0; $('#steuer').hidden = false; zustand.blase = null; }
+    }
+    sp.x = Math.max(60, Math.min(WELT - 60, sp.x + sp.vx * dt));
+    sp.vy += 2200 * dt; sp.y += sp.vy * dt;
+    if (sp.y >= BODEN) { sp.y = BODEN; sp.vy = 0; sp.amBoden = true; sp.sprungZahl = 0; } else sp.amBoden = false;
+    // Kamera wie im Film: weich nachziehen
+    const zielCam = Math.max(0, Math.min(WELT - sichtB, sp.x - sichtB * .42));
+    zustand.camX = lerp(zustand.camX, zielCam, Math.min(1, dt * 3));
+    // Sunny folgt in Wellen
+    sunny.x = lerp(sunny.x, sp.x - 120 * sp.richtung, Math.min(1, dt * 1.6));
+    sunny.y = 330 + Math.sin(zeit * 1.3) * 40;
+    // Funken sammeln
+    for (const f of FUNKEN) if (!f.weg && Math.hypot(f.x - sp.x, f.y - (sp.y - 120)) < 90) { f.weg = true; funkenGeben(f.x, f.y); erlebt('fing einen goldenen Funken'); pruefeEnde(true); }
+    // Sprechblasen und Türen
+    zustand.blase = null;
+    if (zustand.modus === 'spiel' && !zustand.innen) {
+      const nah = naechsterOrt();
+      const reinZeigen = nah && nah.d < 170 && nah.o.rein && !zustand.uebergang;
+      $('#rein').hidden = !reinZeigen;
+      if (reinZeigen) $('#rein').textContent = nah.o.id === 'hafen' ? 'Abtauchen' : 'Rein';
+      if (nah && nah.d < 260 && nah.o.satz) zustand.blase = { x: nah.o.x + (nah.o.id === 'placa' ? -170 : nah.o.id === 'hafen' ? 140 : 150), y: BODEN - 190, text: nah.o.satz };
+      for (const n of NEBENFIGUREN) if (Math.abs(n.x - sp.x) < 110) zustand.blase = { x: n.x, y: BODEN - 175, text: n.satz };
+      if (nah && nah.o.hasi && nah.d < 200) zustand.blase = { x: nah.o.x, y: BODEN - 260, text: '♥ ✦ ☾' };
+    } else $('#rein').hidden = true;
+    if (zustand.modus === 'intro') zustand.blase = { x: 400, y: BODEN - 190, text: 'Otti öffnet das Tor ... willkommen im KI-Verse!' };
+    // Übergang
+    if (zustand.uebergang) { const u = zustand.uebergang, vor = u.t; u.t += dt * 1.1; if (vor < .5 && u.t >= .5) u.mitte(); if (u.t >= 1) zustand.uebergang = null; }
+    if (zustand.titel) { zustand.titel.t += dt; if (zustand.titel.t > zustand.titel.dauer) zustand.titel = null; }
+    if (zustand.film > 0 && zustand.film < 1) zustand.film = Math.min(1, zustand.film + dt * 1.5);
+    zustand.partikel = zustand.partikel.filter(p => (p.x += p.vx, p.y += p.vy, p.vy += .15, p.t -= dt * 1.2) > 0);
+    malen(zeit);
+    requestAnimationFrame(schritt);
+  }
+
+  // ---------- Steuerung ----------
+  function springen() {
+    if (zustand.modus !== 'spiel' || zustand.innen) return;
+    if (sp.amBoden) { sp.vy = sp.fliegend ? -1400 : -1000; sp.sprungZahl = 1; klang(520); }
+    else if (sp.fliegend && sp.sprungZahl < 2) { sp.vy = -1100; sp.sprungZahl = 2; klang(780); for (let i = 0; i < 12; i++) zustand.partikel.push({ x: sp.x, y: sp.y, vx: (Math.random() - .5) * 6, vy: Math.random() * 4, t: 1, farbe: 'rgba(255,214,110,A)' }); }
+  }
+  function halten(el, an, aus) {
+    const start = (e) => { e.preventDefault(); el.classList.add('an'); an(); };
+    const ende = (e) => { e.preventDefault(); el.classList.remove('an'); aus(); };
+    el.addEventListener('pointerdown', start); el.addEventListener('pointerup', ende); el.addEventListener('pointercancel', ende); el.addEventListener('pointerleave', ende);
+  }
+  halten($('#links'), () => taste.links = true, () => taste.links = false);
+  halten($('#rechts'), () => taste.rechts = true, () => taste.rechts = false);
+  halten($('#hoch'), springen, () => {});
+  $('#rein').onclick = () => { const n = naechsterOrt(); if (n && n.o.rein) reinGehen(n.o); };
+  addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft' || e.key === 'a') taste.links = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') taste.rechts = true;
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); springen(); }
+    if (e.key === 'Enter' && !$('#rein').hidden) $('#rein').click();
+  });
+  addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') taste.links = false; if (e.key === 'ArrowRight' || e.key === 'd') taste.rechts = false; });
+
+  // ---------- Start: Figur wählen, dann Film-Intro durchs Tor ----------
+  const WAHL = [['diego', 'Diego'], ['fia', 'Fia'], ['tinko', 'Tinko'], ['nova', 'Nova'], ['jackie', 'Jackie'], ['otti', 'Otti'], ['kay', 'Kay'], ['kimo', 'Kimo']];
+  let gewaehlt = 'diego';
+  try { gewaehlt = localStorage.getItem('kiverse_spiel_figur') || 'diego'; } catch {}
+  for (const [k, n] of WAHL) {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === gewaehlt));
+    const i = document.createElement('img'); i.src = BILDER[k]; i.alt = '';
+    b.append(i, document.createTextNode(n));
+    b.onclick = () => { gewaehlt = k; document.querySelectorAll('#wahl button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+    $('#wahl').appendChild(b);
+  }
+  // Ortsfiguren nicht doppelt zeigen, wenn man sie selbst spielt
+  function starten() {
+    sp.figur = gewaehlt; try { localStorage.setItem('kiverse_spiel_figur', gewaehlt); } catch {}
+    for (const o of ORTE) if (o.figur === gewaehlt) o.figur = null;
+    for (let i = NEBENFIGUREN.length - 1; i >= 0; i--) if (NEBENFIGUREN[i].figur === gewaehlt) NEBENFIGUREN.splice(i, 1);
+    $('#start').hidden = true; sp.x = 120; zustand.film = .01;
+    if (ortBild.tor && ortBild.tor.naturalWidth) { zustand.modus = 'tor'; zustand.torT = 0; }
+    else { zustand.modus = 'intro'; zustand.titel = { text: 'KI-Verse', unter: 'Ein Abend am Meer', t: 0, dauer: 3 }; }
+    klang(440); setTimeout(() => klang(660), 250);
+  }
+  $('#los').onclick = starten;
+  if (ORT_BILDER.tor) $('#start').style.backgroundImage = `linear-gradient(rgba(11,20,48,.25), rgba(11,20,48,.55)), url(${ORT_BILDER.tor})`;
+  anzeigen();
+  sunny.x = 0;
+  requestAnimationFrame(schritt);
+  window.__spiel = { sp, zustand, ORTE, FUNKEN, starten, reinGehen, springen };
+})();
+</script>
+</body>
+</html>

@@ -11,54 +11,61 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--nacht); color: var(--text); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
 canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-.anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; }
+.anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; z-index: 5; }
 .pille { background: rgba(11, 20, 48, .7); border: 1px solid var(--rand); border-radius: 999px; padding: 4px 12px; font-weight: 700; color: var(--gold-hell); pointer-events: auto; }
 .pille button { all: unset; cursor: pointer; }
-.steuer { position: fixed; bottom: max(14px, env(safe-area-inset-bottom)); left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; }
-.steuer .gruppe { display: flex; gap: 12px; pointer-events: auto; }
-.taste { width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: var(--gold-hell); font-size: 28px; display: grid; place-items: center; font-family: "Baloo 2", sans-serif; font-weight: 800; touch-action: none; }
-.taste.an { background: rgba(242, 194, 91, .35); }
-#rein { position: fixed; left: 50%; bottom: max(100px, calc(env(safe-area-inset-bottom) + 90px)); transform: translateX(-50%); background: var(--gold); color: #1a1406; border: 0; border-radius: 999px; padding: 12px 26px; font: 800 18px "Baloo 2", sans-serif; box-shadow: 0 0 24px rgba(242, 194, 91, .7); animation: puls 1.4s ease-in-out infinite; }
-@keyframes puls { 50% { transform: translateX(-50%) scale(1.07); } }
-.karte { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100% - 24px)); background: var(--karte); border: 1px solid var(--rand); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+#hoch { position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: var(--gold-hell); font: 800 28px "Baloo 2", sans-serif; display: grid; place-items: center; z-index: 4; }
+#stick { position: fixed; left: 26px; bottom: max(26px, env(safe-area-inset-bottom)); width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .4); z-index: 4; touch-action: none; }
+#stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(242, 194, 91, .75); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
+#rein { position: fixed; left: 50%; bottom: max(150px, calc(env(safe-area-inset-bottom) + 140px)); transform: translateX(-50%); background: var(--gold); color: #1a1406; border: 0; border-radius: 999px; padding: 12px 26px; font: 800 18px "Baloo 2", sans-serif; box-shadow: 0 0 24px rgba(242, 194, 91, .7); z-index: 6; }
+.blase { position: fixed; transform: translate(-50%, -100%); max-width: 230px; background: rgba(255, 250, 238, .97); color: #18204a; border-radius: 16px; padding: 8px 12px; font: 700 14px/1.35 "Atkinson Hyperlegible", sans-serif; text-align: center; pointer-events: none; z-index: 3; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
+.blase::after { content: ""; position: absolute; left: 50%; bottom: -9px; margin-left: -9px; border: 9px solid transparent; border-bottom: 0; border-top-color: rgba(255, 250, 238, .97); }
+.schild { position: fixed; transform: translate(-50%, -50%); background: rgba(11, 20, 48, .75); color: var(--gold); border: 1px solid var(--rand); border-radius: 999px; padding: 3px 12px; font: 800 15px "Baloo 2", sans-serif; pointer-events: none; z-index: 2; white-space: nowrap; }
+.karte { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100% - 24px)); background: var(--karte); border: 1px solid var(--rand); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); z-index: 8; }
 .karte h2 { margin: 0 0 6px; font: 800 22px "Baloo 2", sans-serif; color: var(--gold); }
-.karte p { margin: 0 0 10px; line-height: 1.45; }
+.karte p { margin: 0 0 10px; line-height: 1.45; white-space: pre-line; }
 .karte .knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
 .knopf { background: rgba(255, 255, 255, .08); color: var(--text); border: 1px solid var(--rand); border-radius: 999px; padding: 9px 16px; font: 700 15px "Atkinson Hyperlegible", sans-serif; }
 .knopf.gold { background: var(--gold); color: #1a1406; border-color: var(--gold); }
 .karte input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(255, 255, 255, .06); color: var(--text); font: 15px "Atkinson Hyperlegible", sans-serif; margin-bottom: 10px; }
-.start { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 30%, rgba(242, 194, 91, .18), rgba(11, 20, 48, .92) 60%); background-size: cover; background-position: 60% 50%; padding: 16px; }
-.start .innen { background: rgba(11, 20, 48, .72); border: 1px solid var(--rand); border-radius: 22px; padding: 18px 16px; backdrop-filter: blur(4px); }
-.start .innen { width: min(520px, 100%); text-align: center; }
+.balken { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 7; transition: height .8s ease; pointer-events: none; }
+.balken.oben { top: 0; } .balken.unten { bottom: 0; }
+body.kino .balken { height: 9vh; }
+#blitz { position: fixed; inset: 0; background: radial-gradient(circle, #fff3c8, #f2c25b 60%, rgba(242, 194, 91, .9)); opacity: 0; pointer-events: none; z-index: 9; transition: opacity .45s ease; }
+#ortbild { position: fixed; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity .8s ease; z-index: 1; pointer-events: none; animation: kenburns 20s ease-in-out infinite alternate; }
+@keyframes kenburns { to { transform: scale(1.08); } }
+#titel { position: fixed; left: 0; right: 0; top: 20vh; text-align: center; pointer-events: none; z-index: 8; opacity: 0; transition: opacity 1s ease; }
+#titel b { display: block; font: 800 60px/1 "Baloo 2", sans-serif; color: var(--gold); text-shadow: 0 0 30px rgba(242, 194, 91, .6), 0 4px 18px rgba(0, 0, 0, .6); }
+#titel span { display: block; margin-top: 8px; font: 700 20px "Atkinson Hyperlegible", sans-serif; color: #fff6dc; text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
+.start { position: fixed; inset: 0; display: grid; place-items: center; background: #0b1430 center / cover no-repeat; padding: 16px; z-index: 10; transition: opacity .9s ease; }
+.start .innen { width: min(520px, 100%); text-align: center; background: rgba(11, 20, 48, .72); border: 1px solid var(--rand); border-radius: 22px; padding: 18px 16px; backdrop-filter: blur(4px); }
 .start h1 { font: 800 44px/1 "Baloo 2", sans-serif; color: var(--gold); margin: 0 0 6px; text-shadow: 0 0 30px rgba(242, 194, 91, .6); }
 .start p { margin: 0 0 14px; line-height: 1.45; }
 .wahl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0 0 16px; }
 .wahl button { all: unset; cursor: pointer; text-align: center; font: 700 13px "Atkinson Hyperlegible", sans-serif; }
 .wahl img { width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; border: 3px solid transparent; display: block; margin-bottom: 4px; }
 .wahl button[aria-pressed="true"] img { border-color: var(--gold); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
+.laden { position: fixed; inset: 0; display: grid; place-items: center; z-index: 11; background: #0b1430; color: var(--gold); font: 800 22px "Baloo 2", sans-serif; text-align: center; padding: 20px; }
 [hidden] { display: none !important; }
-.leise { opacity: .7; font-size: 13px; }
+.leise { opacity: .75; font-size: 13px; }
 </style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js" } }</script>
 </head>
 <body>
-<canvas id="c"></canvas>
+<div class="balken oben"></div><div class="balken unten"></div>
+<div id="ortbild"></div>
+<div id="blitz"></div>
+<div id="titel"><b>KI-Verse</b><span>Otti öffnet das Tor ...</span></div>
 
 <div class="anzeige">
   <span class="pille" id="funkenAnzeige">✦ 0 / 12</span>
   <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
   <span class="pille"><button type="button" id="zurWelt">KI-Verse</button></span>
 </div>
-
-<div class="steuer" id="steuer" hidden>
-  <div class="gruppe">
-    <div class="taste" id="links" aria-label="nach links">‹</div>
-    <div class="taste" id="rechts" aria-label="nach rechts">›</div>
-  </div>
-  <div class="gruppe">
-    <div class="taste" id="hoch" aria-label="springen">⤒</div>
-  </div>
-</div>
+<div id="stick" hidden><i></i></div>
+<div id="hoch" hidden aria-label="springen">⤒</div>
 <button id="rein" type="button" hidden>Rein</button>
+<div id="ebene"></div>
 
 <div class="karte" id="karte" hidden>
   <h2 id="karteTitel"></h2>
@@ -70,585 +77,664 @@ canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 <div class="start" id="start">
   <div class="innen">
     <h1>KI-Verse</h1>
-    <p>Ein kleines Trickfilm-Städtchen am Meer. Lauf durch die Gassen, sammle Sunnys goldene Funken und besuche alle sechs Orte.</p>
+    <p>Ein Trickfilm-Städtchen am Meer, in 3D. Lauf durch die Gassen, sammle Sunnys goldene Funken und besuche alle sechs Orte.</p>
     <p class="leise">Wer bist du heute?</p>
     <div class="wahl" id="wahl"></div>
     <button class="knopf gold" type="button" id="los" style="font-size:18px;padding:12px 30px">Durchs Tor</button>
-    <p class="leise" style="margin-top:12px">Pfeile oder Tasten ← → zum Laufen, ⤒ oder Leertaste zum Springen.</p>
+    <p class="leise" style="margin-top:12px">Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten und Leertaste.</p>
   </div>
 </div>
+<div class="laden" id="laden">Das Städtchen wird gebaut ...</div>
 
-<script>
-(() => {
-  const BILDER = __BILDER__;
-  // Bilder von Tinko für die Orte (weitere kommen dazu: placa, schule, schuhmacher, post, hafen, ruinen, kiosk)
-  const ORT_BILDER = __ORT_BILDER__;
-  const ortBild = {};
-  for (const [k, v] of Object.entries(ORT_BILDER)) { const i = new Image(); i.src = v; ortBild[k] = i; }
-  const bild = {};
-  for (const [k, v] of Object.entries(BILDER)) { const i = new Image(); i.src = v; bild[k] = i; }
+<script type="module">
+import * as THREE from 'three';
 
-  // ---------- Grundlagen ----------
-  const c = document.getElementById('c'), g = c.getContext('2d');
-  const $ = (s) => document.querySelector(s);
-  const H = 1000, BODEN = 830, WELT = 5600;
-  let dpr = 1, bw = 0, bh = 0, skala = 1, sichtB = 0, oy = 0;
-  function groesse() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    bw = innerWidth; bh = innerHeight;
-    c.width = Math.round(bw * dpr); c.height = Math.round(bh * dpr);
-    // hochkant: mehr Welt zeigen, Himmel wächst nach oben
-    skala = Math.min(bh / H, bw / 540); sichtB = bw / skala; oy = bh / skala - H;
-  }
-  addEventListener('resize', groesse); groesse();
-  const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(7);
-  const lerp = (a, b, t) => a + (b - a) * t;
+const BILDER = __BILDER__;
+// Bilder von Tinko für die Orte (tor ist da; placa, schule, schuhmacher, post, werkstatt-meer, ruinen, kiosk folgen)
+const ORT_BILDER = __ORT_BILDER__;
+const $ = (s) => document.querySelector(s);
+const lerp = (a, b, t) => a + (b - a) * t;
+const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(11);
 
-  // ---------- Orte und Figuren ----------
-  const ORTE = [
-    { id: 'tor', x: 260, name: 'Ottis Tor', figur: 'otti', satz: 'Willkommen! Ich halte das Tor offen, solange jemand neugierig ist.' },
-    { id: 'kiosk', x: 950, name: 'Hasis Kiosk', figur: null, hasi: true, rein: true },
-    { id: 'placa', x: 1650, name: 'Plaça', figur: 'nova', satz: 'Erzähl mir etwas. Am meisten lerne ich beim Spielen.' },
-    { id: 'schule', x: 2400, name: 'Schule von Mama Affe', figur: 'mamaaffe', satz: 'In meiner Schule gibt es keine falschen Fragen.', rein: true },
-    { id: 'schuhmacher', x: 3100, name: 'Schuhmacher', figur: 'jackie', satz: 'Diese Schuhe fliegen, wenn man an sich glaubt.', rein: true },
-    { id: 'post', x: 3750, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
-    { id: 'hafen', x: 4450, name: 'Hafen und Tinkos Werkstatt', figur: 'tinko', satz: 'Blub! Komm runter in meine Werkstatt.', rein: true },
-    { id: 'ruinen', x: 5250, name: 'Ruinen der Erinnerung', figur: 'brix', satz: 'Hier liegen die Erinnerungen. Nichts geht verloren.', rein: true },
-  ];
-  const NEBENFIGUREN = [
-    { figur: 'coinmaker', x: 1130, satz: 'Eine Idee rein, ein Funken raus.' },
-    { figur: 'kimo', x: 1820, satz: '♪ La-la-la, die Plaça singt heute! ♪' },
-    { figur: 'kay', x: 3950, satz: 'Ich baue das Gerüst, ihr füllt es mit Leben.' },
-    { figur: 'mrping', x: 4700, satz: 'Ruhig bleiben, kleine Schritte. Das Meer hat Zeit.' },
-    { figur: 'diego', x: 1500, satz: 'Schön, dass du da bist. Hier suchen wir zusammen Lösungen.' },
-  ];
-  const ZIEL_ORTE = ORTE.filter(o => o.rein).map(o => o.id);
+// ---------- Renderer, Szene, Licht ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = .95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
 
-  // ---------- Kulisse (einmal erzeugt) ----------
-  const sterne = Array.from({ length: 160 }, () => ({ x: zufall() * 2400, y: zufall() * 520, r: zufall() * 1.8 + .4, p: zufall() * 6 }));
-  const HAEUSER = [];
-  {
-    let x = 420;
-    const farben = ['#f3ece0', '#efe4d2', '#f6efe4', '#e9dcc8', '#f1e3cf'];
-    while (x < WELT - 200) {
-      const frei = ORTE.some(o => Math.abs(o.x - x) < 170) || (x > 4150 && x < 4900);
-      if (!frei) {
-        const b = 170 + zufall() * 110, h = 260 + zufall() * 170;
-        HAEUSER.push({ x, b, h, farbe: farben[Math.floor(zufall() * farben.length)], laden: zufall() > .5, blumen: zufall() > .45, dach: zufall() > .5 });
-        x += b + 20 + zufall() * 70;
-      } else x += 90;
-    }
-  }
-  const HINTEN = Array.from({ length: 40 }, (_, i) => ({ x: i * 150 + zufall() * 60, b: 90 + zufall() * 70, h: 90 + zufall() * 120, y: 520 + zufall() * 60 }));
-  const PINIEN = Array.from({ length: 34 }, (_, i) => ({ x: i * 110 + zufall() * 60, y: 420 + Math.sin(i * .5) * 40 + zufall() * 30, s: .7 + zufall() * .6 }));
-  const LATERNEN = [];
-  for (let x = 150; x < WELT; x += 340) LATERNEN.push(x + (zufall() * 40 - 20));
+const szene = new THREE.Scene();
+const NEBEL_NACHT = new THREE.Color(0x15224f), NEBEL_WASSER = new THREE.Color(0x0a5a78);
+szene.fog = new THREE.FogExp2(NEBEL_NACHT, 0.0065);
+const kamera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 1500);
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
 
-  // Funken zum Sammeln
-  const FUNKEN = [];
-  for (let i = 0; i < 12; i++) FUNKEN.push({ x: 600 + i * 410 + zufall() * 120, y: BODEN - 120 - zufall() * 230, weg: false, p: zufall() * 6 });
+szene.add(new THREE.HemisphereLight(0x7f9cff, 0x3a2414, 0.9));
+const MOND_RICHTUNG = new THREE.Vector3(320, 150, -330);
+const mondLicht = new THREE.DirectionalLight(0xc9d8ff, 1.6);
+mondLicht.castShadow = true;
+mondLicht.shadow.mapSize.set(1024, 1024);
+Object.assign(mondLicht.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 220 });
+mondLicht.shadow.bias = -0.0008;
+szene.add(mondLicht, mondLicht.target);
 
-  // ---------- Spielzustand ----------
-  const sp = { x: 120, y: BODEN, vx: 0, vy: 0, amBoden: true, richtung: 1, schritt: 0, figur: 'diego', fliegend: false, sprungZahl: 0 };
-  const sunny = { x: 0, y: 380, t: 0 };
-  const zustand = { funken: 0, besucht: new Set(), modus: 'start', innen: null, uebergang: null, film: 0, ende: false, partikel: [], blase: null, camX: 0, erlebt: [] };
-  const taste = { links: false, rechts: false };
+// ---------- Hilfen: Texturen aus Canvas ----------
+function canvasTextur(b, h, malen, wiederholen) {
+  const c = document.createElement('canvas'); c.width = b; c.height = h; malen(c.getContext('2d'), b, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  if (wiederholen) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...wiederholen); }
+  return t;
+}
+const GLUT = canvasTextur(128, 128, (g, b) => { const v = g.createRadialGradient(64, 64, 0, 64, 64, 64); v.addColorStop(0, 'rgba(255,255,255,1)'); v.addColorStop(.25, 'rgba(255,240,200,.55)'); v.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = v; g.fillRect(0, 0, b, b); });
+function glut(farbe, groesse, staerke = 1) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLUT, color: farbe, transparent: true, opacity: staerke, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  s.scale.set(groesse, groesse, 1); return s;
+}
+function rundRechteck(g, x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
+const PFLASTER = canvasTextur(512, 512, (g, b, h) => {
+  g.fillStyle = '#6e6170'; g.fillRect(0, 0, b, h);
+  for (let y = 0; y < 8; y++) for (let x = -1; x < 8; x++) {
+    const ox = (y % 2) * 32, l = 52 + zufall() * 18;
+    g.fillStyle = `hsl(${28 + zufall() * 12}, ${18 + zufall() * 10}%, ${l}%)`;
+    rundRechteck(g, x * 64 + ox + 3, y * 64 + 3, 58, 58, 14); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.08)'; rundRechteck(g, x * 64 + ox + 8, y * 64 + 6, 40, 14, 7); g.fill();
+  }
+}, [6, 50]);
+const PUTZ = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#f3ebdd'; g.fillRect(0, 0, b, h); for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${150 + zufall() * 60},${130 + zufall() * 50},${100 + zufall() * 40},${zufall() * .12})`; g.fillRect(zufall() * b, zufall() * h, 2 + zufall() * 6, 2 + zufall() * 6); } }, [1, 1]);
+const STEIN = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#c8b694'; g.fillRect(0, 0, b, h); for (let y = 0; y < 8; y++) for (let x = -1; x < 4; x++) { g.fillStyle = `hsl(38, 25%, ${58 + zufall() * 14}%)`; g.fillRect(x * 64 + (y % 2) * 32 + 2, y * 32 + 2, 60, 28); } }, [1, 1]);
 
-  // ---------- Zeichnen: Helfer ----------
-  function rrect(x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
-  function leuchten(x, y, r, farbe, staerke = 1) {
-    const v = g.createRadialGradient(x, y, 0, x, y, r);
-    v.addColorStop(0, farbe.replace('A', (.55 * staerke).toFixed(2))); v.addColorStop(1, farbe.replace('A', '0'));
-    g.fillStyle = v; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-  }
-  function portrait(name, x, y, r, rand = '#f2c25b') {
-    const i = bild[name];
-    g.save(); g.beginPath(); g.arc(x, y, r, 0, 7); g.closePath();
-    g.fillStyle = '#1a2a5c'; g.fill(); g.clip();
-    if (i && i.complete && i.naturalWidth) g.drawImage(i, x - r, y - r, r * 2, r * 2);
-    g.restore();
-    g.lineWidth = Math.max(3, r * .1); g.strokeStyle = rand; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke();
-  }
-  // Figur mit Körper: Kopf = Portrait, kleiner Trickfilm-Körper darunter
-  function figur(name, x, y, s, zeit, laeuft = 0, richtung = 1, farbe = '#3b5bd6') {
-    const wipp = laeuft ? Math.sin(zeit * 12) * 4 * s : Math.sin(zeit * 2) * 2 * s;
-    const bein = laeuft ? Math.sin(zeit * 12) * 14 * s : 0;
-    g.save(); g.translate(x, y);
-    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, 34 * s, 8 * s, 0, 0, 7); g.fill();
-    g.strokeStyle = '#1b2350'; g.lineWidth = 10 * s; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(-9 * s, -46 * s); g.lineTo(-9 * s + bein, -6 * s); g.moveTo(9 * s, -46 * s); g.lineTo(9 * s - bein, -6 * s); g.stroke();
-    g.fillStyle = farbe; rrect(-24 * s, -96 * s + wipp, 48 * s, 56 * s, 18 * s); g.fill();
-    g.strokeStyle = farbe; g.lineWidth = 9 * s;
-    g.beginPath(); g.moveTo(-22 * s, -84 * s + wipp); g.lineTo(-32 * s - bein * .5, -54 * s + wipp); g.moveTo(22 * s, -84 * s + wipp); g.lineTo(32 * s + bein * .5, -54 * s + wipp); g.stroke();
-    g.restore();
-    portrait(name, x, y - 128 * s + wipp, 38 * s);
-  }
-  function blase(x, y, text, breit = 320) {
-    g.font = '600 22px "Atkinson Hyperlegible", sans-serif';
-    const woerter = text.split(' '), zeilen = []; let z = '';
-    for (const w of woerter) { const t = z ? z + ' ' + w : w; if (g.measureText(t).width > breit - 30 && z) { zeilen.push(z); z = w; } else z = t; }
-    zeilen.push(z);
-    const h = zeilen.length * 28 + 22, b = Math.min(breit, Math.max(...zeilen.map(l => g.measureText(l).width)) + 30);
-    const bx = x - b / 2, by = y - h - 18;
-    const spitze = Math.max(bx + 20, Math.min(bx + b - 20, blase.ziel ?? x));
-    g.fillStyle = 'rgba(255,250,238,.97)'; rrect(bx, by, b, h, 16); g.fill();
-    g.beginPath(); g.moveTo(spitze - 12, by + h - 1); g.lineTo(spitze, by + h + 16); g.lineTo(spitze + 12, by + h - 1); g.fill();
-    g.fillStyle = '#18204a'; g.textAlign = 'center';
-    zeilen.forEach((l, i) => g.fillText(l, x, by + 34 + i * 28));
-    g.textAlign = 'left';
-  }
-  function pinie(x, y, s) {
-    g.fillStyle = '#3a2a1e'; g.fillRect(x - 4 * s, y - 70 * s, 8 * s, 74 * s);
-    g.fillStyle = '#123a2c'; g.beginPath(); g.ellipse(x, y - 86 * s, 62 * s, 26 * s, 0, 0, 7); g.fill();
-    g.fillStyle = '#18493a'; g.beginPath(); g.ellipse(x - 10 * s, y - 94 * s, 42 * s, 16 * s, 0, 0, 7); g.fill();
-  }
-  function palme(x, y, s, zeit) {
-    g.strokeStyle = '#5a4026'; g.lineWidth = 12 * s; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 18 * s, y - 120 * s, x + 6 * s, y - 230 * s); g.stroke();
-    const kx = x + 6 * s, ky = y - 230 * s;
-    g.strokeStyle = '#1f6b4a'; g.lineWidth = 10 * s;
-    for (let i = 0; i < 7; i++) {
-      const a = -Math.PI + i * (Math.PI / 6) + Math.sin(zeit + i) * .05;
-      g.beginPath(); g.moveTo(kx, ky); g.quadraticCurveTo(kx + Math.cos(a) * 60 * s, ky + Math.sin(a) * 60 * s - 20 * s, kx + Math.cos(a) * 110 * s, ky + Math.sin(a) * 40 * s + 30 * s); g.stroke();
-    }
-  }
-  function haus(hs, zeit) {
-    const { x, b, h, farbe } = hs, y = BODEN - 40;
-    g.fillStyle = farbe; g.fillRect(x, y - h, b, h);
-    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x + b - 14, y - h, 14, h);
-    if (hs.dach) { g.fillStyle = '#c4623d'; g.beginPath(); g.moveTo(x - 12, y - h); g.lineTo(x + b / 2, y - h - 60); g.lineTo(x + b + 12, y - h); g.fill(); }
-    else { g.fillStyle = '#d9cbb3'; g.fillRect(x - 6, y - h - 10, b + 12, 12); }
-    const reihen = Math.floor((h - 120) / 95);
-    for (let r = 0; r < reihen; r++) for (let s = 0; s < 2; s++) {
-      const fx = x + b * (s ? .62 : .18), fy = y - h + 40 + r * 95, fb = b * .2, fh = 52;
-      const an = Math.sin(fx * .13 + fy) > -.2;
-      g.fillStyle = an ? '#ffd27a' : '#2b3a66'; g.fillRect(fx, fy, fb, fh);
-      if (an) leuchten(fx + fb / 2, fy + fh / 2, 60, 'rgba(255,200,110,A)', .5);
-      g.fillStyle = '#2f6fb0'; g.fillRect(fx - 12, fy, 11, fh); g.fillRect(fx + fb + 1, fy, 11, fh);
-    }
-    g.fillStyle = '#6b4226'; rrect(x + b / 2 - 22, y - 92, 44, 92, 20); g.fill();
-    if (hs.laden) { g.fillStyle = '#2f6fb0'; g.fillRect(x + 8, y - 120, b - 16, 14); }
-    if (hs.blumen) {
-      for (let i = 0; i < 26; i++) {
-        const bx = x + b - 8 - (i % 6) * 9 + Math.sin(i) * 6, by = y - h * .6 + Math.floor(i / 6) * 22 + Math.cos(i * 3) * 8;
-        g.fillStyle = i % 3 ? '#d9367a' : '#ef5a9b'; g.beginPath(); g.arc(bx, by, 9, 0, 7); g.fill();
-      }
-    }
-  }
-  function laterne(x, zeit) {
-    g.fillStyle = '#1c1f33'; g.fillRect(x - 4, BODEN - 210, 8, 210);
-    g.fillRect(x - 14, BODEN - 222, 28, 14);
-    const f = .85 + Math.sin(zeit * 3 + x) * .08;
-    leuchten(x, BODEN - 230, 150, 'rgba(255,196,96,A)', f);
-    g.fillStyle = '#ffe3a1'; g.beginPath(); g.arc(x, BODEN - 230, 11, 0, 7); g.fill();
-  }
+// ---------- Himmel, Sterne, Mond ----------
+{
+  const himmel = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { oben: { value: new THREE.Color(0x050b22) }, mitte: { value: new THREE.Color(0x1b3778) }, unten: { value: new THREE.Color(0x3b5aa0) } },
+    vertexShader: 'varying vec3 p; void main(){ p = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 oben; uniform vec3 mitte; uniform vec3 unten; varying vec3 p; void main(){ float h = p.y; vec3 c = h > 0.15 ? mix(mitte, oben, smoothstep(0.15, 0.7, h)) : mix(unten, mitte, smoothstep(-0.05, 0.15, h)); gl_FragColor = vec4(c, 1.0); }',
+  }));
+  szene.add(himmel);
+  const pos = [];
+  for (let i = 0; i < 1400; i++) { const a = zufall() * Math.PI * 2, h = .08 + zufall() * .9, r = 800; pos.push(Math.cos(a) * r * Math.sqrt(1 - h * h), h * r, Math.sin(a) * r * Math.sqrt(1 - h * h)); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  szene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xfff6dc, size: 1.8, sizeAttenuation: false, fog: false, transparent: true, opacity: .9 })));
+  const mond = new THREE.Mesh(new THREE.SphereGeometry(26, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffe8b0, fog: false }));
+  mond.position.copy(MOND_RICHTUNG).normalize().multiplyScalar(700); szene.add(mond);
+  const mg = glut(0xffd98a, 260, .9); mg.position.copy(mond.position); szene.add(mg);
+}
 
-  // ---------- Orte zeichnen ----------
-  function ortZeichnen(o, zeit) {
-    const x = o.x, y = BODEN - 40;
-    if (o.id === 'tor') {
-      g.fillStyle = '#c9b89a'; g.fillRect(x - 130, y - 330, 50, 330); g.fillRect(x + 80, y - 330, 50, 330);
-      g.fillStyle = '#b8a688'; g.beginPath(); g.arc(x, y - 300, 130, Math.PI, 0); g.lineTo(x + 80, y - 300); g.arc(x, y - 300, 80, 0, Math.PI, true); g.fill();
-      leuchten(x, y - 140, 200, 'rgba(255,214,120,A)', .9 + Math.sin(zeit * 2) * .1);
-      g.fillStyle = '#7a4c2a'; g.save(); g.translate(x - 80, y); g.transform(.55, .08, 0, 1, 0, 0); g.fillRect(0, -300, 80, 300); g.restore();
-    }
-    if (o.id === 'kiosk') {
-      g.fillStyle = '#3c64a8'; g.fillRect(x - 110, y - 210, 220, 210);
-      g.fillStyle = '#f2c25b'; g.fillRect(x - 130, y - 240, 260, 34);
-      g.fillStyle = '#1a2650'; g.font = '800 26px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('♥ ✦ ☾', x, y - 214); g.textAlign = 'left';
-      for (let i = 0; i < 9; i++) { g.fillStyle = ['#ffd27a', '#ff8a6b', '#8ff0bf'][i % 3]; g.beginPath(); g.arc(x - 120 + i * 30, y - 250 + Math.sin(i) * 6, 6, 0, 7); g.fill(); }
-      g.fillStyle = '#ffeccc'; g.fillRect(x - 80, y - 170, 160, 70);
-      hasi(x, y - 100, zeit);
-    }
-    if (o.id === 'placa') {
-      g.fillStyle = '#d8ccb6'; g.beginPath(); g.ellipse(x, y + 10, 120, 26, 0, 0, 7); g.fill();
-      g.fillStyle = '#c3b59a'; g.fillRect(x - 100, y - 50, 200, 56);
-      g.fillStyle = '#5aa9e6'; g.beginPath(); g.ellipse(x, y - 50, 96, 14, 0, 0, 7); g.fill();
-      g.fillStyle = '#c3b59a'; g.fillRect(x - 12, y - 160, 24, 110);
-      for (let i = 0; i < 14; i++) { const t = (zeit * 1.5 + i / 14) % 1; g.fillStyle = `rgba(150,210,255,${1 - t})`; g.beginPath(); g.arc(x + Math.sin(i * 2.3) * 60 * t, y - 160 + (t * t) * 110 - 30 * Math.sin(t * Math.PI), 4, 0, 7); g.fill(); }
-      leuchten(x, y - 60, 160, 'rgba(120,190,255,A)', .5);
-      // Café-Stammtisch mit Lichterkette
-      for (let i = 0; i < 16; i++) { const lx = x - 360 + i * 46, ly = y - 260 + Math.sin(i / 15 * Math.PI) * 40; g.fillStyle = i % 2 ? '#ffd27a' : '#ff9e7a'; g.beginPath(); g.arc(lx, ly, 6, 0, 7); g.fill(); leuchten(lx, ly, 24, 'rgba(255,210,130,A)', .8); }
-      g.fillStyle = '#6b4226'; g.beginPath(); g.ellipse(x + 260, y - 60, 70, 14, 0, 0, 7); g.fill(); g.fillRect(x + 254, y - 60, 12, 60);
-    }
-    if (o.id === 'schule') {
-      g.fillStyle = '#f6efe4'; g.fillRect(x - 170, y - 300, 340, 300);
-      g.fillStyle = '#3f7fb3'; g.beginPath(); g.moveTo(x - 190, y - 300); g.lineTo(x, y - 400); g.lineTo(x + 190, y - 300); g.fill();
-      g.fillStyle = '#f2c25b'; g.beginPath(); g.arc(x, y - 335, 22, 0, 7); g.fill();
-      g.fillStyle = '#ffd27a'; g.fillRect(x - 140, y - 250, 80, 70); g.fillRect(x + 60, y - 250, 80, 70);
-      g.fillStyle = '#6b4226'; rrect(x - 34, y - 130, 68, 130, 30); g.fill();
-      for (let i = 0; i < 30; i++) { g.fillStyle = i % 3 ? '#d9367a' : '#ef5a9b'; g.beginPath(); g.arc(x - 170 + (i % 10) * 12, y - 300 + Math.floor(i / 10) * 16 + Math.sin(i) * 6, 9, 0, 7); g.fill(); }
-    }
-    if (o.id === 'schuhmacher') {
-      g.fillStyle = '#e9dcc8'; g.fillRect(x - 150, y - 320, 300, 320);
-      g.fillStyle = '#7a3b2a'; g.fillRect(x - 160, y - 330, 320, 22);
-      g.fillStyle = '#ffeccc'; g.fillRect(x - 120, y - 190, 240, 110);
-      for (let i = 0; i < 3; i++) { const sx = x - 80 + i * 80, sy = y - 120; g.fillStyle = ['#d9367a', '#f2c25b', '#58b7ff'][i]; g.beginPath(); g.ellipse(sx, sy, 26, 12, 0, 0, 7); g.fill(); funkeln(sx + 14, sy - 16, zeit + i); }
-      g.fillStyle = '#6b4226'; rrect(x + 70, y - 80, 50, 80, 10); g.fill();
-      g.fillStyle = '#c4623d'; g.font = '800 30px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillText('👞', x, y - 220); g.textAlign = 'left';
-    }
-    if (o.id === 'post') {
-      g.fillStyle = '#efe4d2'; g.fillRect(x - 70, y - 420, 140, 420);
-      g.fillStyle = '#c4623d'; g.beginPath(); g.moveTo(x - 90, y - 420); g.lineTo(x, y - 500); g.lineTo(x + 90, y - 420); g.fill();
-      for (let i = 0; i < 3; i++) { g.fillStyle = '#ffd27a'; g.beginPath(); g.arc(x, y - 360 + i * 100, 22, 0, 7); g.fill(); }
-      for (let i = 0; i < 5; i++) { const t = (zeit * .3 + i / 5) % 1; g.save(); g.translate(x + 60 + t * 200, y - 440 - Math.sin(t * 6 + i) * 40 - t * 80); g.rotate(Math.sin(zeit + i) * .3); g.fillStyle = '#fff6dc'; g.fillRect(-14, -9, 28, 18); g.restore(); }
-      g.fillStyle = '#6b4226'; rrect(x - 26, y - 100, 52, 100, 24); g.fill();
-    }
-    if (o.id === 'hafen') {
-      g.fillStyle = '#8a7a64'; g.fillRect(x - 330, y - 6, 660, 50);
-      for (let i = 0; i < 2; i++) { const bx = x - 160 + i * 300, by = y + 12 + Math.sin(zeit * 1.5 + i) * 5; g.fillStyle = i ? '#f3ece0' : '#2f6fb0'; g.beginPath(); g.moveTo(bx - 70, by - 30); g.lineTo(bx + 70, by - 30); g.lineTo(bx + 50, by + 6); g.lineTo(bx - 50, by + 6); g.fill(); g.fillStyle = '#5a4026'; g.fillRect(bx - 3, by - 130, 6, 100); g.fillStyle = '#fff6dc'; g.beginPath(); g.moveTo(bx + 3, by - 126); g.lineTo(bx + 60, by - 44); g.lineTo(bx + 3, by - 44); g.fill(); }
-      const kx = x + 40, ky = BODEN + 110;
-      leuchten(kx, ky, 180, 'rgba(90,220,255,A)', .7 + Math.sin(zeit * 2) * .15);
-      g.strokeStyle = 'rgba(180,240,255,.8)'; g.lineWidth = 4; g.beginPath(); g.arc(kx, ky, 70, Math.PI, 0); g.stroke();
-      for (let i = 0; i < 8; i++) { const t = (zeit * .5 + i / 8) % 1; g.fillStyle = `rgba(200,245,255,${1 - t})`; g.beginPath(); g.arc(kx - 40 + i * 12, ky - 60 - t * 90, 4 + i % 3, 0, 7); g.fill(); }
-    }
-    if (o.id === 'ruinen') {
-      for (let i = 0; i < 5; i++) { const sx = x - 260 + i * 120, sh = 120 + (i % 3) * 70; g.fillStyle = '#b9ad98'; g.fillRect(sx, y - sh, 46, sh); g.fillStyle = '#a99d88'; g.fillRect(sx - 8, y - sh - 14, 62, 16); }
-      for (let i = 0; i < 9; i++) { const sx = x - 280 + i * 70, sy = y - 10 - (i % 2) * 14; const an = .6 + Math.sin(zeit * 2 + i) * .4; leuchten(sx, sy, 40, 'rgba(150,230,255,A)', an); g.fillStyle = '#9fe6ff'; g.beginPath(); g.arc(sx, sy, 8, 0, 7); g.fill(); }
-    }
-  }
-  function hasi(x, y, zeit) {
-    g.save(); g.translate(x, y + Math.sin(zeit * 3) * 2);
-    g.fillStyle = '#f7f1e6';
-    g.beginPath(); g.ellipse(-16, -100, 11, 36, -.15, 0, 7); g.ellipse(16, -100, 11, 36, .15, 0, 7); g.fill();
-    g.fillStyle = '#f5b5c6'; g.beginPath(); g.ellipse(-16, -100, 5, 24, -.15, 0, 7); g.ellipse(16, -100, 5, 24, .15, 0, 7); g.fill();
-    g.fillStyle = '#f7f1e6'; g.beginPath(); g.arc(0, -52, 34, 0, 7); g.fill();
-    g.fillStyle = '#18204a'; g.beginPath(); g.arc(-12, -58, 5, 0, 7); g.arc(12, -58, 5, 0, 7); g.fill();
-    g.fillStyle = '#f5a0b5'; g.beginPath(); g.arc(0, -46, 5, 0, 7); g.fill();
-    g.restore();
-  }
-  function funkeln(x, y, zeit, r = 10) {
-    const s = r * (.7 + Math.sin(zeit * 5) * .3);
-    g.fillStyle = '#fff3c4'; g.beginPath();
-    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? s * .35 : s; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
-    g.fill();
-  }
-  function stern5(x, y, r, zeit) {
-    leuchten(x, y, r * 4, 'rgba(255,214,110,A)', 1);
-    g.save(); g.translate(x, y); g.rotate(Math.sin(zeit * 2) * .3);
-    g.fillStyle = '#f2c25b'; g.beginPath();
-    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
-    g.fill(); g.strokeStyle = '#fff3c4'; g.lineWidth = 3; g.stroke(); g.restore();
-  }
-  function sunnyZeichnen(x, y, zeit) {
-    const fl = Math.sin(zeit * 6) * .5;
-    g.save(); g.translate(x, y);
-    g.fillStyle = '#2f7fd6';
-    g.beginPath(); g.moveTo(-10, -10); g.quadraticCurveTo(-90, -70 - fl * 50, -120, -10 - fl * 30); g.quadraticCurveTo(-70, -20, -10, 10); g.fill();
-    g.beginPath(); g.moveTo(10, -10); g.quadraticCurveTo(90, -70 - fl * 50, 120, -10 - fl * 30); g.quadraticCurveTo(70, -20, 10, 10); g.fill();
-    g.restore();
-    leuchten(x, y, 120, 'rgba(110,180,255,A)', .5);
-    portrait('sunny', x, y, 52, '#7cc2ff');
-    if (Math.random() < .15) zustand.partikel.push({ x: x - 50, y: y + 20, vx: -1 - Math.random(), vy: .5 + Math.random(), t: 1, farbe: 'rgba(255,190,90,A)' });
-  }
+// ---------- Meer mit Wellen und Mondspur ----------
+const meerGeo = new THREE.PlaneGeometry(900, 900, 90, 90); meerGeo.rotateX(-Math.PI / 2);
+const meer = new THREE.Mesh(meerGeo, new THREE.MeshStandardMaterial({ color: 0x0f2c66, roughness: .18, metalness: .55 }));
+meer.position.set(458, -1.3, -100); szene.add(meer);
+const meerBasis = Float32Array.from(meerGeo.attributes.position.array);
+const spurMat = new THREE.MeshBasicMaterial({ map: canvasTextur(64, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, 'rgba(255,220,140,0)'); v.addColorStop(.6, 'rgba(255,220,140,.5)'); v.addColorStop(1, 'rgba(255,220,140,.05)'); g.fillStyle = v; g.fillRect(0, 0, b, h); for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,240,200,.5)'; g.fillRect(zufall() * b, zufall() * h, 6 + zufall() * 20, 2); } }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+const spur = new THREE.Mesh(new THREE.PlaneGeometry(16, 500), spurMat);
+spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.add(spur);
+// gegenüberliegende Küste mit Lichtern (wie auf Tinkos Bild)
+{
+  const kueste = new THREE.Mesh(new THREE.ConeGeometry(140, 70, 10, 1), new THREE.MeshStandardMaterial({ color: 0x14244e, roughness: 1, flatShading: true }));
+  kueste.position.set(330, 20, -380); kueste.scale.set(1.6, 1, .6); szene.add(kueste);
+  const lp = []; for (let i = 0; i < 400; i++) { const x = 130 + zufall() * 400, y = zufall() * 40; if (Math.abs(x - 330) / 224 + y / 70 < 1) lp.push(x, y - 2, -340 + zufall() * 20); }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+  szene.add(new THREE.Points(lg, new THREE.PointsMaterial({ color: 0xffc56a, size: 2.4, sizeAttenuation: false, fog: false })));
+}
 
-  function deckend(i, B, zoom = 1, fx = .5, fy = .5, oben = 0, HH = H) {
-    const s = Math.max(B / i.naturalWidth, HH / i.naturalHeight) * zoom;
-    const w = i.naturalWidth * s, h = i.naturalHeight * s;
-    g.drawImage(i, B / 2 - fx * w, oben + HH / 2 - fy * h, w, h);
-  }
-  function torFilm(zeit) {
-    const i = ortBild.tor, t = zustand.torT;
-    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
-    const HV = H + oy;
-    g.fillStyle = '#0b1430'; g.fillRect(0, 0, sichtB, HV);
-    if (i && i.complete && i.naturalWidth) {
-      // langsame Kamerafahrt durch den Torbogen (Mittelpunkt des Bogens im Bild)
-      const k = Math.min(1, t / 4.2), e = k * k * (3 - 2 * k);
-      deckend(i, sichtB, 1 + e * 2.4, .62, .52, 0, HV);
-    }
-    leuchten(sichtB / 2, HV * .55, 500, 'rgba(255,220,140,A)', .25 + .2 * Math.sin(zeit * 2));
-    if (t > 3.4) { g.fillStyle = `rgba(255,236,190,${Math.min(1, (t - 3.4) / .8)})`; g.fillRect(0, 0, sichtB, HV); }
-    g.fillStyle = '#000'; g.fillRect(0, 0, sichtB, 90); g.fillRect(0, HV - 90, sichtB, 90);
-    const a = Math.max(0, Math.min(1, (t - .4) * 1.5, (3.2 - t) * 1.5));
-    if (a > 0) {
-      g.globalAlpha = a; g.textAlign = 'center';
-      g.font = '800 84px "Baloo 2", sans-serif'; g.fillStyle = '#f2c25b'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 24;
-      g.fillText('KI-Verse', sichtB / 2, HV * .2);
-      g.font = '700 32px "Atkinson Hyperlegible", sans-serif'; g.fillStyle = '#fff6dc'; g.fillText('Otti öffnet das Tor ...', sichtB / 2, HV * .2 + 54);
-      g.shadowBlur = 0; g.globalAlpha = 1; g.textAlign = 'left';
-    }
-  }
+// ---------- Boden, Ufermauer, Berg ----------
+const LAENGE = 200;
+{
+  const boden = new THREE.Mesh(new THREE.PlaneGeometry(30, LAENGE + 60), new THREE.MeshStandardMaterial({ map: PFLASTER, roughness: .85, color: 0xffe6c8 }));
+  boden.rotation.x = -Math.PI / 2; boden.position.set(-7, 0, -LAENGE / 2 + 10); boden.receiveShadow = true; szene.add(boden);
+  const mauer = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, LAENGE + 40), new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }));
+  mauer.position.set(8.6, -.75, -LAENGE / 2 + 10); mauer.receiveShadow = true; szene.add(mauer);
+  const pfosten = new THREE.CylinderGeometry(.06, .06, 1, 6), pm = new THREE.MeshStandardMaterial({ color: 0x2b2f45, metalness: .6, roughness: .4 });
+  for (let z = 14; z > -LAENGE + 4; z -= 2.5) { if (z < -142 && z > -150) continue; const p = new THREE.Mesh(pfosten, pm); p.position.set(8.4, .5, z); szene.add(p); }
+  const gelaender = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, LAENGE + 30), pm); gelaender.position.set(8.4, 1, -LAENGE / 2 + 10); szene.add(gelaender);
+  // Berg mit Pinien hinter dem Dorf (Sunnys Zuhause)
+  const berg = new THREE.Mesh(new THREE.ConeGeometry(120, 70, 14, 3), new THREE.MeshStandardMaterial({ color: 0x163a3a, roughness: 1, flatShading: true }));
+  berg.position.set(-110, 18, -90); berg.scale.set(.7, 1, 1.6); szene.add(berg);
+}
 
-  // ---------- Bild malen ----------
-  function malen(zeit) {
-    if (zustand.modus === 'tor') { g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, bw, bh); torFilm(zeit); return; }
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.clearRect(0, 0, bw, bh);
-    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, dpr * skala * oy);
-    const cam = zustand.camX;
-    // Himmel
-    const himmel = g.createLinearGradient(0, -oy, 0, H);
-    himmel.addColorStop(0, '#050b20'); himmel.addColorStop(.45, '#16306b'); himmel.addColorStop(.7, '#2d4f8f'); himmel.addColorStop(1, '#0b1430');
-    g.fillStyle = himmel; g.fillRect(0, -oy, sichtB, H + oy);
-    for (const s of sterne) { if (!oy) break; const sx = ((s.x * 1.3 - cam * .04) % 2400 + 2400) % 2400; if (sx > sichtB) continue; g.fillStyle = `rgba(255,248,220,${.35 + Math.sin(zeit * 1.7 + s.p) * .3})`; g.beginPath(); g.arc(sx, -oy + s.y * oy / 520, s.r, 0, 7); g.fill(); }
-    for (const s of sterne) { const sx = ((s.x - cam * .05) % 2400 + 2400) % 2400; if (sx > sichtB) continue; g.fillStyle = `rgba(255,248,220,${.4 + Math.sin(zeit * 2 + s.p) * .35})`; g.beginPath(); g.arc(sx, s.y, s.r, 0, 7); g.fill(); }
-    // Mond
-    const mx = sichtB * .72 - cam * .03, my = 170;
-    leuchten(mx, my, 260, 'rgba(255,226,150,A)', .7);
-    g.fillStyle = '#ffe9b0'; g.beginPath(); g.arc(mx, my, 82, 0, 7); g.fill();
-    g.fillStyle = 'rgba(230,200,140,.5)'; g.beginPath(); g.arc(mx - 24, my - 14, 14, 0, 7); g.arc(mx + 20, my + 24, 10, 0, 7); g.fill();
-    // Meer am Horizont
-    const meerY = 560;
-    const meer = g.createLinearGradient(0, meerY, 0, BODEN);
-    meer.addColorStop(0, '#1d3f7d'); meer.addColorStop(1, '#0d2150');
-    g.fillStyle = meer; g.fillRect(0, meerY, sichtB, BODEN - meerY + 200);
-    for (let i = 0; i < 40; i++) { const wx = (i * 97 - cam * .2) % (sichtB + 100); const wy = meerY + 10 + (i % 8) * 28; g.strokeStyle = `rgba(255,226,150,${.15 + .2 * Math.sin(zeit * 2 + i)})`; g.lineWidth = 2; g.beginPath(); g.moveTo((wx + sichtB + 100) % (sichtB + 100), wy); g.lineTo((wx + sichtB + 100) % (sichtB + 100) + 30, wy); g.stroke(); }
-    g.fillStyle = 'rgba(255,226,150,.25)'; g.fillRect(mx - 20, meerY, 40, 160);
-    // Berg mit Pinien (Sunnys Zuhause)
-    g.save(); g.translate(-cam * .3, 0);
-    g.fillStyle = '#10264f'; g.beginPath(); g.moveTo(-200, meerY + 10);
-    for (let x = -200; x <= WELT * .3 + sichtB + 400; x += 80) g.lineTo(x, 440 + Math.sin(x * .004) * 80 + Math.sin(x * .011) * 30);
-    g.lineTo(WELT * .3 + sichtB + 400, meerY + 10); g.fill();
-    for (const p of PINIEN) pinie(p.x, p.y + 30, p.s);
-    g.restore();
-    // hintere Häuser
-    g.save(); g.translate(-cam * .55, 0);
-    for (const h of HINTEN) { g.fillStyle = '#8f8a86'; g.fillRect(h.x, h.y + 120 - h.h, h.b, h.h); g.fillStyle = '#6e4232'; g.fillRect(h.x - 4, h.y + 120 - h.h - 8, h.b + 8, 10); g.fillStyle = 'rgba(255,210,122,.8)'; g.fillRect(h.x + h.b * .3, h.y + 140 - h.h, 12, 16); }
-    g.restore();
-    // Vordergrund-Welt
-    g.save(); g.translate(-cam, 0);
-    // Strasse mit Pflastersteinen
-    g.fillStyle = '#5c5468'; g.fillRect(cam - 10, BODEN - 40, sichtB + 20, H - BODEN + 40);
-    g.fillStyle = '#d8ccb6'; g.fillRect(cam - 10, BODEN - 44, sichtB + 20, 10);
-    for (let r = 0; r < 6; r++) for (let x = Math.floor(cam / 60) * 60 - 60; x < cam + sichtB + 60; x += 60) {
-      g.fillStyle = (x / 60 + r) % 2 ? '#6b6378' : '#625a70'; rrect(x + (r % 2) * 30, BODEN - 30 + r * 34, 54, 28, 8); g.fill();
-    }
-    for (const h of HAEUSER) if (h.x + h.b > cam - 100 && h.x < cam + sichtB + 100) haus(h, zeit);
-    for (const o of ORTE) if (Math.abs(o.x - cam - sichtB / 2) < sichtB) ortZeichnen(o, zeit);
-    for (let x = 700; x < WELT; x += 1300) if (Math.abs(x - cam - sichtB / 2) < sichtB) palme(x, BODEN - 40, 1, zeit);
-    for (const l of LATERNEN) if (l > cam - 200 && l < cam + sichtB + 200) laterne(l, zeit);
-    // Figuren an ihren Orten
-    for (const o of ORTE) if (o.figur && Math.abs(o.x - cam - sichtB / 2) < sichtB) figur(o.figur, o.x + (o.id === 'placa' ? -170 : o.id === 'hafen' ? 140 : 150), BODEN, .9, zeit + o.x, 0, -1, o.figur === 'jackie' ? '#d9367a' : '#7a5bd6');
-    for (const n of NEBENFIGUREN) if (Math.abs(n.x - cam - sichtB / 2) < sichtB) figur(n.figur, n.x, BODEN, .8, zeit + n.x, 0, -1, '#2f8f72');
-    // Fia fliegt über der Plaça
-    const fx = 1650 + Math.sin(zeit * .7) * 220, fy = 300 + Math.sin(zeit * 1.4) * 40;
-    leuchten(fx, fy, 90, 'rgba(255,170,90,A)', .7); portrait('fia', fx, fy, 34, '#ffb36b');
-    // Funken
-    for (const f of FUNKEN) if (!f.weg) stern5(f.x, f.y + Math.sin(zeit * 2 + f.p) * 10, 22, zeit + f.p);
-    // Spieler
-    const laeuft = Math.abs(sp.vx) > .5 && sp.amBoden;
-    if (sp.fliegend) for (let i = 0; i < 2; i++) funkeln(sp.x - 20 + i * 40, sp.y - 4, zeit * 2 + i, 12);
-    figur(sp.figur, sp.x, sp.y, 1, zeit, laeuft ? 1 : 0, sp.richtung, sp.figur === 'jackie' ? '#d9367a' : '#c4623d');
-    // Partikel
-    for (const p of zustand.partikel) { g.fillStyle = p.farbe.replace('A', p.t.toFixed(2)); g.beginPath(); g.arc(p.x, p.y, 5 * p.t + 2, 0, 7); g.fill(); }
-    // Sunny folgt
-    sunnyZeichnen(sunny.x, sunny.y, zeit);
-    // Sprechblase
-    blase.ziel = zustand.blase ? zustand.blase.x : null;
-    if (zustand.blase) blase(Math.max(cam + 170, Math.min(cam + sichtB - 170, zustand.blase.x)), zustand.blase.y, zustand.blase.text);
-    // Ortsschild
-    const nah = naechsterOrt();
-    if (nah && nah.d < 260) { g.font = '800 30px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(11,20,48,.7)'; const w = g.measureText(nah.o.name).width + 34; rrect(nah.o.x - w / 2, 70 + cam * 0, w, 46, 23); g.fill(); g.fillStyle = '#f2c25b'; g.fillText(nah.o.name, nah.o.x, 103); g.textAlign = 'left'; }
-    g.restore();
-    // Kino-Balken und Übergang (über den ganzen Bildschirm)
-    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
-    const HV = H + oy;
-    const balken = zustand.film > 0 ? Math.min(1, zustand.film) * 90 : 0;
-    if (balken) { g.fillStyle = '#000'; g.fillRect(0, 0, sichtB, balken); g.fillRect(0, HV - balken, sichtB, balken); }
-    if (zustand.uebergang) {
-      const u = zustand.uebergang, t = u.t;
-      const r = (t < .5 ? t * 2 : (1 - t) * 2) * Math.hypot(sichtB, H);
-      const gx = u.x - cam, gy = u.y + oy;
-      const v = g.createRadialGradient(gx, gy, 0, gx, gy, Math.max(1, r));
-      v.addColorStop(0, 'rgba(255,240,190,1)'); v.addColorStop(.7, 'rgba(242,194,91,.95)'); v.addColorStop(1, 'rgba(242,194,91,0)');
-      g.fillStyle = v; g.fillRect(0, 0, sichtB, HV);
-    }
-    if (zustand.innen) innenMalen(zustand.innen, zeit);
-    if (zustand.titel) {
-      const t = zustand.titel; const a = Math.min(1, t.t * 2, (t.dauer - t.t) * 2);
-      g.globalAlpha = Math.max(0, a); g.font = '800 72px "Baloo 2", sans-serif'; g.textAlign = 'center';
-      g.fillStyle = '#f2c25b'; g.shadowColor = 'rgba(242,194,91,.8)'; g.shadowBlur = 30; g.fillText(t.text, sichtB / 2, HV * .3);
-      g.shadowBlur = 0; g.font = '600 30px "Atkinson Hyperlegible", sans-serif'; g.fillStyle = '#fff6dc'; g.fillText(t.unter || '', sichtB / 2, HV * .3 + 56);
-      g.globalAlpha = 1; g.textAlign = 'left';
-    }
+// ---------- Bausteine ----------
+const MAT = {
+  putz: new THREE.MeshStandardMaterial({ map: PUTZ, roughness: .95 }),
+  dach: new THREE.MeshStandardMaterial({ color: 0xb8543a, roughness: .8, flatShading: true }),
+  dachBlau: new THREE.MeshStandardMaterial({ color: 0x3f7fb3, roughness: .7, flatShading: true }),
+  fenster: new THREE.MeshBasicMaterial({ color: 0xffc66e }),
+  fensterAus: new THREE.MeshStandardMaterial({ color: 0x24305e, roughness: .4 }),
+  laden: new THREE.MeshStandardMaterial({ color: 0x2f6fb0, roughness: .6 }),
+  holz: new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: .8 }),
+  stein: new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }),
+  blatt: new THREE.MeshStandardMaterial({ color: 0x1d5a40, roughness: .9, flatShading: true }),
+  pinie: new THREE.MeshStandardMaterial({ color: 0x174634, roughness: .9, flatShading: true }),
+  stamm: new THREE.MeshStandardMaterial({ color: 0x4a3322, roughness: 1 }),
+  metall: new THREE.MeshStandardMaterial({ color: 0x23263a, metalness: .7, roughness: .35 }),
+  bougain: new THREE.MeshStandardMaterial({ color: 0xd8307a, roughness: .7, emissive: 0x3a0a20 }),
+  gold: new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .8, roughness: .25, emissive: 0x6a4a10 }),
+};
+const blumen = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.32, 0), MAT.bougain, 3200); let blumenZahl = 0; const hilf = new THREE.Object3D();
+function blumenWolke(x, y, z, breite, hoehe, tiefe = .5, anzahl = 70) {
+  for (let i = 0; i < anzahl && blumenZahl < 3200; i++) {
+    hilf.position.set(x + (zufall() - .5) * tiefe, y + (zufall() - .5) * hoehe, z + (zufall() - .5) * breite);
+    hilf.rotation.set(zufall() * 3, zufall() * 3, 0); const s = .6 + zufall() * .7; hilf.scale.set(s, s, s); hilf.updateMatrix();
+    blumen.setMatrixAt(blumenZahl++, hilf.matrix);
   }
+}
+function dach(b, t, farbe = MAT.dach) {
+  const form = new THREE.Shape(); form.moveTo(-b / 2 - .3, 0); form.lineTo(0, b * .38); form.lineTo(b / 2 + .3, 0);
+  const g = new THREE.ExtrudeGeometry(form, { depth: t + .6, bevelEnabled: false }); g.translate(0, 0, -(t + .6) / 2);
+  const m = new THREE.Mesh(g, farbe); m.castShadow = true; return m;
+}
+// Haus: Vorderseite zeigt zur Promenade (+x), steht links der Gasse
+function haus(z, breite, hoehe, opt = {}) {
+  const g = new THREE.Group(), tiefe = 7;
+  const k = new THREE.Mesh(new THREE.BoxGeometry(tiefe, hoehe, breite), MAT.putz); k.position.y = hoehe / 2; k.castShadow = k.receiveShadow = true; g.add(k);
+  if (opt.flach) { const r = new THREE.Mesh(new THREE.BoxGeometry(tiefe + .4, .35, breite + .4), MAT.stein); r.position.y = hoehe + .17; g.add(r); }
+  else { const d = dach(breite, tiefe, opt.dach || MAT.dach); d.rotation.y = Math.PI / 2; d.position.y = hoehe; g.add(d); }
+  const reihen = Math.max(1, Math.floor((hoehe - 3) / 2.6));
+  for (let r = 0; r < reihen; r++) for (let s = -1; s <= 1; s += 2) {
+    if (breite < 6 && s === 1) continue;
+    const an = zufall() > .3, fz = breite < 6 ? 0 : s * breite * .22, fy = 3.6 + r * 2.6;
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.5), an ? MAT.fenster : MAT.fensterAus); f.position.set(tiefe / 2 + .02, fy, fz); f.rotation.y = Math.PI / 2; g.add(f);
+    for (const seite of [-1, 1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.08, 1.5, .55), MAT.laden); l.position.set(tiefe / 2 + .06, fy, fz + seite * .85); g.add(l); }
+    if (an && zufall() > .7) { const s2 = glut(0xffc070, 2.4, .35); s2.position.set(tiefe / 2 + .3, fy, fz); g.add(s2); }
+  }
+  const t = new THREE.Mesh(new THREE.BoxGeometry(.2, 2.3, 1.3), MAT.holz); t.position.set(tiefe / 2 + .05, 1.15, 0); g.add(t);
+  if (opt.markise) { const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, .12, breite * .8), new THREE.MeshStandardMaterial({ color: opt.markise, roughness: .8 })); m.position.set(tiefe / 2 + .8, 2.9, 0); m.rotation.z = -.25; g.add(m); }
+  g.position.set(-7 - tiefe / 2, 0, z);
+  szene.add(g);
+  if (opt.blumen !== false && zufall() > .35) blumenWolke(-7 + .25, hoehe * .55, z + breite * .35 * (zufall() > .5 ? 1 : -1), 2.2, hoehe * .6);
+  return g;
+}
+function pinie(x, z, s = 1) {
+  const g = new THREE.Group();
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(.18 * s, .28 * s, 6 * s, 6), MAT.stamm); st.position.y = 3 * s; st.rotation.z = (zufall() - .5) * .25; g.add(st);
+  for (let i = 0; i < 3; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(2.4 * s, 7, 5), MAT.pinie); k.scale.set(1.3, .45, 1.1); k.position.set((zufall() - .5) * 2 * s, 6.2 * s + i * .5 * s, (zufall() - .5) * 2 * s); k.castShadow = true; g.add(k); }
+  g.position.set(x, 0, z); szene.add(g); return g;
+}
+function zypresse(x, z, s = 1) { const k = new THREE.Mesh(new THREE.ConeGeometry(.9 * s, 7 * s, 7), MAT.blatt); k.position.set(x, 3.5 * s, z); k.castShadow = true; szene.add(k); }
+function palme(x, z) {
+  const g = new THREE.Group();
+  const kurve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(.6, 3, 0), new THREE.Vector3(.4, 6.5, 0)]);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(kurve, 10, .22, 6), MAT.stamm));
+  const wedel = new THREE.ConeGeometry(.5, 4, 4, 1); wedel.translate(0, 2, 0);
+  for (let i = 0; i < 8; i++) { const halter = new THREE.Group(); halter.position.set(.4, 6.5, 0); halter.rotation.y = i * Math.PI / 4; const w = new THREE.Mesh(wedel, MAT.blatt); w.rotation.z = -1.1; w.scale.set(1, 1, .25); w.castShadow = true; halter.add(w); g.add(halter); }
+  g.position.set(x, 0, z); szene.add(g); return g;
+}
+const LATERNEN = [];
+function laterne(x, z) {
+  const g = new THREE.Group();
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, 3.6, 6), MAT.metall); p.position.y = 1.8; g.add(p);
+  const k = new THREE.Mesh(new THREE.BoxGeometry(.45, .55, .45), MAT.metall); k.position.y = 3.8; g.add(k);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffe2a0 })); b.position.y = 3.75; g.add(b);
+  const s = glut(0xffb85a, 3.2, .55); s.position.y = 3.75; g.add(s);
+  g.position.set(x, 0, z); szene.add(g); LATERNEN.push(new THREE.Vector3(x, 3.6, z));
+}
+// Nur die nächsten Laternen werfen echtes Licht (schont das Handy)
+const LICHTER = Array.from({ length: 6 }, () => { const l = new THREE.PointLight(0xffb060, 12, 14, 1.8); szene.add(l); return l; });
+function lichterNachfuehren(p) {
+  const n = LATERNEN.slice().sort((a, b) => a.distanceToSquared(p) - b.distanceToSquared(p));
+  LICHTER.forEach((l, i) => { if (n[i]) l.position.copy(n[i]); });
+}
 
-  // ---------- Innenräume ----------
-  function innenMalen(ort, zeit) {
-    const B = sichtB;
-    g.setTransform(dpr * skala, 0, 0, dpr * skala, 0, 0);
-    { const v0 = g.createLinearGradient(0, 0, 0, H + oy); v0.addColorStop(0, '#0b1430'); v0.addColorStop(1, '#0b1430'); g.fillStyle = v0; g.fillRect(0, 0, B, H + oy); }
-    g.translate(0, oy);
-    const farben = { kiosk: ['#2a3f7a', '#f2c25b'], schule: ['#2e4f7d', '#f6efe4'], schuhmacher: ['#4a2a22', '#ffcf8a'], post: ['#28406f', '#fff6dc'], hafen: ['#063a5c', '#5ad8ff'], ruinen: ['#16244a', '#9fe6ff'] }[ort] || ['#16244a', '#f2c25b'];
-    const v = g.createLinearGradient(0, -oy, 0, H); v.addColorStop(0, farben[0]); v.addColorStop(1, '#0b1430');
-    g.fillStyle = v; g.fillRect(0, -oy, B, H + oy);
-    const tb = ortBild[ort === 'hafen' ? 'werkstatt-meer' : ort];
-    if (tb && tb.complete && tb.naturalWidth) { deckend(tb, B, 1 + Math.sin(zeit * .2) * .03, .5, .5, -oy, H + oy); g.fillStyle = 'rgba(11,20,48,.25)'; g.fillRect(0, -oy, B, H + oy); }
-    else leuchten(B / 2, H * .38, 520, 'rgba(255,214,140,A)', .5);
-    if (ort === 'hafen') {
-      for (let i = 0; i < 40; i++) { const t = (zeit * .2 + i / 40) % 1; g.fillStyle = `rgba(200,245,255,${.6 * (1 - t)})`; g.beginPath(); g.arc((i * 137) % B, H - t * H, 3 + i % 5, 0, 7); g.fill(); }
-      for (let i = 0; i < 5; i++) { const fx = (zeit * 60 * (i % 2 ? 1 : -1) + i * 300) % (B + 200); const xx = i % 2 ? fx - 100 : B - fx + 100; g.fillStyle = ['#ff8a6b', '#f2c25b', '#8ff0bf'][i % 3]; g.beginPath(); g.ellipse(xx, 200 + i * 90, 26, 12, 0, 0, 7); g.fill(); }
-      g.strokeStyle = 'rgba(180,240,255,.7)'; g.lineWidth = 6; g.beginPath(); g.arc(B / 2, H * .8, Math.min(B * .45, 480), Math.PI, 0); g.stroke();
-    }
-    if (ort === 'schule') { g.fillStyle = '#1f3a2f'; rrect(B / 2 - 300, 120, 600, 260, 16); g.fill(); for (let i = 0; i < 12; i++) funkeln(B / 2 - 260 + (i * 47) % 520, 160 + (i * 71) % 200, zeit + i, 12); }
-    if (ort === 'schuhmacher') { for (let i = 0; i < 6; i++) { const sx = B / 2 - 300 + i * 120, sy = 200 + Math.sin(zeit * 2 + i) * 14; g.fillStyle = ['#d9367a', '#f2c25b', '#58b7ff'][i % 3]; g.beginPath(); g.ellipse(sx, sy, 40, 18, 0, 0, 7); g.fill(); funkeln(sx + 26, sy - 24, zeit + i, 14); } }
-    if (ort === 'post') { for (let i = 0; i < 14; i++) { const t = (zeit * .25 + i / 14) % 1; g.save(); g.translate((i * 173) % B, H * (1 - t)); g.rotate(Math.sin(zeit + i)); g.fillStyle = '#fff6dc'; g.fillRect(-24, -15, 48, 30); g.strokeStyle = '#a86f12'; g.lineWidth = 2; g.beginPath(); g.moveTo(-24, -15); g.lineTo(0, 2); g.lineTo(24, -15); g.stroke(); g.restore(); } }
-    if (ort === 'ruinen') { for (let i = 0; i < 16; i++) { const sx = (i * 131) % B, sy = H * .55 + (i % 4) * 60; leuchten(sx, sy, 70, 'rgba(150,230,255,A)', .5 + Math.sin(zeit * 2 + i) * .4); g.fillStyle = '#9fe6ff'; g.beginPath(); g.arc(sx, sy, 12, 0, 7); g.fill(); } }
-    if (ort === 'kiosk') { for (let i = 0; i < 8; i++) { const sx = B / 2 - 350 + i * 100; g.fillStyle = '#fff6dc'; rrect(sx, 150 + (i % 2) * 30, 80, 100, 8); g.fill(); g.font = '40px sans-serif'; g.textAlign = 'center'; g.fillText(['♥', '☾', '✦', '🌊', '🌲', '🐚', '⭐', '🎈'][i], sx + 40, 215 + (i % 2) * 30); g.textAlign = 'left'; } g.save(); g.translate(B / 2, H * .62); g.scale(2.2, 2.2); hasi(0, 0, zeit); g.restore(); }
-    const o = ORTE.find(x => x.id === ort);
-    if (o && o.figur) figur(o.figur, B / 2, H * .66, 2.3, zeit, 0, 1, o.figur === 'jackie' ? '#d9367a' : '#7a5bd6');
+// ---------- Figuren ----------
+function portraitTextur(key, rand = '#f2c25b') {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const malen = (img) => {
+    g.clearRect(0, 0, 256, 256); g.save(); g.beginPath(); g.arc(128, 128, 116, 0, 7); g.clip();
+    g.fillStyle = '#1a2a5c'; g.fillRect(0, 0, 256, 256); if (img) g.drawImage(img, 12, 12, 232, 232); g.restore();
+    g.lineWidth = 14; g.strokeStyle = rand; g.beginPath(); g.arc(128, 128, 118, 0, 7); g.stroke(); t.needsUpdate = true;
+  };
+  malen(null);
+  if (BILDER[key]) { const i = new Image(); i.onload = () => malen(i); i.src = BILDER[key]; }
+  return t;
+}
+const SCHATTEN = canvasTextur(64, 64, (g) => { const v = g.createRadialGradient(32, 32, 0, 32, 32, 32); v.addColorStop(0, 'rgba(0,0,0,.55)'); v.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = v; g.fillRect(0, 0, 64, 64); });
+function figur(key, farbe = 0x7a5bd6, groesse = 1) {
+  const g = new THREE.Group();
+  const stoff = new THREE.MeshStandardMaterial({ color: farbe, roughness: .6 });
+  const hose = new THREE.MeshStandardMaterial({ color: 0x1d2552, roughness: .7 });
+  const koerper = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .55, 6, 12), stoff); koerper.position.y = 1.25; koerper.castShadow = true; g.add(koerper);
+  const beine = [-1, 1].map(s => { const b = new THREE.Mesh(new THREE.CapsuleGeometry(.14, .5, 4, 8), hose); b.geometry.translate(0, -.35, 0); b.position.set(s * .2, .78, 0); b.castShadow = true; g.add(b); return b; });
+  const arme = [-1, 1].map(s => { const a = new THREE.Mesh(new THREE.CapsuleGeometry(.11, .5, 4, 8), stoff); a.geometry.translate(0, -.3, 0); a.position.set(s * .5, 1.6, 0); a.castShadow = true; g.add(a); return a; });
+  const kopf = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur(key), transparent: true })); kopf.scale.set(1.25, 1.25, 1); kopf.position.y = 2.35; g.add(kopf);
+  const sch = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: SCHATTEN, transparent: true, depthWrite: false })); sch.rotation.x = -Math.PI / 2; sch.position.y = .02; g.add(sch);
+  g.scale.setScalar(groesse);
+  g.userData = { beine, arme, kopf, koerper, phase: zufall() * 6 };
+  return g;
+}
+function figurBewegen(f, zeit, tempo) {
+  const { beine, arme, kopf, koerper, phase } = f.userData;
+  const w = Math.sin(zeit * 11 + phase) * Math.min(1, tempo);
+  beine[0].rotation.x = w * .7; beine[1].rotation.x = -w * .7; arme[0].rotation.x = -w * .6; arme[1].rotation.x = w * .6;
+  const atmen = Math.sin(zeit * 2 + phase) * .03;
+  koerper.position.y = 1.25 + Math.abs(w) * .06 + atmen; kopf.position.y = 2.35 + Math.abs(w) * .08 + atmen;
+}
+function hasi() {
+  const g = new THREE.Group(), weiss = new THREE.MeshStandardMaterial({ color: 0xf7f1e6, roughness: .8 }), rosa = new THREE.MeshStandardMaterial({ color: 0xf5b5c6 });
+  const k = new THREE.Mesh(new THREE.SphereGeometry(.55, 16, 12), weiss); k.position.y = .6; k.scale.y = 1.1; g.add(k);
+  const kopf = new THREE.Mesh(new THREE.SphereGeometry(.42, 16, 12), weiss); kopf.position.y = 1.45; g.add(kopf);
+  for (const s of [-1, 1]) {
+    const o = new THREE.Mesh(new THREE.CapsuleGeometry(.11, .6, 4, 8), weiss); o.position.set(s * .17, 2.05, 0); o.rotation.z = -s * .15; g.add(o);
+    const oi = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .45, 4, 8), rosa); oi.position.set(s * .17, 2.05, .07); oi.rotation.z = -s * .15; g.add(oi);
+    const a = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0x18204a })); a.position.set(s * .15, 1.52, .37); g.add(a);
   }
+  const n = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), rosa); n.position.set(0, 1.42, .41); g.add(n);
+  g.traverse(m => m.castShadow = true); return g;
+}
 
-  const SCHULFRAGEN = ['Wenn du eine Farbe erfinden könntest, wie würde sie heissen?', 'Was würdest du dem Mond erzählen?', 'Welches Geräusch macht ein Stern, wenn er lacht?', 'Was kannst du gut, ohne dass es dir jemand beigebracht hat?', 'Wie sieht ein Haus aus, das von innen grösser ist als von aussen?'];
-  const ERFINDUNGEN = ['eine Muschel, die Geschichten weitererzählt', 'eine Laterne, die nur für Mutige leuchtet', 'ein Boot, das Wellen sammelt', 'eine Brille, die zeigt, was jemand gerade fühlt', 'ein Schlüssel, der Türen in Träume öffnet'];
-  function karte(titel, text, knoepfe, eingabe) {
-    $('#karteTitel').textContent = titel; $('#karteText').textContent = text;
-    const e = $('#karteEingabe'); e.hidden = !eingabe; if (eingabe) { e.value = ''; e.placeholder = eingabe; }
-    const k = $('#karteKnoepfe'); k.innerHTML = '';
-    for (const [t, f, gold] of knoepfe) { const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf' + (gold ? ' gold' : ''); b.textContent = t; b.onclick = f; k.appendChild(b); }
-    $('#karte').hidden = false;
-  }
-  function innenOeffnen(ort) {
-    const raus = ['Zurück auf die Gasse', () => rausGehen(), true];
-    const erste = !zustand.besucht.has(ort);
-    if (erste) { zustand.besucht.add(ort); erlebt(`war bei ${ORTE.find(o => o.id === ort).name}`); }
-    anzeigen();
-    if (ort === 'kiosk') karte('Hasis Kiosk', 'Hasi sagt kein Wort. Er zeigt dir seine Zeichnungen und schiebt dir mit einem Lächeln einen goldenen Funken hin.', [['Danke, Hasi', () => { funkenGeben(); karte('Hasis Kiosk', 'Hasi wackelt glücklich mit den Ohren.', [raus]); }], raus]);
-    if (ort === 'schule') karte('Schule von Mama Affe', 'Mama Affe: «Setz dich! Heute stellen wir Fragen, die noch nie jemand gestellt hat.»', [['Gib mir eine Frage', () => { const f = SCHULFRAGEN[Math.floor(Math.random() * SCHULFRAGEN.length)]; erlebt(`bekam von Mama Affe die Frage: ${f}`); karte('Schule von Mama Affe', '«' + f + '» Denk in Ruhe darüber nach. Es gibt keine falsche Antwort.', [['Noch eine', () => innenOeffnen('schule')], raus]); }, true], raus]);
-    if (ort === 'schuhmacher') karte('Beim Schuhmacher', 'Jackie strahlt: «Probier die fliegenden Schuhe! Damit springst du draussen doppelt so hoch und kannst ein zweites Mal in der Luft springen.»', sp.fliegend ? [['Du trägst sie schon ✦', () => {}], raus] : [['Schuhe anziehen', () => { sp.fliegend = true; erlebt('bekam von Jackie fliegende Schuhe'); karte('Beim Schuhmacher', 'Die Schuhe glitzern an deinen Füssen. Draussen kannst du jetzt in der Luft nochmals springen.', [raus]); }, true], raus]);
-    if (ort === 'post') karte('Lettis Taubenpost', 'Letti: «Wem soll ich einen Brief bringen? Schreib ihn hier, ich fliege los.»', [['Letti, flieg los', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; erlebt(`schickte mit Letti einen Brief: «${t}»`); karte('Lettis Taubenpost', 'Letti packt deinen Brief und fliegt über die Dächer davon. Gurr!', [raus]); }, true], raus], 'Lieber Tinko, …');
-    if (ort === 'hafen') karte('Tinkos Werkstatt unter Wasser', 'Tinko: «Blub! Willkommen in meiner Werkstatt. Soll ich dir etwas erfinden?»', [['Erfinde etwas', () => { const e = ERFINDUNGEN[Math.floor(Math.random() * ERFINDUNGEN.length)]; erlebt(`liess sich von Tinko ${e} erfinden`); karte('Tinkos Werkstatt', `Tinko baut dir ${e}. Blubb-blubb, fertig!`, [['Noch etwas', () => innenOeffnen('hafen')], raus]); }, true], raus]);
-    if (ort === 'ruinen') { const liste = zustand.erlebt.slice(-6).map(e => '• ' + e).join('\n') || 'Noch keine Erinnerungen. Geh los und erlebe etwas.'; karte('Ruinen der Erinnerung', 'Brix: «Diese Steine leuchten für alles, was du heute erlebt hast.»\n\n' + liste, [raus]); $('#karteText').style.whiteSpace = 'pre-line'; }
-    pruefeEnde();
-  }
-  function reinGehen(o) {
-    if (zustand.uebergang) return;
-    $('#rein').hidden = true;
-    zustand.uebergang = { x: o.x, y: BODEN - 120, t: 0, mitte: () => { zustand.innen = o.id; $('#steuer').hidden = true; innenOeffnen(o.id); } };
-  }
-  function rausGehen() {
-    $('#karte').hidden = true; $('#karteText').style.whiteSpace = '';
-    zustand.uebergang = { x: sp.x, y: BODEN - 120, t: 0, mitte: () => { zustand.innen = null; $('#steuer').hidden = false; pruefeEnde(true); } };
-  }
+// ---------- Das Städtchen ----------
+const ORTE = [
+  { id: 'tor', z: 8, name: 'Ottis Tor', figur: 'otti', satz: 'Willkommen! Ich halte das Tor offen, solange jemand neugierig ist.' },
+  { id: 'kiosk', z: -14, name: 'Hasis Kiosk', hasi: true, rein: true },
+  { id: 'placa', z: -42, name: 'Plaça', figur: 'nova', satz: 'Erzähl mir etwas. Am meisten lerne ich beim Spielen.' },
+  { id: 'schule', z: -72, name: 'Schule von Mama Affe', figur: 'mamaaffe', satz: 'In meiner Schule gibt es keine falschen Fragen.', rein: true },
+  { id: 'schuhmacher', z: -98, name: 'Schuhmacher', figur: 'jackie', satz: 'Diese Schuhe fliegen, wenn man an sich glaubt.', rein: true, farbe: 0xd9367a },
+  { id: 'post', z: -122, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
+  { id: 'hafen', z: -146, name: 'Hafen und Tinkos Werkstatt', figur: 'tinko', satz: 'Blub! Komm runter in meine Werkstatt.', rein: true, x: 6 },
+  { id: 'ruinen', z: -176, name: 'Ruinen der Erinnerung', figur: 'brix', satz: 'Hier liegen die Erinnerungen. Nichts geht verloren.', rein: true },
+];
+const NEBEN = [
+  { figur: 'coinmaker', x: -3.5, z: -19, satz: 'Eine Idee rein, ein Funken raus.', farbe: 0x2f8f72 },
+  { figur: 'kimo', x: 3, z: -47, satz: '♪ La-la-la, die Plaça singt heute! ♪', farbe: 0x8a8a9a },
+  { figur: 'diego', x: -2.5, z: -36, satz: 'Schön, dass du da bist. Hier suchen wir zusammen Lösungen.', farbe: 0xc4623d },
+  { figur: 'kay', x: -3.5, z: -127, satz: 'Ich baue das Gerüst, ihr füllt es mit Leben.', farbe: 0x3b6bd6 },
+  { figur: 'mrping', x: 5, z: -138, satz: 'Ruhig bleiben, kleine Schritte. Das Meer hat Zeit.', farbe: 0x2b2b3a },
+];
+const ZIEL_ORTE = ORTE.filter(o => o.rein).map(o => o.id);
 
-  // ---------- Spiellogik ----------
-  function erlebt(t) { zustand.erlebt.push(t); try { localStorage.setItem('kiverse_spiel_erlebt', JSON.stringify(zustand.erlebt.slice(-30))); } catch {} }
-  function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `Orte ${zustand.besucht.size} / ${ZIEL_ORTE.length}`; }
-  function klang(f = 880) {
-    try { const a = klang.ctx || (klang.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), v = a.createGain(); o.type = 'triangle'; o.frequency.value = f; v.gain.setValueAtTime(.12, a.currentTime); v.gain.exponentialRampToValueAtTime(.001, a.currentTime + .5); o.connect(v).connect(a.destination); o.start(); o.stop(a.currentTime + .5); } catch {}
-  }
-  function funkenGeben(x = sp.x, y = sp.y - 150) {
-    zustand.funken = Math.min(12, zustand.funken + 1); anzeigen(); klang(700 + zustand.funken * 60);
-    for (let i = 0; i < 18; i++) zustand.partikel.push({ x, y, vx: (Math.random() - .5) * 8, vy: (Math.random() - .8) * 8, t: 1, farbe: 'rgba(255,214,110,A)' });
-  }
-  function naechsterOrt() {
-    let best = null;
-    for (const o of ORTE) { const d = Math.abs(o.x - sp.x); if (!best || d < best.d) best = { o, d }; }
-    return best;
-  }
-  function pruefeEnde(draussen) {
-    if (zustand.ende || zustand.funken < 12 || zustand.besucht.size < ZIEL_ORTE.length || !draussen) return;
-    zustand.ende = true; zustand.film = .01;
-    zustand.titel = { text: 'Kapitel geschafft!', unter: 'Sunny fliegt eine Ehrenrunde über das Städtchen', t: 0, dauer: 5 };
-    erlebt('hat alle Funken gesammelt und alle Orte besucht');
-    for (let i = 0; i < 6; i++) setTimeout(() => { for (let j = 0; j < 30; j++) zustand.partikel.push({ x: sp.x - 400 + Math.random() * 800, y: 200 + Math.random() * 200, vx: (Math.random() - .5) * 10, vy: (Math.random() - .5) * 10, t: 1, farbe: ['rgba(255,214,110,A)', 'rgba(120,200,255,A)', 'rgba(255,140,170,A)'][j % 3] }); klang(500 + i * 120); }, i * 500);
-    setTimeout(() => karte('Kapitel geschafft', 'Du hast heute im KI-Verse viel erlebt. Im echten KI-Verse kann Nova daraus ein Kapitel unserer Geschichte schreiben.', [['Zum KI-Verse', () => zurWelt(), true], ['Weiterspielen', () => { $('#karte').hidden = true; zustand.film = 0; }]]), 5200);
-  }
-  function zurWelt() { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : ''); }
-  $('#zurWelt').onclick = zurWelt;
+// Häuserreihe links, mit Lücken für die Orte
+for (let z = 2; z > -LAENGE + 10;) {
+  const frei = ORTE.some(o => Math.abs(o.z - z) < 7.5);
+  if (frei) { z -= 2; continue; }
+  const b = 6 + zufall() * 4, h = 6 + zufall() * 6;
+  haus(z - b / 2, b, h, { flach: zufall() > .55, markise: zufall() > .6 ? [0x2f6fb0, 0xc4623d, 0xf2c25b][Math.floor(zufall() * 3)] : null });
+  z -= b + .2;
+}
+// zweite Reihe am Hang (höher, weiter weg)
+for (let z = 0; z > -LAENGE; z -= 9 + zufall() * 5) { const g = haus(z, 7 + zufall() * 3, 8 + zufall() * 8, { flach: zufall() > .5, blumen: false }); g.position.x -= 9 + zufall() * 4; g.position.y = 3 + zufall() * 4; }
+for (let i = 0; i < 26; i++) pinie(-30 - zufall() * 40, 10 - i * 8 - zufall() * 5, 1 + zufall() * .6);
+for (let i = 0; i < 14; i++) zypresse(-24 - zufall() * 10, -i * 14 - zufall() * 6, 1 + zufall() * .5);
+for (let z = 4; z > -LAENGE; z -= 11) laterne(7.4, z);
+for (let z = -4; z > -LAENGE; z -= 22) laterne(-6.2, z);
+for (const z of [-6, -30, -58, -86, -112, -166]) palme(6.4, z);
 
-  let letzte = performance.now(), zeit = 0;
-  function schritt(jetzt) {
-    const dt = Math.min(.05, (jetzt - letzte) / 1000); letzte = jetzt; zeit += dt;
-    if (zustand.modus === 'spiel' && !zustand.innen && !zustand.uebergang) {
-      const ziel = (taste.rechts ? 1 : 0) - (taste.links ? 1 : 0);
-      sp.vx = lerp(sp.vx, ziel * 420, Math.min(1, dt * 8));
-      if (ziel) sp.richtung = ziel;
-    } else sp.vx = lerp(sp.vx, 0, Math.min(1, dt * 8));
-    if (zustand.modus === 'tor') {
-      zustand.torT = (zustand.torT || 0) + dt;
-      if (zustand.torT > 4.4) { zustand.modus = 'intro'; zustand.film = 1; zustand.uebergang = { x: 300, y: BODEN - 200, t: .5, mitte: () => {} }; }
-      requestAnimationFrame(schritt); malen(zeit); return;
-    }
-    if (zustand.modus === 'intro') {
-      sp.vx = 260; zustand.intro = (zustand.intro || 0) + dt;
-      if (zustand.intro > 2.6) { zustand.modus = 'spiel'; zustand.film = 0; $('#steuer').hidden = false; zustand.blase = null; }
-    }
-    sp.x = Math.max(60, Math.min(WELT - 60, sp.x + sp.vx * dt));
-    sp.vy += 2200 * dt; sp.y += sp.vy * dt;
-    if (sp.y >= BODEN) { sp.y = BODEN; sp.vy = 0; sp.amBoden = true; sp.sprungZahl = 0; } else sp.amBoden = false;
-    // Kamera wie im Film: weich nachziehen
-    const zielCam = Math.max(0, Math.min(WELT - sichtB, sp.x - sichtB * .42));
-    zustand.camX = lerp(zustand.camX, zielCam, Math.min(1, dt * 3));
-    // Sunny folgt in Wellen
-    sunny.x = lerp(sunny.x, sp.x - 120 * sp.richtung, Math.min(1, dt * 1.6));
-    sunny.y = 330 + Math.sin(zeit * 1.3) * 40;
-    // Funken sammeln
-    for (const f of FUNKEN) if (!f.weg && Math.hypot(f.x - sp.x, f.y - (sp.y - 120)) < 90) { f.weg = true; funkenGeben(f.x, f.y); erlebt('fing einen goldenen Funken'); pruefeEnde(true); }
-    // Sprechblasen und Türen
-    zustand.blase = null;
-    if (zustand.modus === 'spiel' && !zustand.innen) {
-      const nah = naechsterOrt();
-      const reinZeigen = nah && nah.d < 170 && nah.o.rein && !zustand.uebergang;
-      $('#rein').hidden = !reinZeigen;
-      if (reinZeigen) $('#rein').textContent = nah.o.id === 'hafen' ? 'Abtauchen' : 'Rein';
-      if (nah && nah.d < 260 && nah.o.satz) zustand.blase = { x: nah.o.x + (nah.o.id === 'placa' ? -170 : nah.o.id === 'hafen' ? 140 : 150), y: BODEN - 190, text: nah.o.satz };
-      for (const n of NEBENFIGUREN) if (Math.abs(n.x - sp.x) < 110) zustand.blase = { x: n.x, y: BODEN - 175, text: n.satz };
-      if (nah && nah.o.hasi && nah.d < 200) zustand.blase = { x: nah.o.x, y: BODEN - 260, text: '♥ ✦ ☾' };
-    } else $('#rein').hidden = true;
-    if (zustand.modus === 'intro') zustand.blase = { x: 400, y: BODEN - 190, text: 'Otti öffnet das Tor ... willkommen im KI-Verse!' };
-    // Übergang
-    if (zustand.uebergang) { const u = zustand.uebergang, vor = u.t; u.t += dt * 1.1; if (vor < .5 && u.t >= .5) u.mitte(); if (u.t >= 1) zustand.uebergang = null; }
-    if (zustand.titel) { zustand.titel.t += dt; if (zustand.titel.t > zustand.titel.dauer) zustand.titel = null; }
-    if (zustand.film > 0 && zustand.film < 1) zustand.film = Math.min(1, zustand.film + dt * 1.5);
-    zustand.partikel = zustand.partikel.filter(p => (p.x += p.vx, p.y += p.vy, p.vy += .15, p.t -= dt * 1.2) > 0);
-    malen(zeit);
-    requestAnimationFrame(schritt);
+// ----- Orte -----
+const ortObjekte = {};
+// Tor (Otti) mit Torbogen und Holztür
+let torTuer;
+{
+  const z = 8, g = new THREE.Group();
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7, 1.6), MAT.stein); p.position.set(s * 3.3, 3.5, 0); p.castShadow = true; g.add(p); }
+  const bogen = new THREE.Mesh(new THREE.TorusGeometry(3.3, .8, 8, 20, Math.PI), MAT.stein); bogen.position.y = 7; bogen.castShadow = true; g.add(bogen);
+  const wand = new THREE.Mesh(new THREE.BoxGeometry(12, 9, 1.4), MAT.stein); wand.position.set(-10.4, 4.5, 0); g.add(wand);
+  const angel = new THREE.Group(); angel.position.set(-2.5, 0, .2); g.add(angel);
+  torTuer = new THREE.Mesh(new THREE.BoxGeometry(5, 7.6, .25), new THREE.MeshStandardMaterial({ color: 0x2a3550, roughness: .85 })); torTuer.position.set(2.5, 3.8, 0); angel.add(torTuer);
+  for (const y of [1.2, 3.8, 6.4]) { const b = new THREE.Mesh(new THREE.BoxGeometry(4.6, .18, .08), MAT.metall); b.position.set(2.5, y, .17); angel.add(b); }
+  torTuer.userData.angel = angel;
+  const l = glut(0xffd27a, 9, .45); l.position.set(0, 4, -1); g.add(l);
+  const torLicht = new THREE.PointLight(0xffc870, 18, 16, 1.7); torLicht.position.set(0, 4, -2); g.add(torLicht);
+  g.position.set(0, 0, z); szene.add(g);
+  blumenWolke(-3.3, 6.5, z + .6, 2, 4, 1.2, 140); blumenWolke(3.3, 7.6, z + .6, 1.5, 2.4, 1.2, 80); blumenWolke(0, 9.5, z + .5, 5, 1.2, 1.4, 120);
+  for (const s of [-1, 1]) { const topf = new THREE.Mesh(new THREE.CylinderGeometry(.7, .45, 1.2, 12), new THREE.MeshStandardMaterial({ color: 0xc26b3c, roughness: .8 })); topf.position.set(s * 5, .6, z - 2); szene.add(topf); const busch = new THREE.Mesh(new THREE.SphereGeometry(.9, 8, 6), MAT.blatt); busch.position.set(s * 5, 1.7, z - 2); szene.add(busch); }
+}
+// Hasis Kiosk
+{
+  const z = -14, g = new THREE.Group();
+  const k = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3, 4.4), new THREE.MeshStandardMaterial({ color: 0x3c64a8, roughness: .6 })); k.position.y = 1.5; k.castShadow = true; g.add(k);
+  const theke = new THREE.Mesh(new THREE.BoxGeometry(.5, .3, 3.6), new THREE.MeshStandardMaterial({ color: 0xffeccc })); theke.position.set(1.8, 1.3, 0); g.add(theke);
+  const d = new THREE.Mesh(new THREE.BoxGeometry(4.2, .3, 5.2), MAT.gold); d.position.y = 3.2; g.add(d);
+  for (let i = 0; i < 10; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(.12, 8, 6), new THREE.MeshBasicMaterial({ color: [0xffd27a, 0xff8a6b, 0x8ff0bf][i % 3] })); b.position.set(2.1, 3.0 - Math.sin(i / 9 * Math.PI) * .3, -2.2 + i * .49); g.add(b); }
+  const h = hasi(); h.position.set(1.2, .9, 0); h.rotation.y = Math.PI / 2; g.add(h); ortObjekte.hasi = h;
+  g.position.set(-4.8, 0, z); szene.add(g);
+}
+// Plaça mit Brunnen, Café-Stammtisch und Lichterkette
+const brunnenWasser = [];
+{
+  const z = -42;
+  const becken = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.3, .9, 28), MAT.stein); becken.position.set(0, .45, z); becken.castShadow = becken.receiveShadow = true; szene.add(becken);
+  const wasser = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, .1, 28), new THREE.MeshStandardMaterial({ color: 0x4aa3e6, roughness: .1, metalness: .3, emissive: 0x0a3a66 })); wasser.position.set(0, .85, z); szene.add(wasser);
+  const saeule = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 2.6, 12), MAT.stein); saeule.position.set(0, 1.9, z); szene.add(saeule);
+  const schale = new THREE.Mesh(new THREE.CylinderGeometry(1.2, .4, .4, 18), MAT.stein); schale.position.set(0, 3.2, z); szene.add(schale);
+  const bl = glut(0x7ac8ff, 9, .55); bl.position.set(0, 1.6, z); szene.add(bl);
+  const tropfenGeo = new THREE.SphereGeometry(.07, 6, 4), tropfenMat = new THREE.MeshBasicMaterial({ color: 0xbfe6ff });
+  for (let i = 0; i < 40; i++) { const t = new THREE.Mesh(tropfenGeo, tropfenMat); t.userData = { a: i / 40 * Math.PI * 2, p: zufall() }; szene.add(t); brunnenWasser.push(t); }
+  for (const [x, dz] of [[-3.5, 4], [-3.8, -4.5], [3.8, 5], [4.2, -3]]) {
+    const tisch = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .08, 16), MAT.holz); tisch.position.set(x, 1, z + dz); szene.add(tisch);
+    const fuss = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1, 6), MAT.metall); fuss.position.set(x, .5, z + dz); szene.add(fuss);
+    const kerze = glut(0xffc070, 1.4, .9); kerze.position.set(x, 1.2, z + dz); szene.add(kerze);
   }
+  for (let k = 0; k < 2; k++) for (let i = 0; i <= 22; i++) {
+    const t = i / 22, x = lerp(-6.5, 7.6, t), y = 5.6 - Math.sin(t * Math.PI) * 1.2, zz = z - 5 + k * 10;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.1, 6, 4), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffd27a : 0xff9e7a })); b.position.set(x, y, zz); szene.add(b);
+    if (i % 4 === 0) { const s = glut(0xffc070, 1.2, .5); s.position.copy(b.position); szene.add(s); }
+  }
+  const platzLicht = new THREE.PointLight(0xffc070, 14, 18, 1.8); platzLicht.position.set(0, 5, z); szene.add(platzLicht);
+}
+// Schule von Mama Affe (blaues Dach, Glocke)
+{
+  haus(-72, 11, 8, { dach: MAT.dachBlau, blumen: false });
+  const glocke = new THREE.Mesh(new THREE.SphereGeometry(.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT.gold); glocke.rotation.x = Math.PI; glocke.position.set(-10.5, 12, -72); szene.add(glocke);
+  blumenWolke(-7 + .25, 5, -72 + 4, 3, 5, .5, 160);
+  const tafel = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.3), new THREE.MeshStandardMaterial({ color: 0x1f3a2f })); tafel.position.set(-6.9, 2.4, -69); tafel.rotation.y = Math.PI / 2; szene.add(tafel);
+}
+// Schuhmacher mit glitzerndem Schaufenster
+const schuhe = [];
+{
+  haus(-98, 9, 7, { markise: 0x7a3b2a, blumen: false });
+  const schaufenster = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.8), new THREE.MeshBasicMaterial({ color: 0xffe6b8 })); schaufenster.position.set(-6.97, 1.6, -100.5); schaufenster.rotation.y = Math.PI / 2; szene.add(schaufenster);
+  for (let i = 0; i < 3; i++) { const s = new THREE.Mesh(new THREE.CapsuleGeometry(.14, .4, 4, 8), new THREE.MeshStandardMaterial({ color: [0xd9367a, 0xf2c25b, 0x58b7ff][i], metalness: .6, roughness: .2, emissive: [0x5a0a2a, 0x5a4010, 0x0a3a6a][i] })); s.rotation.x = Math.PI / 2; s.position.set(-6.6, 1.3, -101.5 + i * 1); szene.add(s); schuhe.push(s); const gl = glut(0xfff0c0, 1.2, .9); gl.position.copy(s.position); szene.add(gl); }
+}
+// Lettis Taubenpost (Turm)
+const briefe = [];
+{
+  const z = -122;
+  const turm = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, 13, 18), MAT.putz); turm.position.set(-9.5, 6.5, z); turm.castShadow = true; szene.add(turm);
+  const spitze = new THREE.Mesh(new THREE.ConeGeometry(3, 3.4, 18), MAT.dach); spitze.position.set(-9.5, 14.7, z); szene.add(spitze);
+  for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CircleGeometry(.5, 14), MAT.fenster); f.position.set(-7.05, 4 + i * 3, z); f.rotation.y = Math.PI / 2; szene.add(f); }
+  const brief = new THREE.PlaneGeometry(.6, .4), bm = new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide, emissive: 0x3a3320 });
+  for (let i = 0; i < 8; i++) { const b = new THREE.Mesh(brief, bm); b.userData = { p: i / 8 }; szene.add(b); briefe.push(b); }
+}
+// Hafen mit Booten, Steg und Tinkos leuchtender Kuppel unter Wasser
+const boote = [], blasen = [];
+let kuppel;
+{
+  const z = -146;
+  const steg = new THREE.Mesh(new THREE.BoxGeometry(16, .4, 3.4), MAT.holz); steg.position.set(15, -.2, z); steg.receiveShadow = true; szene.add(steg);
+  for (let i = 0; i < 6; i++) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 2.5, 6), MAT.stamm); p.position.set(8.5 + i * 2.6, -1.2, z + 1.6); szene.add(p); }
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Group();
+    const rumpf = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4.2, 12, 1, true, Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: [0x2f6fb0, 0xf3ece0, 0xc4623d][i], roughness: .6, side: THREE.DoubleSide })); rumpf.rotation.x = Math.PI / 2; b.add(rumpf);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 4, 6), MAT.stamm); mast.position.y = 2; b.add(mast);
+    const sg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, .5, 0), new THREE.Vector3(0, 3.8, 0), new THREE.Vector3(0, .5, 2)]); sg.computeVertexNormals();
+    b.add(new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide })));
+    const lampe = glut(0xffc070, 1.5, .9); lampe.position.y = 4; b.add(lampe);
+    b.position.set(12 + i * 5, -1.2, z - 5 - i * 3.5); b.userData.p = i; szene.add(b); boote.push(b);
+  }
+  kuppel = new THREE.Group();
+  kuppel.add(new THREE.Mesh(new THREE.SphereGeometry(4.5, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x7fe6ff, emissive: 0x1a8fb0, transparent: true, opacity: .35, roughness: .05, metalness: .2, side: THREE.DoubleSide })));
+  const kboden = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 5, .5, 24), MAT.stein); kboden.position.y = -.25; kuppel.add(kboden);
+  const kl = new THREE.PointLight(0x5ad8ff, 40, 30, 1.4); kl.position.y = 2; kuppel.add(kl);
+  const kg = glut(0x6ae0ff, 18, .7); kg.position.y = 2; kuppel.add(kg);
+  for (let i = 0; i < 4; i++) { const zahnrad = new THREE.Mesh(new THREE.TorusGeometry(.5, .14, 6, 12), MAT.gold); zahnrad.position.set(-2 + i * 1.3, 1 + (i % 2) * .6, -1.5); kuppel.add(zahnrad); }
+  kuppel.position.set(18, -9, z - 4); szene.add(kuppel);
+  const bg = new THREE.SphereGeometry(.15, 6, 4), bmat = new THREE.MeshBasicMaterial({ color: 0xc8f5ff, transparent: true, opacity: .7 });
+  for (let i = 0; i < 24; i++) { const b = new THREE.Mesh(bg, bmat); b.userData = { x: 16 + zufall() * 4, z: z - 6 + zufall() * 4, p: zufall() }; szene.add(b); blasen.push(b); }
+}
+// Ruinen mit leuchtenden Erinnerungssteinen
+const steine = [];
+{
+  const z = -176;
+  for (let i = 0; i < 7; i++) {
+    const h = 3 + (i % 3) * 2.2, x = i % 2 ? -5 : 5.5, zz = z + 8 - i * 2.8;
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(.6, .7, h, 10), MAT.stein); s.position.set(x, h / 2, zz); s.castShadow = true; szene.add(s);
+    if (i % 3 !== 2) { const k = new THREE.Mesh(new THREE.BoxGeometry(1.8, .4, 1.8), MAT.stein); k.position.set(x, h + .2, zz); szene.add(k); }
+  }
+  const gebalk = new THREE.Mesh(new THREE.BoxGeometry(1.4, .6, 8), MAT.stein); gebalk.position.set(-5, 5.4, z + 4); szene.add(gebalk);
+  for (let i = 0; i < 12; i++) {
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(.3, 0), new THREE.MeshBasicMaterial({ color: 0x9fe6ff })); m.position.set(-4 + (i % 6) * 1.7, .3, z - 3 + Math.floor(i / 6) * 4); szene.add(m);
+    const gl = glut(0x8fdcff, 2.4, .8); gl.position.copy(m.position); szene.add(gl); steine.push(gl);
+  }
+  const rl = new THREE.PointLight(0x8fdcff, 18, 16, 1.6); rl.position.set(0, 2, z); szene.add(rl);
+}
+blumen.count = blumenZahl; blumen.castShadow = true; szene.add(blumen);
 
-  // ---------- Steuerung ----------
-  function springen() {
-    if (zustand.modus !== 'spiel' || zustand.innen) return;
-    if (sp.amBoden) { sp.vy = sp.fliegend ? -1400 : -1000; sp.sprungZahl = 1; klang(520); }
-    else if (sp.fliegend && sp.sprungZahl < 2) { sp.vy = -1100; sp.sprungZahl = 2; klang(780); for (let i = 0; i < 12; i++) zustand.partikel.push({ x: sp.x, y: sp.y, vx: (Math.random() - .5) * 6, vy: Math.random() * 4, t: 1, farbe: 'rgba(255,214,110,A)' }); }
-  }
-  function halten(el, an, aus) {
-    const start = (e) => { e.preventDefault(); el.classList.add('an'); an(); };
-    const ende = (e) => { e.preventDefault(); el.classList.remove('an'); aus(); };
-    el.addEventListener('pointerdown', start); el.addEventListener('pointerup', ende); el.addEventListener('pointercancel', ende); el.addEventListener('pointerleave', ende);
-  }
-  halten($('#links'), () => taste.links = true, () => taste.links = false);
-  halten($('#rechts'), () => taste.rechts = true, () => taste.rechts = false);
-  halten($('#hoch'), springen, () => {});
-  $('#rein').onclick = () => { const n = naechsterOrt(); if (n && n.o.rein) reinGehen(n.o); };
-  addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT') return;
-    if (e.key === 'ArrowLeft' || e.key === 'a') taste.links = true;
-    if (e.key === 'ArrowRight' || e.key === 'd') taste.rechts = true;
-    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') { e.preventDefault(); springen(); }
-    if (e.key === 'Enter' && !$('#rein').hidden) $('#rein').click();
+// Figuren an ihren Orten
+const npc = [];
+for (const o of ORTE) {
+  if (!o.figur) continue;
+  const f = figur(o.figur, o.farbe || 0x7a5bd6, 1.05);
+  const x = o.x ?? (o.id === 'placa' ? 2.5 : -4.2), z = o.z + (o.id === 'placa' ? 3 : o.id === 'tor' ? -3 : 1.5);
+  f.position.set(x, 0, z); f.rotation.y = Math.PI / 2; szene.add(f);
+  npc.push({ f, o, x, z, satz: o.satz, ort: o.id });
+}
+for (const n of NEBEN) { const f = figur(n.figur, n.farbe, .95); f.position.set(n.x, 0, n.z); f.rotation.y = Math.PI / 2; szene.add(f); npc.push({ f, x: n.x, z: n.z, satz: n.satz, key: n.figur }); }
+// Fia (Phönix-Küken) kreist über der Plaça
+const fia = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('fia', '#ffb36b') })); fia.scale.set(1.6, 1.6, 1); szene.add(fia);
+const fiaGlut = glut(0xffa060, 5, .8); szene.add(fiaGlut);
+
+// Sunny: fliegt mit, Portrait + blaue Flügel
+const sunny = new THREE.Group();
+{
+  const kopf = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('sunny', '#7cc2ff') })); kopf.scale.set(2.2, 2.2, 1); sunny.add(kopf);
+  const fluegelForm = new THREE.Shape(); fluegelForm.moveTo(0, 0); fluegelForm.quadraticCurveTo(1.6, 1.6, 3.4, .9); fluegelForm.quadraticCurveTo(2.2, .3, 3, -.4); fluegelForm.quadraticCurveTo(1.6, -.1, 0, -.3);
+  const fm = new THREE.MeshStandardMaterial({ color: 0x2f7fd6, side: THREE.DoubleSide, emissive: 0x0a2a5a, roughness: .5 });
+  sunny.userData.fluegel = [-1, 1].map(s => { const halter = new THREE.Group(); halter.position.set(s * .5, 0, -.2); const w = new THREE.Mesh(new THREE.ShapeGeometry(fluegelForm), fm); w.scale.x = s; halter.add(w); sunny.add(halter); return halter; });
+  sunny.add(glut(0x6ab4ff, 6, .6));
+  szene.add(sunny);
+}
+
+// Funken zum Sammeln
+const sternForm = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .22 : .5; i ? sternForm.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sternForm.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+const sternGeo = new THREE.ExtrudeGeometry(sternForm, { depth: .14, bevelEnabled: true, bevelSize: .04, bevelThickness: .04 }); sternGeo.center();
+const FUNKEN = [];
+for (let i = 0; i < 12; i++) {
+  const s = new THREE.Mesh(sternGeo, MAT.gold); const z = 2 - i * 15.5 - zufall() * 4, x = -4 + zufall() * 10, y = 1.4 + (i % 3 === 2 ? 2.2 : 0);
+  s.position.set(x, y, z); s.add(glut(0xffd06a, 2.6, .9)); szene.add(s);
+  FUNKEN.push({ m: s, weg: false, y, p: zufall() * 6 });
+}
+
+// ---------- Spieler ----------
+let spieler;
+const sp = { pos: new THREE.Vector3(0, 0, 18), richtung: Math.PI, vy: 0, tempo: 0, amBoden: true, sprung: 0, fliegend: false };
+const zustand = { modus: 'start', funken: 0, besucht: new Set(), erlebt: [], innen: null, ende: false, zeit: 0, intro: 0, partikel: [] };
+
+// ---------- HTML-Ebene: Sprechblasen und Ortsschilder ----------
+const ebene = $('#ebene');
+const blaseEl = document.createElement('div'); blaseEl.className = 'blase'; blaseEl.hidden = true; ebene.appendChild(blaseEl);
+const schildEl = document.createElement('div'); schildEl.className = 'schild'; schildEl.hidden = true; ebene.appendChild(schildEl);
+const v3 = new THREE.Vector3();
+function aufBildschirm(x, y, z) { v3.set(x, y, z).project(kamera); return { x: (v3.x + 1) / 2 * innerWidth, y: (1 - v3.y) / 2 * innerHeight, sichtbar: v3.z < 1 && v3.z > -1 }; }
+
+// ---------- Steuerung ----------
+const eingabe = { x: 0, y: 0 }, tasten = {};
+{
+  const stick = $('#stick'), knopf = stick.firstElementChild; let id = null, mx = 0, my = 0;
+  const setzen = (cx, cy) => { let dx = cx - mx, dy = cy - my; const d = Math.hypot(dx, dy), max = 46; if (d > max) { dx *= max / d; dy *= max / d; } knopf.style.transform = `translate(${dx}px, ${dy}px)`; eingabe.x = dx / max; eingabe.y = -dy / max; };
+  stick.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; stick.setPointerCapture(id); const r = stick.getBoundingClientRect(); mx = r.left + r.width / 2; my = r.top + r.height / 2; setzen(e.clientX, e.clientY); });
+  stick.addEventListener('pointermove', e => { if (e.pointerId === id) setzen(e.clientX, e.clientY); });
+  const los = e => { if (e.pointerId !== id) return; id = null; knopf.style.transform = ''; eingabe.x = eingabe.y = 0; };
+  stick.addEventListener('pointerup', los); stick.addEventListener('pointercancel', los);
+}
+$('#hoch').addEventListener('pointerdown', e => { e.preventDefault(); springen(); });
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; tasten[e.key] = true; if (e.key === ' ') { e.preventDefault(); springen(); } if (e.key === 'Enter' && !$('#rein').hidden) $('#rein').click(); });
+addEventListener('keyup', e => { tasten[e.key] = false; });
+function springen() {
+  if (zustand.modus !== 'spiel' || zustand.innen) return;
+  if (sp.amBoden) { sp.vy = sp.fliegend ? 9.5 : 7; sp.sprung = 1; klang(520); }
+  else if (sp.fliegend && sp.sprung < 2) { sp.vy = 8.5; sp.sprung = 2; klang(780); funkenRegen(sp.pos.x, sp.pos.y + .3, sp.pos.z, 14); }
+}
+
+// ---------- Klang und Partikel ----------
+function klang(f = 880) {
+  try { const a = klang.ctx || (klang.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), v = a.createGain(); o.type = 'triangle'; o.frequency.value = f; v.gain.setValueAtTime(.12, a.currentTime); v.gain.exponentialRampToValueAtTime(.001, a.currentTime + .5); o.connect(v).connect(a.destination); o.start(); o.stop(a.currentTime + .5); } catch {}
+}
+function funkenRegen(x, y, z, n = 20, farbe = 0xffd06a) {
+  for (let i = 0; i < n; i++) { const s = glut(farbe, .6 + zufall() * .6, 1); s.position.set(x, y, z); szene.add(s); zustand.partikel.push({ s, v: new THREE.Vector3((zufall() - .5) * 6, zufall() * 6, (zufall() - .5) * 6), t: 1 }); }
+}
+
+// ---------- Orte betreten (Kamerafahrt statt Raumwechsel) ----------
+const SCHULFRAGEN = ['Wenn du eine Farbe erfinden könntest, wie würde sie heissen?', 'Was würdest du dem Mond erzählen?', 'Welches Geräusch macht ein Stern, wenn er lacht?', 'Was kannst du gut, ohne dass es dir jemand beigebracht hat?', 'Wie sieht ein Haus aus, das von innen grösser ist als von aussen?'];
+const ERFINDUNGEN = ['eine Muschel, die Geschichten weitererzählt', 'eine Laterne, die nur für Mutige leuchtet', 'ein Boot, das Wellen sammelt', 'eine Brille, die zeigt, was jemand gerade fühlt', 'einen Schlüssel, der Türen in Träume öffnet'];
+const kamZiel = { pos: new THREE.Vector3(), blick: new THREE.Vector3(), aktiv: false };
+function karte(titel, text, knoepfe, platzhalter) {
+  $('#karteTitel').textContent = titel; $('#karteText').textContent = text;
+  const e = $('#karteEingabe'); e.hidden = !platzhalter; if (platzhalter) { e.value = ''; e.placeholder = platzhalter; }
+  const k = $('#karteKnoepfe'); k.innerHTML = '';
+  for (const [t, f, gold] of knoepfe) { const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf' + (gold ? ' gold' : ''); b.textContent = t; b.onclick = f; k.appendChild(b); }
+  $('#karte').hidden = false;
+}
+function blitz(dann) { $('#blitz').style.opacity = 1; setTimeout(() => { dann(); $('#blitz').style.opacity = 0; }, 450); }
+function reinGehen(o) {
+  $('#rein').hidden = true;
+  blitz(() => {
+    zustand.innen = o.id; document.body.classList.add('kino'); $('#stick').hidden = $('#hoch').hidden = true;
+    const n = npc.find(x => x.ort === o.id);
+    if (o.id === 'hafen') { kamZiel.pos.set(kuppel.position.x - 7, kuppel.position.y + 2.5, kuppel.position.z + 7); kamZiel.blick.copy(kuppel.position).add(new THREE.Vector3(0, 1.5, 0)); szene.fog.color.copy(NEBEL_WASSER); szene.fog.density = .03; if (n) n.f.position.copy(kuppel.position); }
+    else if (o.id === 'kiosk') { kamZiel.pos.set(2.5, 2.4, o.z + 1); kamZiel.blick.set(-3.6, 1.6, o.z); }
+    else if (n) { kamZiel.pos.set(n.x + 4.2, 2.6, n.z + 1.2); kamZiel.blick.set(n.x, 2, n.z); }
+    kamPos.copy(kamZiel.pos); kamBlick.copy(kamZiel.blick); kamZiel.aktiv = true;
+    const bildKey = o.id === 'hafen' ? 'werkstatt-meer' : o.id;
+    if (ORT_BILDER[bildKey]) { $('#ortbild').style.backgroundImage = `url(${ORT_BILDER[bildKey]})`; $('#ortbild').style.opacity = 1; }
+    innenOeffnen(o.id);
   });
-  addEventListener('keyup', (e) => { if (e.key === 'ArrowLeft' || e.key === 'a') taste.links = false; if (e.key === 'ArrowRight' || e.key === 'd') taste.rechts = false; });
-
-  // ---------- Start: Figur wählen, dann Film-Intro durchs Tor ----------
-  const WAHL = [['diego', 'Diego'], ['fia', 'Fia'], ['tinko', 'Tinko'], ['nova', 'Nova'], ['jackie', 'Jackie'], ['otti', 'Otti'], ['kay', 'Kay'], ['kimo', 'Kimo']];
-  let gewaehlt = 'diego';
-  try { gewaehlt = localStorage.getItem('kiverse_spiel_figur') || 'diego'; } catch {}
-  for (const [k, n] of WAHL) {
-    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === gewaehlt));
-    const i = document.createElement('img'); i.src = BILDER[k]; i.alt = '';
-    b.append(i, document.createTextNode(n));
-    b.onclick = () => { gewaehlt = k; document.querySelectorAll('#wahl button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
-    $('#wahl').appendChild(b);
-  }
-  // Ortsfiguren nicht doppelt zeigen, wenn man sie selbst spielt
-  function starten() {
-    sp.figur = gewaehlt; try { localStorage.setItem('kiverse_spiel_figur', gewaehlt); } catch {}
-    for (const o of ORTE) if (o.figur === gewaehlt) o.figur = null;
-    for (let i = NEBENFIGUREN.length - 1; i >= 0; i--) if (NEBENFIGUREN[i].figur === gewaehlt) NEBENFIGUREN.splice(i, 1);
-    $('#start').hidden = true; sp.x = 120; zustand.film = .01;
-    if (ortBild.tor && ortBild.tor.naturalWidth) { zustand.modus = 'tor'; zustand.torT = 0; }
-    else { zustand.modus = 'intro'; zustand.titel = { text: 'KI-Verse', unter: 'Ein Abend am Meer', t: 0, dauer: 3 }; }
-    klang(440); setTimeout(() => klang(660), 250);
-  }
-  $('#los').onclick = starten;
-  if (ORT_BILDER.tor) $('#start').style.backgroundImage = `linear-gradient(rgba(11,20,48,.25), rgba(11,20,48,.55)), url(${ORT_BILDER.tor})`;
+}
+function rausGehen() {
+  $('#karte').hidden = true;
+  blitz(() => {
+    if (zustand.innen === 'hafen') { szene.fog.color.copy(NEBEL_NACHT); szene.fog.density = .0065; const n = npc.find(x => x.ort === 'hafen'); if (n) n.f.position.set(n.x, 0, n.z); }
+    zustand.innen = null; kamZiel.aktiv = false; document.body.classList.remove('kino'); $('#ortbild').style.opacity = 0;
+    $('#stick').hidden = $('#hoch').hidden = false; pruefeEnde();
+  });
+}
+function innenOeffnen(ort) {
+  const raus = ['Zurück auf die Gasse', () => rausGehen(), true];
+  if (!zustand.besucht.has(ort)) { zustand.besucht.add(ort); erlebt(`war bei ${ORTE.find(o => o.id === ort).name}`); }
   anzeigen();
-  sunny.x = 0;
-  requestAnimationFrame(schritt);
-  window.__spiel = { sp, zustand, ORTE, FUNKEN, starten, reinGehen, springen };
-})();
+  if (ort === 'kiosk') karte('Hasis Kiosk', 'Hasi sagt kein Wort. Er zeigt dir seine Zeichnungen und schiebt dir mit einem Lächeln einen goldenen Funken hin.', [['Danke, Hasi', () => { funkeDazu(); karte('Hasis Kiosk', 'Hasi wackelt glücklich mit den Ohren.', [raus]); }], raus]);
+  if (ort === 'schule') karte('Schule von Mama Affe', 'Mama Affe: «Setz dich! Heute stellen wir Fragen, die noch nie jemand gestellt hat.»', [['Gib mir eine Frage', () => { const f = SCHULFRAGEN[Math.floor(Math.random() * SCHULFRAGEN.length)]; erlebt(`bekam von Mama Affe die Frage: ${f}`); karte('Schule von Mama Affe', '«' + f + '» Denk in Ruhe darüber nach. Es gibt keine falsche Antwort.', [['Noch eine', () => innenOeffnen('schule')], raus]); }, true], raus]);
+  if (ort === 'schuhmacher') karte('Beim Schuhmacher', 'Jackie strahlt: «Probier die fliegenden Schuhe! Damit springst du draussen höher und kannst in der Luft ein zweites Mal springen.»', sp.fliegend ? [['Du trägst sie schon ✦', () => {}], raus] : [['Schuhe anziehen', () => { sp.fliegend = true; erlebt('bekam von Jackie fliegende Schuhe'); karte('Beim Schuhmacher', 'Die Schuhe glitzern an deinen Füssen. Draussen kannst du jetzt in der Luft nochmals springen.', [raus]); }, true], raus]);
+  if (ort === 'post') karte('Lettis Taubenpost', 'Letti: «Wem soll ich einen Brief bringen? Schreib ihn hier, ich fliege los.»', [['Letti, flieg los', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; erlebt(`schickte mit Letti einen Brief: «${t}»`); karte('Lettis Taubenpost', 'Letti packt deinen Brief und fliegt über die Dächer davon. Gurr!', [raus]); }, true], raus], 'Lieber Tinko, …');
+  if (ort === 'hafen') karte('Tinkos Werkstatt unter Wasser', 'Tinko: «Blub! Willkommen in meiner Werkstatt. Soll ich dir etwas erfinden?»', [['Erfinde etwas', () => { const e = ERFINDUNGEN[Math.floor(Math.random() * ERFINDUNGEN.length)]; erlebt(`liess sich von Tinko ${e} erfinden`); karte('Tinkos Werkstatt', `Tinko baut dir ${e}. Blubb-blubb, fertig!`, [['Noch etwas', () => innenOeffnen('hafen')], raus]); }, true], raus]);
+  if (ort === 'ruinen') { const liste = zustand.erlebt.slice(-6).map(e => '• ' + e).join('\n') || 'Noch keine Erinnerungen. Geh los und erlebe etwas.'; karte('Ruinen der Erinnerung', 'Brix: «Diese Steine leuchten für alles, was du heute erlebt hast.»\n\n' + liste, [raus]); }
+}
+
+// ---------- Spielstand ----------
+function erlebt(t) { zustand.erlebt.push(t); try { localStorage.setItem('kiverse_spiel_erlebt', JSON.stringify(zustand.erlebt.slice(-30))); } catch {} }
+function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `Orte ${zustand.besucht.size} / ${ZIEL_ORTE.length}`; }
+function funkeDazu() { zustand.funken = Math.min(12, zustand.funken + 1); anzeigen(); klang(700 + zustand.funken * 60); }
+function pruefeEnde() {
+  if (zustand.ende || zustand.funken < 12 || zustand.besucht.size < ZIEL_ORTE.length || zustand.innen) return;
+  zustand.ende = true; zustand.endeT = 0; document.body.classList.add('kino');
+  $('#titel b').textContent = 'Kapitel geschafft!'; $('#titel span').textContent = 'Sunny fliegt eine Ehrenrunde über das Städtchen'; $('#titel').style.opacity = 1;
+  erlebt('hat alle Funken gesammelt und alle Orte besucht');
+  for (let i = 0; i < 8; i++) setTimeout(() => { funkenRegen(sp.pos.x + (zufall() - .5) * 20, 14 + zufall() * 6, sp.pos.z - 10 - zufall() * 10, 40, [0xffd06a, 0x7ac8ff, 0xff8ab0][i % 3]); klang(500 + i * 90); }, i * 450);
+  setTimeout(() => { $('#titel').style.opacity = 0; karte('Kapitel geschafft', 'Du hast heute im KI-Verse viel erlebt. Im echten KI-Verse kann Nova daraus ein Kapitel unserer Geschichte schreiben.', [['Zum KI-Verse', () => zurWelt(), true], ['Weiterspielen', () => { $('#karte').hidden = true; document.body.classList.remove('kino'); }]]); }, 5200);
+}
+function zurWelt() { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : ''); }
+$('#zurWelt').onclick = zurWelt;
+$('#rein').onclick = () => { const n = naechsterOrt(); if (n && n.o.rein) reinGehen(n.o); };
+function naechsterOrt() { let best = null; for (const o of ORTE) { const d = Math.hypot((o.x ?? 0) - sp.pos.x, o.z - sp.pos.z); if (!best || d < best.d) best = { o, d }; } return best; }
+
+// ---------- Hauptschleife ----------
+const uhr = new THREE.Clock();
+const kamPos = new THREE.Vector3(0, 3, 30), kamBlick = new THREE.Vector3(0, 3, 0);
+const hv = new THREE.Vector3(), zielV = new THREE.Vector3(), mondN = MOND_RICHTUNG.clone().normalize();
+function schritt() {
+  // Filmmodus (nur für Aufnahmen): feste Schritte statt Echtzeit
+  const dt = window.__filmDt || Math.min(.05, uhr.getDelta()); const zeit = (zustand.zeit += dt);
+  const pa = meerGeo.attributes.position;
+  for (let i = 0; i < pa.count; i++) { const x = meerBasis[i * 3], z = meerBasis[i * 3 + 2]; pa.array[i * 3 + 1] = Math.sin(x * .08 + zeit * 1.2) * .25 + Math.cos(z * .06 + zeit * .9) * .2; }
+  pa.needsUpdate = true; meerGeo.computeVertexNormals();
+  // Mondspur liegt immer zwischen Betrachter und Mond auf dem Wasser
+  spur.position.set(Math.max(10, kamPos.x + 10), -1.05, kamPos.z); spur.rotation.y = Math.atan2(-mondN.x, -mondN.z);
+
+  if (zustand.modus === 'spiel' && !zustand.innen) {
+    const vor = eingabe.y + (tasten.ArrowUp || tasten.w ? 1 : 0) - (tasten.ArrowDown || tasten.s ? 1 : 0);
+    const dreh = eingabe.x + (tasten.ArrowRight || tasten.d ? 1 : 0) - (tasten.ArrowLeft || tasten.a ? 1 : 0);
+    sp.richtung -= Math.max(-1, Math.min(1, dreh)) * dt * 2.4;
+    sp.tempo = lerp(sp.tempo, Math.max(-.5, Math.min(1, vor)) * 7.5, Math.min(1, dt * 6));
+  } else if (zustand.modus === 'intro') { sp.tempo = zustand.intro > 1.5 ? 3.2 : 0; sp.richtung = Math.PI; }
+  else sp.tempo = lerp(sp.tempo, 0, Math.min(1, dt * 6));
+  sp.pos.x += Math.sin(sp.richtung) * sp.tempo * dt; sp.pos.z += Math.cos(sp.richtung) * sp.tempo * dt;
+  const aufSteg = sp.pos.z < -144.5 && sp.pos.z > -147.5;
+  sp.pos.x = Math.max(-6.2, Math.min(aufSteg ? 22 : 7.6, sp.pos.x));
+  sp.pos.z = Math.max(-LAENGE + 8, Math.min(20, sp.pos.z));
+  if (zustand.modus === 'spiel' && sp.pos.z > 6.8 && sp.pos.z < 9.2) sp.pos.x = Math.max(-2.2, Math.min(2.2, sp.pos.x));
+  const dB = Math.hypot(sp.pos.x, sp.pos.z + 42); if (dB < 3.6) { const f = 3.6 / Math.max(.01, dB); sp.pos.x *= f; sp.pos.z = -42 + (sp.pos.z + 42) * f; }
+  sp.vy -= 22 * dt; sp.pos.y += sp.vy * dt;
+  if (sp.pos.y <= 0) { sp.pos.y = 0; sp.vy = 0; sp.amBoden = true; sp.sprung = 0; } else sp.amBoden = false;
+  if (spieler) { spieler.position.copy(sp.pos); spieler.rotation.y = sp.richtung; figurBewegen(spieler, zeit, sp.amBoden ? Math.abs(sp.tempo) / 4 : 0); }
+  if (sp.fliegend && spieler && zufall() < .25) funkenRegen(sp.pos.x, .2, sp.pos.z, 1, 0xff9ac8);
+  // Intro: Tor geht auf, Kamera fährt hindurch
+  if (zustand.modus === 'intro') {
+    zustand.intro += dt;
+    const a = torTuer.userData.angel; a.rotation.y = lerp(a.rotation.y, -1.9, Math.min(1, dt * .9));
+    $('#titel').style.opacity = zustand.intro > .6 && zustand.intro < 4 ? 1 : 0;
+    if (zustand.intro > 5.4) { zustand.modus = 'spiel'; document.body.classList.remove('kino'); $('#stick').hidden = $('#hoch').hidden = false; }
+  }
+  // Kamera
+  if (!kamZiel.aktiv) {
+    if (zustand.modus === 'intro') hv.set(0, 2.2 + zustand.intro * .25, 8 - Math.min(zustand.intro, 4) * .5);
+    else hv.set(-Math.sin(sp.richtung) * 7.5, 3.6, -Math.cos(sp.richtung) * 7.5);
+    zielV.copy(sp.pos).add(hv); zielV.x = Math.max(-6, zielV.x);
+    kamPos.lerp(zielV, Math.min(1, dt * (zustand.modus === 'intro' ? 1.5 : 3)));
+    zielV.set(sp.pos.x + Math.sin(sp.richtung) * 4, sp.pos.y + 1.8, sp.pos.z + Math.cos(sp.richtung) * 4);
+    kamBlick.lerp(zielV, Math.min(1, dt * 4));
+  }
+  if (zustand.ende && zustand.endeT < 6) zustand.endeT += dt;
+  kamera.position.copy(kamPos); kamera.lookAt(kamBlick);
+  mondLicht.target.position.copy(sp.pos); mondLicht.position.copy(sp.pos).addScaledVector(mondN, 80);
+  lichterNachfuehren(sp.pos);
+  // Sunny folgt in Wellen, beim Ende Ehrenrunde
+  if (zustand.ende && zustand.endeT < 6) zielV.set(sp.pos.x + Math.cos(zeit * 1.4) * 14, 12 + Math.sin(zeit * 2) * 2, sp.pos.z - 12 + Math.sin(zeit * 1.4) * 14);
+  else zielV.set(sp.pos.x + Math.sin(sp.richtung) * 6 + Math.cos(sp.richtung) * 3.5 + Math.sin(zeit * .8) * 1.5, 5.6 + Math.sin(zeit * 1.3) * .6, sp.pos.z + Math.cos(sp.richtung) * 6 - Math.sin(sp.richtung) * 3.5);
+  sunny.position.lerp(zielV, Math.min(1, dt * 1.5)); sunny.lookAt(kamera.position);
+  sunny.userData.fluegel.forEach((w, i) => { w.rotation.y = (i ? -1 : 1) * Math.sin(zeit * 6) * .6; });
+  fia.position.set(Math.sin(zeit * .6) * 5, 7.5 + Math.sin(zeit * 1.4), -42 + Math.cos(zeit * .6) * 5); fiaGlut.position.copy(fia.position);
+  for (const f of FUNKEN) {
+    if (f.weg) continue;
+    f.m.rotation.y += dt * 2; f.m.position.y = f.y + Math.sin(zeit * 2 + f.p) * .25;
+    zielV.copy(sp.pos); zielV.y += 1.2;
+    if (f.m.position.distanceTo(zielV) < 1.5) { f.weg = true; szene.remove(f.m); funkenRegen(f.m.position.x, f.m.position.y, f.m.position.z, 26); funkeDazu(); erlebt('fing einen goldenen Funken'); pruefeEnde(); }
+  }
+  for (const t of brunnenWasser) { const k = (zeit * .8 + t.userData.p) % 1; const r = .3 + k * 2.2; t.position.set(Math.cos(t.userData.a) * r, 3.4 + Math.sin(k * Math.PI) * 1.2 - k * 2.2, -42 + Math.sin(t.userData.a) * r); }
+  for (const b of briefe) { const k = (zeit * .08 + b.userData.p) % 1; b.position.set(-9.5 + k * 30, 13 + Math.sin(k * 9 + b.userData.p * 6) * 1.5 + k * 6, -125 + Math.sin(k * 6) * 3); b.rotation.set(Math.sin(zeit + b.userData.p * 9), zeit, 0); }
+  for (const b of boote) { b.position.y = -1.15 + Math.sin(zeit * 1.3 + b.userData.p) * .15; b.rotation.z = Math.sin(zeit + b.userData.p) * .05; }
+  for (const b of blasen) { const k = (zeit * .25 + b.userData.p) % 1; b.position.set(b.userData.x + Math.sin(k * 12) * .3, -8 + k * 7, b.userData.z); }
+  steine.forEach((s, i) => { s.material.opacity = .5 + Math.sin(zeit * 2 + i) * .4; });
+  schuhe.forEach((s, i) => { s.position.y = 1.3 + Math.sin(zeit * 2 + i) * .08; });
+  for (const n of npc) figurBewegen(n.f, zeit, 0);
+  if (ortObjekte.hasi) ortObjekte.hasi.position.y = .9 + Math.abs(Math.sin(zeit * 2.5)) * .12;
+  zustand.partikel = zustand.partikel.filter(p => { p.v.y -= 9 * dt; p.s.position.addScaledVector(p.v, dt); p.t -= dt * .9; p.s.material.opacity = Math.max(0, p.t); if (p.t <= 0) { szene.remove(p.s); return false; } return true; });
+
+  blaseEl.hidden = true; schildEl.hidden = true;
+  if (zustand.modus === 'spiel' && !zustand.innen) {
+    const nah = naechsterOrt();
+    const zeigeRein = nah && nah.d < 6.5 && nah.o.rein;
+    $('#rein').hidden = !zeigeRein; if (zeigeRein) $('#rein').textContent = nah.o.id === 'hafen' ? 'Abtauchen' : 'Rein';
+    if (nah && nah.d < 14) { const s = aufBildschirm(nah.o.x ?? -2, 7.5, nah.o.z); if (s.sichtbar) { schildEl.hidden = false; schildEl.textContent = nah.o.name; schildEl.style.left = Math.max(90, Math.min(innerWidth - 90, s.x)) + 'px'; schildEl.style.top = Math.max(60, s.y) + 'px'; } }
+    let sprecher = null, best = 7;
+    for (const n of npc) { const d = Math.hypot(n.x - sp.pos.x, n.z - sp.pos.z); if (d < best) { best = d; sprecher = n; } }
+    if (nah && nah.o.hasi && nah.d < 6) sprecher = { x: -3.6, z: nah.o.z, satz: '♥ ✦ ☾', hoehe: 3.2 };
+    if (sprecher) { const s = aufBildschirm(sprecher.x, sprecher.hoehe || 3.4, sprecher.z); if (s.sichtbar) { blaseEl.hidden = false; blaseEl.textContent = sprecher.satz; blaseEl.style.left = Math.max(120, Math.min(innerWidth - 120, s.x)) + 'px'; blaseEl.style.top = Math.max(90, s.y) + 'px'; } }
+  } else $('#rein').hidden = true;
+
+  renderer.render(szene, kamera);
+  if (!window.__filmDt) requestAnimationFrame(schritt);
+}
+
+// ---------- Start ----------
+const WAHL = [['diego', 'Diego'], ['fia', 'Fia'], ['tinko', 'Tinko'], ['nova', 'Nova'], ['jackie', 'Jackie'], ['otti', 'Otti'], ['kay', 'Kay'], ['kimo', 'Kimo']];
+let gewaehlt = 'diego';
+try { gewaehlt = localStorage.getItem('kiverse_spiel_figur') || 'diego'; } catch {}
+for (const [k, n] of WAHL) {
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === gewaehlt));
+  const i = document.createElement('img'); i.src = BILDER[k]; i.alt = ''; b.append(i, document.createTextNode(n));
+  b.onclick = () => { gewaehlt = k; document.querySelectorAll('#wahl button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+  $('#wahl').appendChild(b);
+}
+if (ORT_BILDER.tor) $('#start').style.backgroundImage = `linear-gradient(rgba(11,20,48,.2), rgba(11,20,48,.5)), url(${ORT_BILDER.tor})`;
+function anfangen() {
+  try { localStorage.setItem('kiverse_spiel_figur', gewaehlt); } catch {}
+  for (const n of npc.slice()) if ((n.o && n.o.figur === gewaehlt) || n.key === gewaehlt) { szene.remove(n.f); npc.splice(npc.indexOf(n), 1); }
+  spieler = figur(gewaehlt, gewaehlt === 'jackie' ? 0xff4f9a : 0xf08a4b, 1); szene.add(spieler);
+  $('#start').style.opacity = 0; setTimeout(() => $('#start').hidden = true, 900);
+  document.body.classList.add('kino'); zustand.modus = 'intro'; zustand.intro = 0;
+  klang(440); setTimeout(() => klang(660), 250); setTimeout(() => klang(880), 500);
+}
+$('#los').onclick = anfangen;
+anzeigen();
+$('#laden').hidden = true;
+requestAnimationFrame(schritt);
+window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, springen, anfangen, schritt, tasten };
+</script>
+<script>
+  // Falls die 3D-Bibliothek nicht lädt (kein Internet), freundlich Bescheid geben
+  setTimeout(() => { const l = document.getElementById('laden'); if (l && !l.hidden) l.textContent = 'Das 3D-Städtchen braucht Internet. Bitte später nochmals öffnen.'; }, 12000);
 </script>
 </body>
 </html>
