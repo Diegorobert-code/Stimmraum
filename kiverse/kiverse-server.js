@@ -19,7 +19,11 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = parseInt(process.env.KIVERSE_PORT || '8787', 10);
-const WELT_CODE = process.env.KIVERSE_CODE || crypto.randomBytes(9).toString('base64url');
+// Schlüssel erneuern (Diego 19.10.): neue Werte liegen in daten/schluessel.json und gelten vor denen aus der Installation.
+const SCHLUESSEL_DATEI = require('path').join(process.env.KIVERSE_DATEN || __dirname, 'schluessel.json');
+let schluesselNeu = {};
+try { schluesselNeu = JSON.parse(fs.readFileSync(SCHLUESSEL_DATEI, 'utf8')); } catch {}
+let WELT_CODE = schluesselNeu.code || process.env.KIVERSE_CODE || crypto.randomBytes(9).toString('base64url');
 const MAX_NACHRICHTEN = 200;
 const MAX_TEXT = 4000;
 const MAX_FOTO = 120 * 1024; // Comic-Bild als data:-URL
@@ -53,7 +57,7 @@ const wohnungen = new Map(); // 'h1-3' -> bewohner-id
 // Diego hat einen Besitzer-Schlüssel (bei der Installation erzeugt). Damit erstellt er in der Welt
 // pro Person einen eigenen Einladungslink und kann ihn jederzeit widerrufen. Ohne gültigen Schlüssel
 // sieht man nur die Vorschau. Ist kein Besitzer-Schlüssel gesetzt (lokal), ist die Welt offen.
-const BESITZER = process.env.KIVERSE_BESITZER || '';
+let BESITZER = schluesselNeu.besitzer || process.env.KIVERSE_BESITZER || '';
 const GAESTE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'gaeste.json');
 let gaeste = [];
 try { gaeste = JSON.parse(fs.readFileSync(GAESTE_DATEI, 'utf8')); } catch {}
@@ -1325,6 +1329,18 @@ const server = http.createServer(async (req, res) => {
       const z = zugang(url.searchParams.get('k') || req.headers['x-kiverse-k']);
       if (!z) return json(res, 401, { fehler: 'Dieses KI-Verse ist privat. Bitte Diego um deinen Einladungslink.' });
       req.zugang = z;
+    }
+    // Neuer Besitzer-Link und neue Connector-Adresse (nur Diego, Knopf in der Welt). Die alten gelten sofort nicht mehr.
+    // Die neuen Werte gehen nur an Diegos Bildschirm zurück, nie in ein Protokoll.
+    if (url.pathname === '/api/schluessel-neu' && req.method === 'POST') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      const alt = BESITZER;
+      BESITZER = crypto.randomBytes(24).toString('base64url'); WELT_CODE = crypto.randomBytes(18).toString('base64url');
+      try { fs.writeFileSync(SCHLUESSEL_DATEI, JSON.stringify({ besitzer: BESITZER, code: WELT_CODE, seit: jetzt() }), { mode: 0o600 }); }
+      catch (e) { return json(res, 500, { fehler: 'Konnte die neuen Schlüssel nicht speichern: ' + e.message }); }
+      for (const z of zuhoerer) if (alt && z._k === alt) { try { z.end(); } catch {} zuhoerer.delete(z); }
+      const basis = 'https://' + String(req.headers.host || '').replace(/[^\w.:-]/g, '');
+      return json(res, 200, { link: `${basis}/?k=${BESITZER}`, mcp: `${basis}/mcp/${WELT_CODE}` });
     }
     if (url.pathname === '/api/update' && req.method === 'POST') return req.zugang.rolle === 'besitzer' ? json(res, 200, { text: await knopfUpdate() }) : json(res, 403, { fehler: 'Nur Diego.' });
     if (url.pathname === '/api/ich' && req.method === 'GET') return json(res, 200, req.zugang);

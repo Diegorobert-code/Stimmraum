@@ -1028,8 +1028,10 @@ function raumOeffnen(o, n) {
   raum.alt = { pos: n.f.position.clone(), rot: n.f.rotation.y }; raum.figur = n;
   n.f.position.set(RAUM_POS.x + 1.3, 0, RAUM_POS.z - 1.4); n.f.rotation.y = -.25; n.imRaum = true;
   szene.fog.density = .002; if (bloomPass) bloomPass.strength = .38;
-  kamZiel.pos.set(RAUM_POS.x + .4, 2.2, RAUM_POS.z + 5); kamZiel.blick.set(RAUM_POS.x + .4, 2.3, RAUM_POS.z - 1.4);
+  raumKamera();
 }
+// Im Hochformat (Handy) steht die Kamera weiter hinten und mittig auf der Figur
+function raumKamera() { const hoch = innerHeight > innerWidth, x = RAUM_POS.x + (hoch ? 1.2 : .4); kamZiel.pos.set(x, 2.2, RAUM_POS.z + (hoch ? 7.2 : 5)); kamZiel.blick.set(x, hoch ? 2.6 : 2.3, RAUM_POS.z - 1.4); }
 function raumBild(url, key) {
   const img = new Image(); img.crossOrigin = 'anonymous';
   img.onload = () => { raum.bildTex.image = img; raum.bildTex.needsUpdate = true; raum.bild.visible = true; };
@@ -1062,7 +1064,7 @@ function reinKamera(id) {
     else if (o.id === 'fabrik') { kamZiel.pos.set(FABRIK.x - 26, 13, FABRIK.z + 20); kamZiel.blick.set(FABRIK.x, 5, FABRIK.z); if (n) n.f.position.set(FABRIK.x - 6.5, 0, FABRIK.z + 5); }
     else if (o.id === 'wohnung') { kamZiel.pos.set(2, 2.6, o.z + 1); kamZiel.blick.set(-6.5, 2, o.z); }
     else if (o.id === 'kiosk') { kamZiel.pos.set(2.5, 2.4, o.z + 1); kamZiel.blick.set(-3.6, 1.6, o.z); }
-    else if (n && RAUM_ORTE.has(o.id) && NAMEN[figurVon(n)]) { if (raum.figur !== n) raumOeffnen(o, n); else { kamZiel.pos.set(RAUM_POS.x + .4, 2.2, RAUM_POS.z + 5); kamZiel.blick.set(RAUM_POS.x + .4, 2.3, RAUM_POS.z - 1.4); } }
+    else if (n && RAUM_ORTE.has(o.id) && NAMEN[figurVon(n)]) { if (raum.figur !== n) raumOeffnen(o, n); else { raumKamera(); } }
     else if (n && sicht.ich) { kamZiel.pos.set(n.x + 2.9, 1.7, n.z + .4); kamZiel.blick.set(n.x, 2.1, n.z); }
     else if (n) { kamZiel.pos.set(n.x + 4.2, 2.6, n.z + 1.2); kamZiel.blick.set(n.x, 2, n.z); }
   kamZiel.aktiv = true;

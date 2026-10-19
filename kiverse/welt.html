@@ -339,6 +339,9 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 @keyframes karteZumTisch { to { transform: translate(-50%, 40vh) scale(.1); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 @media (max-width: 480px) { .erklaer { display: none; } .kopf .hueter { display: none; } .figur { width: 62px; } .figur .koerper { width: 52px; height: 52px; } .sunny img { width: 60px; height: 60px; } .sunny { width: 76px; } }
+.schluesselBox { position: fixed; inset: 0; z-index: 200; background: rgba(6,10,26,.82); display: grid; place-items: center; padding: 16px; }
+.schluesselBox .innen { max-width: 440px; background: #13204a; border: 2px solid #f2c25b; border-radius: 18px; padding: 18px 20px; color: #f3ead8; }
+.schluesselBox a { color: #f2c25b; font-weight: 700; }
 </style>
 
 <header class="kopf">
@@ -354,6 +357,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="wissenKnopf" class="knopf" type="button" hidden>📚 Wissen</button>
     <button id="updateKnopf" class="knopf" type="button" hidden title="Neuste Version vom KI-Verse holen (nur du)">🔄 Update</button>
+    <button id="schluesselKnopf" class="knopf" type="button" hidden title="Neuer geheimer Link und neue Connector-Adresse (nur du)">🔑 Neue Schlüssel</button>
     <button id="schleifeKnopf" class="knopf" type="button" hidden>🔁 Schleife</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
@@ -2175,6 +2179,25 @@ Format: Hochformat 9:16.`;
     catch (e) { alert('Update ging nicht: ' + e.message); }
     finally { k.disabled = false; k.textContent = '🔄 Update'; }
   });
+  // Neue Schlüssel (Diego 19.10.): neuer geheimer Link + neue Connector-Adresse, die alten gelten sofort nicht mehr.
+  // Die neuen Werte erscheinen nur hier auf dem Bildschirm, mit Kopier-Knöpfen.
+  $('#schluesselKnopf').addEventListener('click', async () => {
+    if (!confirm('Neuen geheimen Link und neue Connector-Adresse machen? Der alte Link und der alte Connector gehen danach nicht mehr.')) return;
+    let r; try { r = await api('api/schluessel-neu', {}); } catch (e) { return alert('Ging nicht: ' + e.message); }
+    try { localStorage.setItem('kiverse_k', new URL(r.link).searchParams.get('k')); } catch {}
+    const box = document.createElement('div'); box.className = 'schluesselBox';
+    box.innerHTML = `<div class="innen"><h2>🔑 Neue Schlüssel</h2>
+      <p><b>1.</b> Tippe auf deinen neuen Link. Er öffnet das KI-Verse. Dann im Teilen-Menü «Zum Home-Bildschirm» und das alte Symbol löschen.</p>
+      <p><a id="sNeuLink" href="">Mein neues KI-Verse öffnen</a> <button type="button" class="knopf" data-kopie="link">Link kopieren</button></p>
+      <p><b>2.</b> Connector bei Claude (und Tinko) neu eintragen: alten löschen, neuen mit dieser Adresse anlegen.</p>
+      <p><button type="button" class="knopf gold" data-kopie="mcp">Connector-Adresse kopieren</button></p>
+      <p class="leise">Link und Adresse nirgends als Foto oder in einen Chat schicken. Sie stehen nur hier.</p>
+      <p><button type="button" class="knopf" data-zu>Fertig</button></p></div>`;
+    box.querySelector('#sNeuLink').href = r.link;
+    box.querySelectorAll('[data-kopie]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(r[b.dataset.kopie]); b.textContent = 'Kopiert ✓'; } catch { prompt('Kopieren:', r[b.dataset.kopie]); } });
+    box.querySelector('[data-zu]').onclick = () => { location.href = r.link; };
+    document.body.appendChild(box);
+  });
   $('#wissenKnopf').addEventListener('click', async () => {
     $('#wissen').hidden = false; $('#wissenInfo').textContent = '';
     try { $('#wissenText').value = (await api('api/wissen')).text || ''; } catch (e) { $('#wissenInfo').textContent = e.message; }
@@ -2233,7 +2256,7 @@ Format: Hochformat 9:16.`;
   fetch(mitK('api/welt'), { cache: 'no-store' }).then(r => { privat = r.status === 401; return r.ok ? r.json() : Promise.reject(); }).then(s => {
     if (!s || !Array.isArray(s.bewohner)) throw 0;
     z.live = true; const m = $('#modus'); m.textContent = 'Live'; m.classList.add('live'); liveStarten();
-    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#updateKnopf').hidden = ich.rolle !== 'besitzer'; $('#zentraleKnopf').hidden = ich.rolle !== 'besitzer' || !z.live; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
+    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#updateKnopf').hidden = ich.rolle !== 'besitzer'; $('#schluesselKnopf').hidden = ich.rolle !== 'besitzer'; $('#zentraleKnopf').hidden = ich.rolle !== 'besitzer' || !z.live; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
   }).catch(() => {
     vorschauStarten();
     if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }
