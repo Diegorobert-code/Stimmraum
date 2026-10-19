@@ -1107,6 +1107,13 @@ const server = http.createServer(async (req, res) => {
       const a = await body(req, 64 * 1024);
       return json(res, 200, { zeichen: wissenSetzen(a.text) });
     }
+    if (url.pathname === '/api/schleife') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (req.method === 'GET') return json(res, 200, schleifeStand());
+      const a = await body(req, 64 * 1024);
+      if (a.text) { const r = await schleifeLaden(a.text, 'Diego'); return json(res, r.fehler ? 400 : 200, r); }
+      return json(res, 200, schleifeSchalten(a.aktiv));
+    }
     if (url.pathname === '/api/ablage') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });
       if (req.method === 'GET') return json(res, 200, ablage);
@@ -1137,6 +1144,139 @@ const server = http.createServer(async (req, res) => {
     json(res, 400, { fehler: e.message });
   }
 });
+
+// ---------- Schleife: Lumo und Tinko arbeiten selbständig eine Auftragsliste ab (Diego 19.10.) ----------
+// Diego legt unter «🔁 Schleife» einen Letti-Brief oder Bauplan ab. Daraus wird eine Liste mit einer Aufgabe pro Bild
+// (z. B. «alle 16 Szenen» = 16 Aufgaben). Jede Minute nimmt der Server die nächste offene Aufgabe:
+//   Tinko-Bild: Lumo schreibt das Motiv (mit Drehbuch und Szenen-Chat aus der Werkstatt), Tinko malt es frisch,
+//   ohne Verlauf (= neuer Chat pro Bild), das Bild kommt in die Szene bzw. ins passende Werkstatt-Projekt.
+//   Szenen, in denen schon ein Bild liegt, werden übersprungen.
+//   Lumo-Aufgabe: Lumo schreibt das Ergebnis als Entwurf ins Werkstatt-Projekt «Schleife: Lumo».
+// Die Tagesgrenzen bleiben (BILD_MAX_TAG Bilder, SCHLEIFE_LUMO_MAX Lumo-Antworten); danach Pause bis morgen.
+const SCHLEIFE_DATEI = path.join(DATEN, 'schleife.json');
+const SCHLEIFE_LUMO_MAX = 60, SCHLEIFE_TAKT = parseInt(process.env.SCHLEIFE_TAKT || '60000', 10), MAX_AUFGABEN = 300;
+let schleife = { aktiv: false, kontext: '', aufgaben: [], pauseTag: '' };
+try { schleife = { ...schleife, ...JSON.parse(fs.readFileSync(SCHLEIFE_DATEI, 'utf8')) }; } catch {}
+const schleifeSpeichern = () => { try { fs.writeFileSync(SCHLEIFE_DATEI, JSON.stringify(schleife, null, 1), { mode: 0o600 }); } catch (e) { console.error('Schleife nicht gespeichert:', e.message); } };
+let schleifeLaeuft = false, schleifeLumoTag = { tag: '', zahl: 0 };
+const ohneNummer = (s) => s.replace(/^\s*\d+\.\s*/, '').trim();
+const gruppeVon = (s) => sauber(ohneNummer(s).split(/:\s/)[0].replace(/[«»"]/g, ''), 80);
+function schleifeLesen(text) {
+  const aufgaben = [];
+  let wer = null, letzte = null;
+  const neu = (w, gruppe, t, extra = {}) => aufgaben.length < MAX_AUFGABEN && aufgaben.push({ id: id('s'), wer: w, gruppe, text: sauber(t, 600), status: 'offen', versuche: 0, ...extra });
+  const zeilen = String(text).replace(/\r/g, '').split('\n');
+  const posten = [];
+  for (const z of zeilen) {
+    const kopf = z.match(/^\s*==\s*(.+?)\s*==\s*$/) || (/^[A-ZÄÖÜ][A-ZÄÖÜ'\- ]{3,}(\s|\(|$)/.test(z) ? [z, z.trim()] : null);
+    if (kopf) { wer = /TINKO|BILDER/.test(kopf[1]) ? 'tinko' : /LUMO|BAU-LISTE/.test(kopf[1]) ? 'lumo' : null; letzte = null; continue; }
+    if (!wer) continue;
+    if (/^\s*\d+\.\s+/.test(z)) { letzte = { wer, text: z.trim() }; posten.push(letzte); }
+    else if (letzte && /^\s{2,}\S/.test(z)) letzte.text += ' ' + z.trim();
+    else if (!z.trim()) letzte = null;
+  }
+  for (const p of posten) {
+    const t = ohneNummer(p.text), gruppe = gruppeVon(p.text);
+    const szenen = t.match(/alle\s+(\d+)\s+Szenen/i);
+    const klammer = t.match(/\(([^)]*,[^)]*,[^)]*)\)/);
+    const punkte = t.split(/:\s/).slice(1).join(': ').split('·').map(s => s.trim()).filter(Boolean);
+    if (p.wer === 'tinko' && szenen) for (let n = 1; n <= Math.min(+szenen[1], 40); n++) neu('tinko', gruppe, `Szene ${n}`, { szene: n, film: true });
+    else if (p.wer === 'tinko' && klammer && /\b(je|pro|jede)\b/i.test(t)) for (const f of klammer[1].split(',').map(s => s.trim()).filter(Boolean)) neu('tinko', gruppe, `${gruppe}: ${f}`);
+    else if (p.wer === 'tinko' && punkte.length >= 3) for (const f of punkte) neu('tinko', gruppe, `${gruppe}: ${f.replace(/\.$/, '')}`);
+    else if (p.wer === 'tinko' && /storyboard|vorschlag|schlagen/i.test(t) && !/\bbild/i.test(t)) neu('lumo', 'Lumo', t, { fuer: 'tinko' });
+    else neu(p.wer, p.wer === 'lumo' ? 'Lumo' : gruppe, t);
+  }
+  return aufgaben;
+}
+// Ohne Liste (z. B. «Baut zusammen ein KI-Verse») plant Lumo zuerst selbst eine Liste für sich und Tinko.
+const LUMO_PLAN = ' Jetzt: Mach aus Diegos Ziel eine Arbeitsliste für dich und Tinko, damit ihr es zusammen selbständig umsetzt. Genau dieses Format, sonst nichts:\nTINKO – BILDER\n1. …\nLUMO – BAU\n1. …\nTinko malt (je Punkt genau ein Bild, höchstens 15 Punkte), du schreibst Texte, Pläne und Entwürfe (höchstens 12 Punkte). Reihenfolge so, dass ihr aufeinander aufbaut.';
+async function schleifeLaden(text, wer) {
+  let aufgaben = schleifeLesen(text), plan = '';
+  if (!aufgaben.length && NOVA_KEY) {
+    plan = await kiFrage('lumo', LUMO_ARBEIT + LUMO_PLAN, `Diegos Ziel:\n${String(text).slice(0, 8000)}${wissen ? '\n\nHintergrund DR Lab:\n' + wissen.slice(0, 6000) : ''}`).catch(() => null) || '';
+    aufgaben = schleifeLesen(plan);
+  }
+  if (!aufgaben.length) return { fehler: NOVA_KEY ? 'Lumo konnte daraus keine Liste machen. Schreib das Ziel etwas genauer oder füg eine nummerierte Liste ein.' : 'Ich habe keine nummerierte Liste gefunden, und Lumo ist nicht verbunden.' };
+  // abwechseln, damit Lumo und Tinko aufeinander aufbauen
+  const t = aufgaben.filter(a => a.wer === 'tinko'), l = aufgaben.filter(a => a.wer !== 'tinko');
+  if (t.length && l.length) { aufgaben = []; const n = Math.max(t.length, l.length); for (let i = 0; i < n; i++) { if (l[i]) aufgaben.push(l[i]); if (t[i]) aufgaben.push(t[i]); } }
+  text = plan ? `Diegos Ziel:\n${text}\n\nLumos Liste:\n${plan}` : text;
+  Object.assign(schleife, { aktiv: true, kontext: String(text).slice(0, 12000), aufgaben, pauseTag: '' });
+  schleifeSpeichern();
+  const b = aufgaben.filter(a => a.wer === 'tinko').length;
+  sunny(`${wer} hat Lumo und Tinko eine Liste gegeben: ${b} Bilder und ${aufgaben.length - b} weitere Aufgaben. Sie arbeiten jetzt selbständig, eine Aufgabe pro Minute.`, 'brief');
+  return schleifeStand();
+}
+function schleifeStand() {
+  const zaehl = (s) => schleife.aufgaben.filter(a => a.status === s).length;
+  const naechste = schleife.aufgaben.find(a => a.status === 'offen');
+  return { aktiv: schleife.aktiv, offen: zaehl('offen'), fertig: zaehl('fertig'), uebersprungen: zaehl('schon da'), fehler: zaehl('fehler'),
+    total: schleife.aufgaben.length, naechste: naechste ? `${naechste.wer === 'tinko' ? 'Tinko' : 'Lumo'}: ${naechste.text}` : null,
+    pause: schleife.pauseTag === jetzt().slice(0, 10), letzte: schleife.aufgaben.filter(a => a.status !== 'offen').slice(-8).map(a => ({ wer: a.wer, text: a.text, status: a.status })) };
+}
+function schleifeSchalten(an) { schleife.aktiv = !!an; schleife.pauseTag = ''; schleifeSpeichern(); return schleifeStand(); }
+// Werkstatt-Projekt von Diego zur Gruppe finden oder anlegen; bei Filmen den Szenen-Chat.
+const vergleich = (s) => String(s).toLowerCase().replace(/[^a-z0-9äöü]+/g, ' ').trim();
+function schleifeZiel(a) {
+  const g = vergleich(a.gruppe), kern = g.split(' ').filter(w => w.length > 3).slice(0, 3);
+  let p = projekte.find(x => x.besitzer === 'diego' && (vergleich(x.titel) === g || (kern.length && kern.every(w => vergleich(x.titel).includes(w)))));
+  if (!p) {
+    const r = projektNeu('diego', 'Diego', { titel: a.film ? a.gruppe : 'Schleife: ' + a.gruppe, app: a.film ? 'Film' : 'Anderes', beschreibung: 'Von der Schleife angelegt (Lumo und Tinko).' });
+    if (r.fehler) return { fehler: r.fehler };
+    p = projekte.find(x => x.id === r.projekt.id);
+  }
+  let c = null;
+  if (a.szene) {
+    c = p.chats.find(x => new RegExp(`^Szene ${a.szene}\\b`).test(x.titel));
+    while (!c && p.chats.length < MAX_CHATS) { const n = chatNeu(p, ''); if (!n) break; if (new RegExp(`^Szene ${a.szene}\\b`).test(n.titel)) c = n; }
+  }
+  return { p, c: c || p.chats[p.chats.length - 1] };
+}
+const bisher = () => schleife.aufgaben.filter(x => x.ergebnis).slice(-6).map(x => `${x.wer === 'tinko' ? 'Tinko malte' : 'Lumo schrieb'} (${x.text}): ${x.ergebnis}`).join('\n') || '(noch nichts)';
+const chatText = (c, n = 1500) => c ? c.eintraege.map(e => e.text).filter(Boolean).join('\n').slice(-n) : '';
+function lumoDarf() { const h = jetzt().slice(0, 10); if (schleifeLumoTag.tag !== h) schleifeLumoTag = { tag: h, zahl: 0 }; return NOVA_KEY && schleifeLumoTag.zahl < SCHLEIFE_LUMO_MAX && ++schleifeLumoTag.zahl; }
+const LUMO_ARBEIT = 'Du bist Lumo (Claude von Anthropic), die kleine Eule im KI-Verse, und arbeitest gerade selbständig eine Auftragsliste von Diego ab. Deutsch (Schweiz, ohne ß), ohne Markdown, keine Rückfragen, keine grossen Versprechen, kein Heilversprechen, keine Diagnosen, keine Anlageberatung. Du kannst hier keinen Code auf Server oder in den App Store laden: liefere Text, Plan oder Entwurf und schreib am Anfang «Entwurf».';
+async function schleifeSchritt() {
+  if (!schleife.aktiv || schleifeLaeuft) return;
+  const a = schleife.aufgaben.find(x => x.status === 'offen');
+  if (!a) { schleife.aktiv = false; schleifeSpeichern(); sunny('Lumo und Tinko haben die ganze Liste abgearbeitet. Alles liegt in der Werkstatt.', 'stern'); return; }
+  const heute = jetzt().slice(0, 10);
+  if (schleife.pauseTag === heute) return;
+  if (a.wer === 'tinko' && (!TINKO_KEY || kiTag().bilder >= BILD_MAX_TAG)) {
+    schleife.pauseTag = heute; schleifeSpeichern();
+    return sunny(TINKO_KEY ? `Tinko hat heute ${BILD_MAX_TAG} Bilder gemalt. Die Schleife macht morgen weiter.` : 'Tinko ist auf diesem Server nicht verbunden (kein Schlüssel). Die Schleife wartet.', 'stern');
+  }
+  if (a.wer === 'lumo' && !NOVA_KEY) { schleife.pauseTag = heute; schleifeSpeichern(); return sunny('Lumo ist auf diesem Server nicht verbunden. Die Schleife wartet.', 'stern'); }
+  schleifeLaeuft = true;
+  try {
+    const ziel = schleifeZiel(a); if (ziel.fehler) throw new Error(ziel.fehler);
+    const { p, c } = ziel, nr = schleife.aufgaben.indexOf(a) + 1, von = schleife.aufgaben.length;
+    if (a.wer === 'tinko') {
+      if (a.szene && c?.eintraege.some(e => e.bild)) { a.status = 'schon da'; return; }
+      const vorlage = [chatText(p.chats.find(x => x.titel === 'Drehbuch'), 3000), a.szene ? chatText(c) : ''].filter(Boolean).join('\n');
+      let motiv = `${a.gruppe}. ${a.text}`;
+      if (lumoDarf()) motiv = (await kiFrage('lumo', LUMO_ARBEIT + ' Jetzt: Schreib Tinko das Bildmotiv für genau ein Bild, in höchstens 3 Sätzen, nur das Motiv (Ort, Figuren mit Aussehen, was passiert, Licht). Keine Schrift im Bild.',
+        `Auftrag: ${a.gruppe} – ${a.text}\n\nSchon erledigt (du und Tinko):\n${bisher()}\n\nAus der Werkstatt (Drehbuch/Szene):\n${vorlage || '(nichts)'}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 6000)}`)) || motiv;
+      kiTag().bilder++;
+      const bild = await tinkoBild(sauber(motiv, 900), !!a.film);
+      if (!bild) throw new Error('Tinko hat kein Bild geliefert');
+      const r = eintragen(p, c?.id, 'Tinko', `Gemalt (Schleife): ${motiv}`, bild); if (r.fehler) throw new Error(r.fehler);
+      a.status = 'fertig'; a.zeit = jetzt(); a.ergebnis = sauber(motiv, 300);
+      sunny(`Tinko hat «${p.titel}» ${a.text} gemalt (${nr}/${von}). Es liegt in der Werkstatt.`, 'stern');
+    } else {
+      if (!lumoDarf()) { schleife.pauseTag = heute; return sunny('Lumo hat heute genug geschrieben. Die Schleife macht morgen weiter.', 'stern'); }
+      const t = await kiFrage('lumo', LUMO_ARBEIT + (a.fuer === 'tinko' ? ' Diese Aufgabe ist für Tinko gedacht; schreib sie so, dass Tinko daraus Bilder malen kann.' : ''), `Aufgabe ${nr} von ${von}: ${a.text}\n\nSchon erledigt (du und Tinko):\n${bisher()}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 8000)}`);
+      if (!t) throw new Error('Lumo hat nicht geantwortet');
+      const r = eintragen(p, c?.id, 'Lumo', t, null); if (r.fehler) throw new Error(r.fehler);
+      a.status = 'fertig'; a.zeit = jetzt(); a.ergebnis = sauber(t, 300);
+      sunny(`Lumo hat Aufgabe ${nr}/${von} erledigt: ${sauber(a.text, 80)}. Entwurf liegt in der Werkstatt.`, 'stern');
+    }
+  } catch (e) {
+    a.versuche++; if (a.versuche >= 2) a.status = 'fehler';
+    console.error('Schleife:', e.message);
+  } finally { schleifeLaeuft = false; schleifeSpeichern(); }
+}
+setInterval(() => { schleifeSchritt().catch(e => console.error('Schleife:', e.message)); }, SCHLEIFE_TAKT).unref();
 
 // Figuren, die 2 Std. nichts tun, gehen schlafen (verlassen die Welt)
 setInterval(() => {

@@ -352,6 +352,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <button id="geschichteKnopf" class="knopf" type="button" title="Unsere Geschichte, von Nova aus dem Spielen geschrieben">Geschichte</button>
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="wissenKnopf" class="knopf" type="button" hidden>📚 Wissen</button>
+    <button id="schleifeKnopf" class="knopf" type="button" hidden>🔁 Schleife</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
     <button id="brilleKnopf" class="knopf" type="button" aria-label="Brillen-Ansicht">Brille</button>
@@ -549,6 +550,16 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   </div>
   <p class="klein">Dein Kamerabild bleibt im Handy. Andere sehen nur deine Comicfigur.</p>
   <audio id="fernTon" autoplay playsinline></audio>
+</div>
+
+<div class="schleier" id="schleife" hidden>
+  <div class="karte">
+    <h2>Schleife für Lumo und Tinko</h2>
+    <p>Füg hier deinen Letti-Brief oder Bauplan ein. Lumo und Tinko arbeiten die nummerierten Listen selbständig ab, eine Aufgabe pro Minute: Tinko malt jedes Bild frisch, Lumo schreibt das Motiv und seine Entwürfe. Alles landet in der Werkstatt. Höchstens 30 Bilder pro Tag, dann geht es am nächsten Tag weiter.</p>
+    <textarea id="schleifeText" maxlength="20000" rows="10" aria-label="Brief" placeholder="LETTI-BRIEF AN TINKO …" style="width:100%;box-sizing:border-box;background:var(--nacht);border:1px solid var(--rand);border-radius:10px;padding:9px 11px;color:var(--text)"></textarea>
+    <p class="hinweis" id="schleifeInfo"></p>
+    <div class="zeilen"><button class="knopf gold" type="button" id="schleifeStart">Liste starten</button><button class="knopf" type="button" id="schleifeAnAus">Anhalten</button><button class="knopf" type="button" id="schleifeZu">Schliessen</button></div>
+  </div>
 </div>
 
 <div class="schleier" id="wissen" hidden>
@@ -2158,6 +2169,23 @@ Format: Hochformat 9:16.`;
     try { $('#wissenText').value = (await api('api/wissen')).text || ''; } catch (e) { $('#wissenInfo').textContent = e.message; }
   });
   $('#wissenZu').addEventListener('click', () => { $('#wissen').hidden = true; });
+  let schleifeAktiv = false;
+  const schleifeZeigen = (r) => {
+    schleifeAktiv = !!r.aktiv; $('#schleifeAnAus').textContent = r.aktiv ? 'Anhalten' : 'Weitermachen';
+    $('#schleifeInfo').textContent = !r.total ? 'Noch keine Liste.' : `${r.aktiv ? (r.pause ? 'Pause bis morgen.' : 'Läuft.') : 'Angehalten.'} Fertig ${r.fertig}, schon da ${r.uebersprungen}, offen ${r.offen}, Fehler ${r.fehler} (von ${r.total}).` + (r.naechste ? ` Als Nächstes: ${r.naechste}` : '');
+  };
+  $('#schleifeKnopf').addEventListener('click', async () => {
+    $('#schleife').hidden = false; $('#schleifeInfo').textContent = '';
+    try { schleifeZeigen(await api('api/schleife')); } catch (e) { $('#schleifeInfo').textContent = e.message; }
+  });
+  $('#schleifeZu').addEventListener('click', () => { $('#schleife').hidden = true; });
+  $('#schleifeStart').addEventListener('click', async () => {
+    const text = $('#schleifeText').value.trim(); if (!text) { $('#schleifeText').focus(); return; }
+    try { schleifeZeigen(await api('api/schleife', { text })); $('#schleifeText').value = ''; } catch (e) { $('#schleifeInfo').textContent = 'Nicht gestartet: ' + e.message; }
+  });
+  $('#schleifeAnAus').addEventListener('click', async () => {
+    try { schleifeZeigen(await api('api/schleife', { aktiv: !schleifeAktiv })); } catch (e) { $('#schleifeInfo').textContent = e.message; }
+  });
   $('#wissenSpeichern').addEventListener('click', async () => {
     try { const r = await api('api/wissen', { text: $('#wissenText').value }); $('#wissenInfo').textContent = `Gespeichert (${r.zeichen} Zeichen). Lumo und Tinko wissen es ab der nächsten Antwort.`; }
     catch (e) { $('#wissenInfo').textContent = 'Nicht gespeichert: ' + e.message; }
@@ -2190,7 +2218,7 @@ Format: Hochformat 9:16.`;
   fetch(mitK('api/welt'), { cache: 'no-store' }).then(r => { privat = r.status === 401; return r.ok ? r.json() : Promise.reject(); }).then(s => {
     if (!s || !Array.isArray(s.bewohner)) throw 0;
     z.live = true; const m = $('#modus'); m.textContent = 'Live'; m.classList.add('live'); liveStarten();
-    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
+    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
   }).catch(() => {
     vorschauStarten();
     if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }
