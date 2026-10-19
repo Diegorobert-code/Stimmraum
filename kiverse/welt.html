@@ -417,6 +417,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <select id="anWen" aria-label="An wen"><option value="">an alle</option></select>
     <input type="text" id="sagenText" placeholder="Sag etwas ins KI-Verse …" maxlength="500" autocomplete="off" aria-label="Nachricht">
     <button class="knopf gold" type="submit">Senden</button>
+    <label class="knopf" id="ablageKnopf" title="Bild in die Ablage von Fia und Tinko legen" style="cursor:pointer" hidden>📎<input type="file" id="ablageBild" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
     <button class="knopf" type="button" id="brueckeKnopf" title="Verbindungsstück zur gewählten Figur bauen">Verbinden</button>
     <button class="knopf" type="button" id="verstehenKnopf" title="Verstehen-Raum mit dem gewählten Menschen öffnen">Verstehen</button>
   </form>
@@ -603,6 +604,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
         <button class="knopf" type="button" id="wsFertig">Fertig, in Hasis Kiosk</button>
         <button class="knopf" type="button" id="wsTuerKnopf">Jemanden einlassen</button>
         <button class="knopf" type="button" id="wsSparky">Bei Sparky testen</button>
+        <button class="knopf" type="button" id="wsMalen" hidden title="Tinko malt, was im Textfeld steht">🎨 Tinko malt</button>
         <button class="knopf gold" type="button" id="wsSchneiden" hidden>🎬 Fia schneidet</button>
       </div>
       <div class="ws-wahl" id="wsFilm" hidden></div>
@@ -880,6 +882,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     if (n.bruecke) { const t = document.createElement('span'); t.className = 'zu'; t.textContent = z.bruecken.get(n.bruecke)?.art === 'verstehen' ? ' · Verstehen-Raum' : ' · Verbindungsstück'; i.appendChild(t); }
     const ze = document.createElement('span'); ze.className = 'zeit'; ze.textContent = (n.zeit || new Date().toISOString()).slice(11, 16); i.appendChild(ze);
     const tx = document.createElement('div'); tx.textContent = n.text; i.appendChild(tx);
+    if (n.bild) { const im = document.createElement('img'); im.src = mitK('api/ablage/' + n.bild); im.alt = 'Bild aus der Ablage'; im.loading = 'lazy'; im.style.cssText = 'display:block;max-width:220px;border-radius:10px;margin-top:6px'; i.appendChild(im); }
     zl.append(m, i); protokoll.appendChild(zl); protokoll.scrollTop = protokoll.scrollHeight;
     const el = figuren.querySelector(`[data-id="${n.von}"]`) || (n.von === 'sunny' ? $('.sunny') : null);
     if (el) { document.querySelectorAll('.figur .blase').forEach(x => x.remove()); const bl = document.createElement('div'); bl.className = 'blase'; bl.textContent = n.text.length > 90 ? n.text.slice(0, 88) + '…' : n.text;
@@ -1286,6 +1289,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     s.bewohner.forEach(b => figurZeigen(b, false)); s.bruecken.forEach(brueckeZeigen); s.nachrichten.forEach(nachrichtZeigen);
     wohnungenZeigen(s.wohnungen || []);
     if (s.nova) novaZeigen(s.nova);
+    z.kis = s.kis || {}; $('#ablageKnopf').hidden = !z.live; $('#wsMalen').hidden = !(z.live && z.kis.tinko);
     z.geschichte = s.geschichte || [];
     z.ideen = s.ideen || []; ideenZeigen(z.ideen);
     $('#postListe').innerHTML = ''; z.briefe.clear(); (s.briefe || []).forEach(b => briefZeigen(b, false));
@@ -1872,6 +1876,24 @@ Format: Hochformat 9:16.`;
     const f = $('#wsBild').files[0]; if (!f) return;
     if (f.size > 3 * 1024 * 1024) { alert('Bild zu gross (höchstens 3 MB).'); $('#wsBild').value = ''; return; }
     const r = new FileReader(); r.onload = () => { ws.bild = r.result; const v = $('#wsBildVorschau'); v.src = r.result; v.hidden = false; }; r.readAsDataURL(f);
+  });
+  $('#ablageBild').addEventListener('change', () => {
+    const f = $('#ablageBild').files[0]; if (!f || !z.ich) return;
+    if (f.size > 3 * 1024 * 1024) { alert('Bild zu gross (höchstens 3 MB).'); $('#ablageBild').value = ''; return; }
+    const r = new FileReader();
+    r.onload = async () => {
+      try { await api('api/ablage', { id: z.ich.id, text: $('#sagenText').value.trim(), bild: r.result }); $('#sagenText').value = ''; }
+      catch (er) { nachrichtZeigen({ von: 'sunny', text: 'Das kam nicht in die Ablage: ' + er.message }); }
+      $('#ablageBild').value = '';
+    };
+    r.readAsDataURL(f);
+  });
+  $('#wsMalen').addEventListener('click', async () => {
+    const wunsch = $('#wsText').value.trim(); if (!wunsch) { $('#wsText').placeholder = 'Schreib hier, was Tinko malen soll …'; $('#wsText').focus(); return; }
+    const k = $('#wsMalen'); k.disabled = true; k.textContent = '🎨 Tinko malt …';
+    try { await ws.auftrag({ projekt: ws.projekt.id, malen: { chat: ws.chat, wunsch } }); $('#wsText').value = ''; wsOeffnen(ws.projekt.id, ws.chat); }
+    catch (er) { alert(er.message); }
+    k.disabled = false; k.textContent = '🎨 Tinko malt';
   });
   $('#wsText').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('#wsLetti').requestSubmit(); });
   $('#wsLetti').addEventListener('submit', async (e) => {

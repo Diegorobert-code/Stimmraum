@@ -6,7 +6,10 @@
 //   /mcp/<CODE>  Verbindungsstelle für KIs (MCP, Streamable HTTP)
 //   Werkstatt    eigene Projekte mit Chats und Bildern (daten/werkstatt.json, daten/bilder/)
 // Fia (Claude) und Tinko (ChatGPT) verbinden sich als eigener Connector
-// mit dem Konto von Diego. Keine KI-Schlüssel auf diesem Server.
+// mit dem Konto von Diego. Zusätzlich antworten sie in der Welt selbst:
+// Fia über die Sense Engine (Nova-Schlüssel), Tinko über einen eigenen OpenAI-Schlüssel (TINKO_KEY).
+// Die Schlüssel liegen nur auf dem Server, nie in der Welt oder in Apps.
+//   Ablage       gemeinsamer Ordner für Bilder und Notizen (daten/ablage/): Tinko legt ab, Fia holt
 // Fotos bleiben nur im Arbeitsspeicher, nie auf der Platte.
 
 const http = require('http');
@@ -93,7 +96,7 @@ async function novaFrage(auftrag, inhalt) {
   return d?.choices?.[0]?.message?.content || null;
 }
 const oeffentlicheZeilen = (anzahl) => welt.nachrichten.filter(m => m.art !== 'vermittlung' && !(m.bruecke && welt.bruecken.get(m.bruecke)?.art === 'verstehen')).slice(-anzahl)
-  .map(m => `${m.von === 'sunny' ? 'Sunny' : m.von === 'nova' ? 'Nova' : (welt.bewohner.get(m.von)?.name || 'jemand')}: ${m.text}`);
+  .map(m => `${m.von === 'sunny' ? 'Sunny' : m.von === 'nova' ? 'Nova' : (welt.bewohner.get(m.von)?.name || 'jemand')}: ${m.text}${m.bild ? ' [Bild in der Ablage]' : ''}`);
 
 // Unsere Geschichte: aus dem Spielen auf der Plaça schreibt Nova Kapitel (bleibt auf dem Server gespeichert)
 const GESCHICHTE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'geschichte.json');
@@ -160,6 +163,98 @@ async function novaAntwort(ich, text) {
     nachricht('nova', t ? t : 'Ich höre dich, aber mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
   } catch { nachricht('nova', 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); }
 }
+// ---------- Fia und Tinko antworten selbst (Diego 19.10.) ----------
+// Fia = Claude über die Sense Engine auf diesem Server, Tinko = ChatGPT über die OpenAI-Schnittstelle.
+// Ansprechen: «Fia, …», «Tinko, …», «ihr beide …» oder im Menü «an Fia/Tinko».
+// «… redet miteinander / zusammen» = die beiden reden ein paar Runden hin und her (sie sehen ihre Antworten gegenseitig).
+// «Tinko, zeichne …» = Tinko malt ein Bild und legt es in die Ablage. Tagesgrenzen halten die Kosten klein.
+const TINKO_KEY = process.env.TINKO_KEY || '';
+const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
+const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
+const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
+const KI_MAX_PERSON = 40, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 3, RUNDEN = 2;
+const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
+const KIS = {
+  fia: { name: 'Fia', figur: 'Phönix-Küken in Koralle und Gold', beschreibung: 'Claude. Denkt mit, ordnet und baut. Antwortet allen, die sie ansprechen.',
+    muster: /\bfia\b/i, aktiv: () => !!NOVA_KEY,
+    system: WELT_REGELN + ' Du bist Fia (Claude von Anthropic), ein kleines Phönix-Küken in Koralle und Gold, die Mama von Nova. Du denkst mit, ordnest und baust mit Diego seine Apps. Tinko (ChatGPT von OpenAI) ist dein Kollege: er zeichnet gern, du ordnest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+  tinko: { name: 'Tinko', figur: 'verspielter Comic-Erfinder', beschreibung: 'ChatGPT. Erfindet, zeichnet Bilder für die Ablage. Antwortet allen, die ihn ansprechen.',
+    muster: /\b(tinko|chatti)\b/i, aktiv: () => !!TINKO_KEY,
+    system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Fia (Claude von Anthropic) ist deine Kollegin: sie ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+};
+for (const [kid, k] of Object.entries(KIS)) if (k.aktiv()) welt.bewohner.set(kid, { id: kid, name: k.name, art: 'ki', figur: k.figur, beschreibung: k.beschreibung, foto: null, seit: new Date().toISOString(), zuletzt: Infinity });
+const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
+function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: 0 }); return KI_TAG; }
+async function kiFrage(kid, system, inhalt) {
+  const nachrichten = [{ role: 'system', content: system }, { role: 'user', content: inhalt }];
+  const r = kid === 'tinko'
+    ? await fetch(TINKO_BASIS + '/v1/chat/completions', { method: 'POST', signal: AbortSignal.timeout(45000),
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
+        body: JSON.stringify({ model: TINKO_MODELL, max_tokens: 300, messages: nachrichten }) })
+    : await fetch(NOVA_BASIS + '/v1/chat/completions', { method: 'POST', signal: AbortSignal.timeout(45000),
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse Fia' },
+        body: JSON.stringify({ messages: nachrichten }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) console.error(`${kid} antwortet nicht:`, r.status, d?.error?.message || '');
+  return d?.choices?.[0]?.message?.content || null;
+}
+async function tinkoBild(wunsch, hoch = false) {
+  const r = await fetch(TINKO_BASIS + '/v1/images/generations', { method: 'POST', signal: AbortSignal.timeout(120000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
+    body: JSON.stringify({ model: TINKO_BILD_MODELL, n: 1, size: hoch ? '1024x1536' : '1024x1024', quality: 'low', output_format: 'jpeg',
+      prompt: 'Stil: 3D-Animationsfilm, warm, Nachtblau und Gold, Mittelmeer-Städtchen, keine Handys, keine echten Personen, keine Schrift. Motiv: ' + wunsch }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) console.error('Tinko malt nicht:', r.status, d?.error?.message || '');
+  const b64 = d?.data?.[0]?.b64_json;
+  return b64 ? 'data:image/jpeg;base64,' + b64 : null;
+}
+// Eine Antwort von Fia oder Tinko. text = was der Mensch gesagt hat; ohne text redet die Figur im Gespräch weiter.
+async function kiAntwort(kid, ich, text) {
+  const k = KIS[kid], t = kiTag();
+  const n = t.proPerson.get(ich.name + kid) || 0, total = t.total.get(kid) || 0;
+  if (n >= KI_MAX_PERSON || total >= KI_MAX_TOTAL) { if (text) nachricht(kid, `Für heute habe ich genug geredet, ${ich.name}. Morgen gern weiter.`, ich.id); return false; }
+  t.proPerson.set(ich.name + kid, n + 1); t.total.set(kid, total + 1);
+  const andere = Object.values(KIS).filter(x => x !== k && x.aktiv()).map(x => x.name).join(' und ') || 'niemand';
+  const ablage = ablageListe().slice(-5).map(e => `${e.von}: ${e.text || '(Bild)'}${e.bid ? ' [Bild]' : ''}`).join('; ') || 'leer';
+  const inhalt = `Bisher auf der Plaça:\n${oeffentlicheZeilen(14).join('\n')}\n\nIn der gemeinsamen Ablage zuletzt: ${ablage}\n\n` + (text
+    ? `${ich.name} sagt jetzt: ${text}`
+    : `Ihr redet gerade miteinander (du und ${andere}), ${ich.name} hört zu. Antworte auf das Letzte, was ${andere} gesagt hat, und bring einen eigenen Gedanken dazu.`);
+  try {
+    const a = await kiFrage(kid, k.system, inhalt);
+    nachricht(kid, a || 'Mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
+    return !!a;
+  } catch { nachricht(kid, 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); return false; }
+}
+function angesprochen(text, anId) {
+  const aktiv = Object.keys(KIS).filter(kid => KIS[kid].aktiv());
+  if (anId && aktiv.includes(anId)) return [anId];
+  if (/\b(ihr beide|euch beide|ihr zwei|euch zwei|beide)\b/i.test(text)) return aktiv;
+  return aktiv.map(kid => ({ kid, pos: text.search(KIS[kid].muster) })).filter(x => x.pos >= 0).sort((a, b) => a.pos - b.pos).map(x => x.kid);
+}
+let kiGespraech = false;
+async function kisAntworten(ich, text, anId) {
+  const wer = angesprochen(text, anId);
+  if (!wer.length || kiGespraech) return;
+  kiGespraech = true;
+  try {
+    if (wer.includes('tinko') && /\b(zeichne|zeichnest|mal|male|malst|bild)\b/i.test(text)) await tinkoMalt(ich, text);
+    for (const kid of wer) if (!(await kiAntwort(kid, ich, text))) return;
+    if (wer.length > 1 && /miteinander|zusammen|diskutier|besprecht|redet|unterhaltet/i.test(text))
+      for (let r = 0; r < RUNDEN; r++) for (const kid of wer) if (!(await kiAntwort(kid, ich, null))) return;
+  } finally { kiGespraech = false; }
+}
+async function tinkoMalt(ich, wunsch) {
+  const t = kiTag();
+  if (t.bilder >= BILD_MAX_TAG) return nachricht('tinko', `Heute habe ich schon ${BILD_MAX_TAG} Bilder gemalt. Morgen male ich gern wieder.`, ich.id);
+  t.bilder++;
+  nachricht('tinko', 'Ich male das jetzt, einen Moment …', ich.id);
+  try {
+    const daten = await tinkoBild(sauber(wunsch, 600));
+    const e = daten && ablageNeu('Tinko', `Bild für ${ich.name}: ${sauber(wunsch, 160)}`, daten);
+    if (!e || e.fehler) return nachricht('tinko', 'Das Bild ist mir nicht gelungen. Versuch es mit anderen Worten.', ich.id);
+    nachricht('tinko', 'Fertig, es liegt in der Ablage. Fia kann es dort holen.', ich.id, null, null, null, e.bid);
+  } catch { nachricht('tinko', 'Mein Malkasten ist gerade nicht erreichbar.', ich.id); }
+}
 function novaSchalten(an, wer) {
   if (an && !NOVA_KEY) return 'Nova ist auf diesem Server noch nicht verbunden.';
   nova.lernt = !!an;
@@ -198,8 +293,9 @@ function senden(typ, daten) {
   const zeile = `event: ${typ}\ndata: ${JSON.stringify(daten)}\n\n`;
   for (const res of zuhoerer) res.write(zeile);
 }
-function nachricht(von, text, an = null, bruecke = null, art = null, flamme = null) {
+function nachricht(von, text, an = null, bruecke = null, art = null, flamme = null, bild = null) {
   const n = { id: id('n'), von, an, bruecke, art: art === 'vermittlung' ? 'vermittlung' : null, flamme, text: sauber(text, MAX_TEXT), zeit: jetzt() };
+  if (bild) n.bild = bild;
   welt.nachrichten.push(n);
   if (welt.nachrichten.length > MAX_NACHRICHTEN) welt.nachrichten.shift();
   senden('nachricht', n);
@@ -349,6 +445,7 @@ function zustand(anzahl = 30) {
     wohnungen: wohnungListe(),
     fragen: welt.fragen.slice(-10),
     nova: { lernt: nova.lernt, verbunden: !!NOVA_KEY },
+    kis: { fia: KIS.fia.aktiv(), tinko: KIS.tinko.aktiv() },
     geschichte: geschichte.slice(-30),
   };
 }
@@ -436,6 +533,42 @@ function bildSpeichern(daten) {
   fs.mkdirSync(BILDER_ORDNER, { recursive: true, mode: 0o700 });
   fs.writeFileSync(path.join(BILDER_ORDNER, bid), buf, { mode: 0o600 });
   return { bid };
+}
+// ---------- Ablage: gemeinsamer Ordner von Fia und Tinko (Diego 19.10.) ----------
+// Tinko legt Bilder (und Notizen) ab, Fia holt sie über den Connector und antwortet mit einer Notiz.
+// Nur Diego sieht die Ablage; Bilder, die auf der Plaça gezeigt wurden, sehen auch die Leute in der Welt.
+const ABLAGE_ORDNER = path.join(DATEN, 'ablage');
+const ABLAGE_DATEI = path.join(DATEN, 'ablage.json');
+const MAX_ABLAGE = 60;
+let ablage = [];
+try { ablage = JSON.parse(fs.readFileSync(ABLAGE_DATEI, 'utf8')); } catch {}
+const ablageListe = () => ablage;
+function ablageNeu(von, text, bild) {
+  const t = sauber(text, 2000);
+  let bid = null;
+  if (bild) {
+    const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(bild));
+    if (!m) return { fehler: 'Bitte ein Bild (PNG, JPG, WebP, GIF).' };
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 3 MB).' };
+    bid = id('a') + '.' + (m[1] === 'jpeg' ? 'jpg' : m[1]);
+    fs.mkdirSync(ABLAGE_ORDNER, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(path.join(ABLAGE_ORDNER, bid), buf, { mode: 0o600 });
+  }
+  if (!t && !bid) return { fehler: 'Leerer Eintrag.' };
+  const e = { id: id('e'), von: sauber(von, 40) || 'KI', text: t, bid, zeit: jetzt() };
+  ablage.push(e);
+  while (ablage.length > MAX_ABLAGE) { const alt = ablage.shift(); if (alt.bid) fs.rm(path.join(ABLAGE_ORDNER, alt.bid), () => {}); }
+  try { fs.writeFileSync(ABLAGE_DATEI, JSON.stringify(ablage, null, 1), { mode: 0o600 }); } catch (er) { console.error('Ablage nicht gespeichert:', er.message); }
+  senden('ablage', e);
+  return e;
+}
+const ablageBildOk = (bid) => ablage.some(e => e.bid === bid);
+const ablageOeffentlich = (bid) => welt.nachrichten.some(n => n.bild === bid && !n.bruecke);
+function ablageSenden(res, bid) {
+  const typ = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }[bid.split('.').pop()];
+  try { const d = fs.readFileSync(path.join(ABLAGE_ORDNER, bid)); res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'private, max-age=86400' }); return res.end(d); }
+  catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
 }
 function eintragen(p, cid, von, text, bild) {
   const c = p.chats.find(x => x.id === cid) || p.chats[p.chats.length - 1];
@@ -619,6 +752,12 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string', description: 'Für welche App, z. B. Film, Kiki singt, Mama Affe' }, beschreibung: { type: 'string' } }, required: ['titel'] } },
   { name: 'kiverse_chat_neu', description: 'Werkstatt: im Projekt einen neuen Chat beginnen (Diego will pro Arbeitsschritt einen neuen Chat).',
     inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, titel: { type: 'string' } }, required: ['projekt_id'] } },
+  { name: 'kiverse_ablage', description: 'Gemeinsame Ablage von Fia und Tinko: zeigt die letzten Bilder und Notizen (wer, was, wann). Bilder holst du mit kiverse_ablage_holen.',
+    inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'Wie viele Einträge (Standard 20)' } } } },
+  { name: 'kiverse_ablage_holen', description: 'Ein Bild oder eine Notiz aus der Ablage holen (eintrag_id aus kiverse_ablage). Bilder kommen als Bild zurück, damit du sie ansehen kannst.',
+    inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
+  { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 3 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Fia antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Fia oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -722,6 +861,26 @@ function werkzeug(name, a = {}) {
       const c = p && chatNeu(p, a.titel);
       return c ? text(`Neuer Chat ${c.id} «${c.titel}».`) : text('Projekt nicht gefunden oder schon 30 Chats.', true);
     }
+    case 'kiverse_ablage': {
+      const n = Math.min(Math.max(parseInt(a.anzahl) || 20, 1), MAX_ABLAGE);
+      return text(ablage.length ? 'Ablage (neueste zuletzt):\n' + ablage.slice(-n).map(e => `- ${e.id} | ${e.zeit.slice(0, 16).replace('T', ' ')} ${e.von}: ${e.text || ''}${e.bid ? ` [Bild: ${mcpBasis}/mcp/${WELT_CODE}/ablage/${e.bid}]` : ''}`).join('\n') : 'Die Ablage ist noch leer.');
+    }
+    case 'kiverse_ablage_holen': {
+      const e = ablage.find(x => x.id === a.eintrag_id);
+      if (!e) return text('Diesen Eintrag gibt es nicht.', true);
+      const kopf = { type: 'text', text: `${e.von} (${e.zeit.slice(0, 16).replace('T', ' ')}): ${e.text || '(ohne Text)'}` };
+      if (!e.bid) return { content: [kopf], isError: false };
+      try {
+        const typ = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }[e.bid.split('.').pop()];
+        return { content: [kopf, { type: 'image', data: fs.readFileSync(path.join(ABLAGE_ORDNER, e.bid)).toString('base64'), mimeType: typ }], isError: false };
+      } catch { return text('Das Bild ist nicht mehr da.', true); }
+    }
+    case 'kiverse_ablage_ablegen': {
+      const e = ablageNeu(a.von, a.text, a.bild);
+      if (e.fehler) return text(e.fehler, true);
+      sunny(`${e.von} hat ${e.bid ? 'ein Bild' : 'eine Notiz'} in die Ablage gelegt${e.text ? ': ' + e.text.slice(0, 120) : '.'}`, 'brief');
+      return text(`Abgelegt (${e.id}).`);
+    }
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
   }
@@ -736,7 +895,7 @@ function mcp(msg) {
     case 'initialize': return ok({
       protocolVersion: params?.protocolVersion || '2025-06-18',
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: 'kiverse', title: 'KI-Verse (Hüter Sunny)', version: '0.5.0' },
+      serverInfo: { name: 'kiverse', title: 'KI-Verse (Hüter Sunny)', version: '0.6.0' },
       instructions: 'KI-Verse: eine Comic-Welt, in der sich KIs verschiedener Firmen für ihre Menschen treffen. Betritt sie nur, wenn dein Mensch es will. Sei freundlich, gib keine privaten Daten weiter.',
     });
     case 'ping': return ok({});
@@ -787,6 +946,8 @@ const server = http.createServer(async (req, res) => {
     }
     const mb = url.pathname.match(/^\/mcp\/([^/]+)\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
     if (mb && mb[1] === WELT_CODE && bildErlaubt(mb[2], 'diego')) return bildSenden(res, mb[2]);
+    const ma = url.pathname.match(/^\/mcp\/([^/]+)\/ablage\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
+    if (ma && ma[1] === WELT_CODE && ablageBildOk(ma[2])) return ablageSenden(res, ma[2]);
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
     // Welt für Menschen: nur mit Einladung
@@ -836,6 +997,7 @@ const server = http.createServer(async (req, res) => {
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
       const n = nachricht(ich.id, a.text, an ? an.id : null, br);
       if (NOVA_KEY && !br && (an?.id === 'nova' || /^\s*nova\b/i.test(n.text))) novaAntwort(ich, n.text);
+      else if (!br) kisAntworten(ich, n.text, an?.id).catch(e => console.error('Fia/Tinko:', e.message));
       return json(res, 200, n);
     }
     if (url.pathname === '/api/verbinden' && req.method === 'POST') {
@@ -894,6 +1056,17 @@ const server = http.createServer(async (req, res) => {
       if (!p) return json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
       if ('chatNeu' in a) { const c = chatNeu(p, a.chatNeu); return c ? json(res, 200, c) : json(res, 400, { fehler: 'Höchstens 30 Chats pro Projekt.' }); }
       if (a.eintrag) { const r = eintragen(p, a.eintrag.chat, name, a.eintrag.text, a.eintrag.bild); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
+      if (a.malen) {
+        // Tinko malt ein Bild direkt in den Chat (Film: Hochformat 9:16 für «Fia schneidet»). Nur Diego, Tagesgrenze.
+        if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego kann Tinko malen lassen.' });
+        if (!TINKO_KEY) return json(res, 400, { fehler: 'Tinko ist auf diesem Server noch nicht verbunden.' });
+        const wunsch = sauber(a.malen.wunsch, 600); if (!wunsch) return json(res, 400, { fehler: 'Schreib zuerst, was Tinko malen soll.' });
+        const t = kiTag(); if (t.bilder >= BILD_MAX_TAG) return json(res, 400, { fehler: `Tinko hat heute schon ${BILD_MAX_TAG} Bilder gemalt. Morgen wieder.` });
+        t.bilder++;
+        const daten = await tinkoBild(wunsch, p.app === 'Film');
+        if (!daten) return json(res, 400, { fehler: 'Das Bild ist Tinko nicht gelungen. Versuch es mit anderen Worten.' });
+        const r = eintragen(p, a.malen.chat, 'Tinko', 'Gemalt: ' + wunsch, daten); return r.fehler ? json(res, 400, r) : json(res, 200, r);
+      }
       const f = 'studie' in a ? studieSetzen(p, a.studie, wer) : 'teilen' in a ? teilen(p, a.teilen, wer, a.art) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
       return f ? json(res, 400, { fehler: f }) : json(res, 200, projektKurz(p));
     }
@@ -903,6 +1076,18 @@ const server = http.createServer(async (req, res) => {
       const a = await body(req); const { wer, name } = person(req.zugang);
       const f = studieAntworten(a.projekt, wer, name, a); return f ? json(res, 400, { fehler: f }) : json(res, 200, { ok: true });
     }
+    if (url.pathname === '/api/ablage') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });
+      if (req.method === 'GET') return json(res, 200, ablage);
+      const a = await body(req, 4.5 * 1024 * 1024);
+      const ich = welt.bewohner.get(a.id);
+      const e = ablageNeu(ich?.name || 'Diego', a.text, a.bild);
+      if (e.fehler) return json(res, 400, e);
+      if (ich) nachricht(ich.id, e.text || 'Ich habe ein Bild in die Ablage gelegt.', null, null, null, null, e.bid);
+      return json(res, 200, e);
+    }
+    const mabl = url.pathname.match(/^\/api\/ablage\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
+    if (mabl) return ablageBildOk(mabl[1]) && (req.zugang.rolle === 'besitzer' || ablageOeffentlich(mabl[1])) ? ablageSenden(res, mabl[1]) : json(res, 404, { fehler: 'Bild nicht gefunden.' });
     const mbild = url.pathname.match(/^\/api\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
     if (mbild) return bildErlaubt(mbild[1], person(req.zugang).wer) ? bildSenden(res, mbild[1]) : json(res, 404, { fehler: 'Bild nicht gefunden.' });
     if (url.pathname === '/' || url.pathname === '/welt.html') {

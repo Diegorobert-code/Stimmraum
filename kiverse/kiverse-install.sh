@@ -26,6 +26,23 @@ if [ -f /etc/sense-engine.env ]; then
   [ -n "$K" ] && printf 'NOVA_KEY=%s\n' "$K" > $NOVA_ENV
 fi
 chmod 600 $NOVA_ENV; chown kiverse $NOVA_ENV
+# Tinko (ChatGPT) antwortet selbst, wenn ein OpenAI-Schlüssel da ist. Eingabe unsichtbar, nur auf dem Server.
+TINKO_ENV=$ORDNER/tinko.env
+touch $TINKO_ENV; chmod 600 $TINKO_ENV; chown root:root $TINKO_ENV
+if [ -r /dev/tty ]; then
+  if [ -s $TINKO_ENV ]; then echo "Tinko hat schon einen Schlüssel (Enter = behalten)."; fi
+  printf 'OpenAI-Schlüssel für Tinko einfügen oder tippen (man sieht nichts), dann Enter. Nur Enter = überspringen: '
+  read -rs TK < /dev/tty || TK=""
+  echo
+  TK=$(printf '%s' "$TK" | tr -d '[:space:]')
+  if [ -n "$TK" ]; then
+    H=$(mktemp); chmod 600 "$H"; printf 'Authorization: Bearer %s\n' "$TK" > "$H"
+    C=$(curl -s -o /dev/null -w '%{http_code}' -H @"$H" https://api.openai.com/v1/models || echo 000); rm -f "$H"
+    if [ "$C" = "200" ]; then printf 'TINKO_KEY=%s\n' "$TK" > $TINKO_ENV; echo "Tinko-Schlüssel funktioniert und ist gespeichert."
+    else echo "Dieser Schlüssel geht nicht (Antwort $C). Nichts gespeichert, bitte Installationszeile nochmals."; fi
+  fi
+  unset TK
+fi
 cat > /etc/systemd/system/kiverse.service <<UNIT
 [Unit]
 Description=KI-Verse (Hueter Sunny)
@@ -34,6 +51,7 @@ After=network.target
 User=kiverse
 Environment=KIVERSE_PORT=8787
 EnvironmentFile=-$ORDNER/nova.env
+EnvironmentFile=-$ORDNER/tinko.env
 ExecStart=/bin/sh -c 'KIVERSE_CODE=\$(cat $CODE_DATEI) KIVERSE_BESITZER=\$(cat $BES_DATEI) KIVERSE_DATEN=$ORDNER/daten exec node $ORDNER/kiverse-server.js'
 Restart=always
 [Install]
@@ -44,6 +62,8 @@ systemctl daemon-reload && systemctl enable kiverse && systemctl restart kiverse
 command -v ufw >/dev/null && ufw allow 80,443/tcp || true
 echo
 echo "KI-Verse läuft:  https://$DOMAIN/"
+[ -s /opt/kiverse/nova.env ] && echo "Fia antwortet selbst: ja" || echo "Fia antwortet selbst: nein (Sense Engine fehlt)"
+[ -s $TINKO_ENV ] && echo "Tinko antwortet selbst: ja" || echo "Tinko antwortet selbst: nein (kein Schlüssel)"
 echo "Connector-Adresse für Fia (Claude) und Tinko (ChatGPT) – NICHT in den Chat kopieren:"
 echo "  https://$DOMAIN/mcp/$(cat $CODE_DATEI)"
 echo
