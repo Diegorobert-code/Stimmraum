@@ -417,7 +417,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <div class="protokoll" id="protokoll" aria-live="polite"></div>
   <form class="eingabe" id="sagenForm">
     <select id="anWen" aria-label="An wen"><option value="">an alle</option></select>
-    <input type="text" id="sagenText" placeholder="Sag etwas ins KI-Verse …" maxlength="500" autocomplete="off" aria-label="Nachricht">
+    <input type="text" id="sagenText" placeholder="Sag etwas ins KI-Verse …" maxlength="4000" autocomplete="off" aria-label="Nachricht">
     <button class="knopf gold" type="submit">Senden</button>
     <label class="knopf" id="ablageKnopf" title="Bild in die Ablage von Fia und Tinko legen" style="cursor:pointer" hidden>📎<input type="file" id="ablageBild" accept="image/png,image/jpeg,image/webp,image/gif" hidden></label>
     <button class="knopf" type="button" id="brueckeKnopf" title="Verbindungsstück zur gewählten Figur bauen">Verbinden</button>
@@ -1434,7 +1434,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     e.preventDefault();
     const text = $('#sagenText').value.trim(), an = $('#anWen').value || null; if (!text || !z.ich) return;
     $('#sagenText').value = '';
-    if (raum && !an) raum.emit('sagen', { t: text.slice(0, 500) }).catch(() => {});
+    if (raum && !an) raum.emit('sagen', { t: text.slice(0, 4000) }).catch(() => {});
     const br = an ? [...z.bruecken.values()].find(b => (b.a === z.ich.id && b.b === an) || (b.b === z.ich.id && b.a === an)) : null;
     if (z.live) { try { await api('api/sagen', { id: z.ich.id, text, an, bruecke: br?.id }); } catch (er) { nachrichtZeigen({ von: 'sunny', text: 'Das kam nicht an: ' + er.message }); } return; }
     vorschau.sag(z.ich.id, text, an, br?.id);
@@ -1714,7 +1714,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     raum.onPeers((ch) => fernFiguren(ch.peers), () => { raum = null; anrufKnoepfe(); });
     raum.on('sagen', (msg) => {
       if (msg.sameTab) return; const id = 'r_' + msg.peer; if (!z.bewohner.has(id)) return;
-      const t = String(msg.data?.t || '').slice(0, 500); if (t) nachrichtZeigen({ von: id, text: t, zeit: new Date().toISOString() });
+      const t = String(msg.data?.t || '').slice(0, 4000); if (t) nachrichtZeigen({ von: id, text: t, zeit: new Date().toISOString() });
     });
     raum.on('signal', signalEmpfangen);
     raumMelden();

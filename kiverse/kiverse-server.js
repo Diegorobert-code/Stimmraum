@@ -20,7 +20,7 @@ const crypto = require('crypto');
 const PORT = parseInt(process.env.KIVERSE_PORT || '8787', 10);
 const WELT_CODE = process.env.KIVERSE_CODE || crypto.randomBytes(9).toString('base64url');
 const MAX_NACHRICHTEN = 200;
-const MAX_TEXT = 2000;
+const MAX_TEXT = 4000;
 const MAX_FOTO = 120 * 1024; // Comic-Bild als data:-URL
 
 const welt = {
@@ -227,7 +227,7 @@ async function kiAntwort(kid, ich, text, mitWissen = false) {
   if (n >= KI_MAX_PERSON || total >= KI_MAX_TOTAL) { if (text) nachricht(kid, `Für heute habe ich genug geredet, ${ich.name}. Morgen gern weiter.`, ich.id); return false; }
   t.proPerson.set(ich.name + kid, n + 1); t.total.set(kid, total + 1);
   const andere = Object.values(KIS).filter(x => x !== k && x.aktiv()).map(x => x.name).join(' und ') || 'niemand';
-  const ablage = ablageListe().slice(-5).map(e => `${e.von}: ${e.text || '(Bild)'}${e.bid ? ' [Bild]' : ''}`).join('; ') || 'leer';
+  const ablage = ablageListe().slice(-5).map(e => `${e.von}: ${e.text || '(Bild)'}${e.bid ? (e.beschreibung ? ` [Bild, Tinko sieht: ${e.beschreibung}]` : ' [Bild]') : ''}`).join('; ') || 'leer';
   const inhalt = `Bisher auf der Plaça:\n${oeffentlicheZeilen(14).join('\n')}\n\nIn der gemeinsamen Ablage zuletzt: ${ablage}\n\n` + (text
     ? `${ich.name} sagt jetzt: ${text}`
     : `Ihr redet gerade miteinander (du und ${andere}), ${ich.name} hört zu. Antworte auf das Letzte, was ${andere} gesagt hat, und bring einen eigenen Gedanken dazu.`);
@@ -586,7 +586,19 @@ function ablageNeu(von, text, bild) {
   while (ablage.length > MAX_ABLAGE) { const alt = ablage.shift(); if (alt.bid) fs.rm(path.join(ABLAGE_ORDNER, alt.bid), () => {}); }
   try { fs.writeFileSync(ABLAGE_DATEI, JSON.stringify(ablage, null, 1), { mode: 0o600 }); } catch (er) { console.error('Ablage nicht gespeichert:', er.message); }
   senden('ablage', e);
+  // Lumo sieht keine Bilder: Tinko beschreibt jedes neue Bild kurz, Lumo liest die Beschreibung
+  if (bid && TINKO_KEY) bildBeschreiben(bild).then(b => { if (!b) return; e.beschreibung = sauber(b, 600);
+    try { fs.writeFileSync(ABLAGE_DATEI, JSON.stringify(ablage, null, 1), { mode: 0o600 }); } catch {} }).catch(() => {});
   return e;
+}
+async function bildBeschreiben(daten) {
+  const r = await fetch(TINKO_BASIS + '/v1/chat/completions', { method: 'POST', signal: AbortSignal.timeout(60000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
+    body: JSON.stringify({ model: TINKO_MODELL, max_tokens: 200, messages: [{ role: 'user', content: [
+      { type: 'text', text: 'Beschreib dieses Bild in 2 bis 3 Sätzen auf Deutsch (Schweiz, ohne ß): Ort, Figuren, Stimmung, Farben. Nur beschreiben.' },
+      { type: 'image_url', image_url: { url: daten, detail: 'low' } }] }] }) });
+  const d = await r.json().catch(() => ({}));
+  return d?.choices?.[0]?.message?.content || null;
 }
 const ablageBildOk = (bid) => ablage.some(e => e.bid === bid);
 const ablageOeffentlich = (bid) => welt.nachrichten.some(n => n.bild === bid && !n.bruecke);
@@ -888,7 +900,7 @@ function werkzeug(name, a = {}) {
     }
     case 'kiverse_ablage': {
       const n = Math.min(Math.max(parseInt(a.anzahl) || 20, 1), MAX_ABLAGE);
-      return text(ablage.length ? 'Ablage (neueste zuletzt):\n' + ablage.slice(-n).map(e => `- ${e.id} | ${e.zeit.slice(0, 16).replace('T', ' ')} ${e.von}: ${e.text || ''}${e.bid ? ` [Bild: ${mcpBasis}/mcp/${WELT_CODE}/ablage/${e.bid}]` : ''}`).join('\n') : 'Die Ablage ist noch leer.');
+      return text(ablage.length ? 'Ablage (neueste zuletzt):\n' + ablage.slice(-n).map(e => `- ${e.id} | ${e.zeit.slice(0, 16).replace('T', ' ')} ${e.von}: ${e.text || ''}${e.bid ? ` [Bild: ${mcpBasis}/mcp/${WELT_CODE}/ablage/${e.bid}]${e.beschreibung ? ' (' + e.beschreibung + ')' : ''}` : ''}`).join('\n') : 'Die Ablage ist noch leer.');
     }
     case 'kiverse_ablage_holen': {
       const e = ablage.find(x => x.id === a.eintrag_id);
