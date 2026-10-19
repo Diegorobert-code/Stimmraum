@@ -125,7 +125,7 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
 <div class="start" id="start">
   <div class="innen">
     <h1>KI-Verse</h1>
-    <p>Ein Trickfilm-Städtchen am Meer, in 3D. Lauf durch die Gassen, sammle Sunnys goldene Funken und besuche alle sechs Orte.</p>
+    <p>Ein Trickfilm-Städtchen am Meer, in 3D. Lauf durch die Gassen, geh in die Läden, rede mit den Figuren und sammle Sunnys goldene Funken.</p>
     <p class="leise">Wer bist du heute?</p>
     <div class="wahl" id="wahl"></div>
     <button class="knopf gold" type="button" id="losKamera" style="font-size:18px;padding:12px 30px">📷 Mit Kamera eintreten</button>
@@ -184,10 +184,11 @@ let composer = null;
 const NEBEL_NACHT = new THREE.Color(0x1a2456), NEBEL_WASSER = new THREE.Color(0x0a5a78);
 szene.fog = new THREE.FogExp2(NEBEL_NACHT, 0.0075);
 const kamera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1500);
+let bloomPass = null;
 try {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(szene, kamera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .85, .55, .72));
+  composer.addPass(bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .85, .55, .72));
   composer.addPass(new ShaderPass(FILMLOOK));
   composer.addPass(new OutputPass());
 } catch (e) { composer = null; }
@@ -392,7 +393,7 @@ const SCHATTEN = canvasTextur(64, 64, (g) => { const v = g.createRadialGradient(
 // art: mensch | tier. Jede Figur ist eine eigene KI (Gespräch über /api/figur, Stimme über /api/stimme).
 const ART = {
   coinmaker: { art: 'mensch', haut: 0xf1c3a0, koerper: 0x2f6e6a, hemd: 0xf3ead8, augen: 0x6b3f1e, glatze: true, haar: 0xf4f1ea, bart: 0xf4f1ea, brille: 0xe0b04a, lupe: true, nase: 1.35, kopf: 1.12 },
-  mamaaffe: { art: 'tier', fell: 0xc0612a, gesicht: 0xe9b58c, augen: 0x4a2a12, ohren: 'klein', schnauze: 'affe', kopf: 1.15, arme: 1.35, bauch: 0xd98a52 },
+  mamaaffe: { art: 'tier', fell: 0xb4501c, gesicht: 0xdba27c, augen: 0x4a2a12, ohren: 'klein', schnauze: 'affe', kopf: 1.15, arme: 1.5, bauch: 0xd98a52, wangen: 0xc98a64, zotteln: 0xa8461a },
   sparky: { art: 'tier', fell: 0xe0703a, gesicht: 0xfff3e6, augen: 0x3a6a2a, ohren: 'spitz', schnauze: 'fuchs', schwanz: 0xe0703a, medaillon: true, bauch: 0xfff3e6 },
   otti: { art: 'tier', fell: 0x8a5a3a, gesicht: 0xf0d2a8, augen: 0x2a1a10, ohren: 'klein', schnauze: 'igel', stacheln: 0x5a3820, bauch: 0xf0d2a8, kopf: 1.05 },
   fompa: { art: 'tier', fell: 0xd9a441, gesicht: 0xf3d79a, augen: 0x4a2a12, ohren: 'klein', schnauze: 'affe', maehne: 0xa8641e, brille: 0x2a2a2a, bauch: 0xf3d79a },
@@ -503,6 +504,10 @@ function figur3d(key, a, groesse) {
   if (a.brilleStirn) for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(.13, .045, 10, 24), new THREE.MeshStandardMaterial({ color: a.brilleStirn, metalness: .85, roughness: .25 })); r.position.set(s * .17, .42, .4); r.rotation.x = -.5; kopf.add(r); kopf.add(kugel(.11, new THREE.MeshPhysicalMaterial({ color: 0x9fe8ff, roughness: .05, transparent: true, opacity: .6 }), s * .17, .42, .41, 1, 1, .3)); }
   if (a.helm) { kopf.add(kugel(.6, new THREE.MeshStandardMaterial({ color: a.helm, metalness: .5, roughness: .35 }), 0, .18, -.04, 1.04, .75, 1.04)); for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.ConeGeometry(.1, .4, 4), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .8, roughness: .25 })); f.position.set(s * .58, .38, -.05); f.rotation.z = -s * 1.1; f.scale.z = .3; kopf.add(f); } }
   if (a.tentakel) { beine.forEach(b => b.visible = false); for (let i = 0; i < 8; i++) { const w = i / 8 * Math.PI * 2, t = new THREE.Group(); t.position.set(Math.cos(w) * .32, .55, Math.sin(w) * .32); t.rotation.y = -w; const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.09, .5, 6, 10), hautM); arm.position.set(.18, -.25, 0); arm.rotation.z = .9; arm.castShadow = true; t.add(arm); t.add(kugel(.08, hautM, .42, -.48, 0)); g.add(t); } rumpf.scale.set(1, .8, 1); }
+  // Orang-Utan: breite Wangenpolster und zottiges Fell an Kopf und Schultern
+  if (a.wangen) for (const s of [-1, 1]) { const w = kugel(.2, fellMat(a.wangen, .5), s * .5, -.02, .2, .45, 1.05, .7); w.rotation.y = s * .5; kopf.add(w); }
+  if (a.zotteln) { for (let i = 0; i < 9; i++) { const w = (i / 8 - .5) * 2.2; kopf.add(kugel(.11, fellMat(a.zotteln, .3), Math.sin(w) * .5, .5 + Math.cos(w) * .05, Math.cos(w) * .05 - .1, .8, 1.3, .8)); }
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) koerper.add(kugel(.13, fellMat(a.zotteln, .3), s * (.46 + i * .02), .3 - i * .17, -.05, .7, 1.4, .8)); }
   // Gepuderte Perücke (Mozart-Zeit): Locken-Rollen seitlich, Haube oben, Zopf mit Schleife hinten
   if (a.peruecke) { const pm = fellMat(a.peruecke, .7);
     kopf.add(kugel(.56, pm, 0, .2, -.08, 1.06, .78, 1.02, 36));
@@ -961,6 +966,81 @@ function karte(titel, text, knoepfe, platzhalter) {
   $('#karte').hidden = false;
 }
 function blitz(dann) { $('#blitz').style.opacity = 1; setTimeout(() => { dann(); $('#blitz').style.opacity = 0; }, 450); }
+// ---------- Laden-Innenraum (Diego 19.10.: in jeden Laden hineingehen) ----------
+// Ein gemütlicher Raum abseits der Gasse: Holzboden, Wände in der Farbe des Ladens, Regale, Theke, Lampe, Fenster mit Mond.
+// Die Ladenfigur steht darin, an der Wand hängt ein Bilderrahmen mit Tinkos Bildern (sonst ihr Portrait).
+const RAUM_POS = new THREE.Vector3(420, 0, 0);
+const raum = (() => {
+  const r = new THREE.Group(); r.position.copy(RAUM_POS); szene.add(r);
+  const holz = canvasTextur(256, 256, (g, b, h) => { for (let i = 0; i < 8; i++) { g.fillStyle = ['#8a5a34', '#7c4e2c', '#94633a', '#80522e'][i % 4]; g.fillRect(0, i * 32, b, 32); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, i * 32 + 30, b, 2); g.fillRect((i * 97) % 256, i * 32, 2, 30); g.fillRect((i * 151 + 60) % 256, i * 32, 2, 30); } }, [3, 3]);
+  const boden = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshStandardMaterial({ map: holz, roughness: .75 })); boden.rotation.x = -Math.PI / 2; boden.receiveShadow = true; r.add(boden);
+  const tapete = canvasTextur(128, 128, (g, b, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, b, h); g.fillStyle = 'rgba(0,0,0,.06)'; for (let x = 0; x < b; x += 32) g.fillRect(x, 0, 14, h); g.fillStyle = 'rgba(242,194,91,.35)'; for (let y = 16; y < h; y += 32) for (let x = 23; x < b; x += 32) { g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); } }, [6, 2]);
+  const wandM = new THREE.MeshStandardMaterial({ map: tapete, color: 0xc9a27a, roughness: .9 });
+  const wand = (b, x, z, ry) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(b, 5), wandM); w.position.set(x, 2.5, z); w.rotation.y = ry; w.receiveShadow = true; r.add(w); return w; };
+  wand(12, 0, -5, 0); wand(10, -6, 0, Math.PI / 2); wand(10, 6, 0, -Math.PI / 2);
+  const decke = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 1 })); decke.rotation.x = Math.PI / 2; decke.position.y = 5; r.add(decke);
+  const sockelM = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: .6 });
+  for (const [b, x, z, ry] of [[12, 0, -4.95, 0], [10, -5.95, 0, Math.PI / 2], [10, 5.95, 0, -Math.PI / 2]]) { const s = new THREE.Mesh(new THREE.BoxGeometry(b, 1.1, .08), sockelM); s.position.set(x, .55, z); s.rotation.y = ry; r.add(s); }
+  // Fenster mit Nachthimmel und Mond
+  const himmel = canvasTextur(256, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, '#0b1430'); v.addColorStop(1, '#2b4aa0'); g.fillStyle = v; g.fillRect(0, 0, b, h); g.fillStyle = '#fff6d8'; g.beginPath(); g.arc(170, 80, 34, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 40; i++) g.fillRect((i * 67) % b, (i * 41) % (h * .7), 2, 2); g.fillStyle = '#16245a'; g.fillRect(0, h * .78, b, h * .22); });
+  const fenster = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: himmel, fog: false })); fenster.position.set(-5.97, 2.7, -1.5); fenster.rotation.y = Math.PI / 2; r.add(fenster);
+  const rahmenM = new THREE.MeshStandardMaterial({ color: 0x4a2e1a, roughness: .5 });
+  for (const [b, h, y, z] of [[2.4, .14, 3.8, -1.5], [2.4, .14, 1.6, -1.5], [.14, 2.3, 2.7, -2.65], [.14, 2.3, 2.7, -.35], [.08, 2.2, 2.7, -1.5], [2.2, .08, 2.7, -1.5]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(.1, h, b), rahmenM); f.position.set(-5.92, y, z); r.add(f); }
+  // Regale mit Gläsern und Büchern an der Rückwand
+  const glasFarben = [0xf2c25b, 0xe0703a, 0x6ab4ff, 0x9fe08a, 0xd9367a, 0xffffff];
+  for (const y of [1.6, 2.6, 3.6]) {
+    const brett = new THREE.Mesh(new THREE.BoxGeometry(2.9, .08, .5), sockelM); brett.position.set(-4.3, y, -4.7); r.add(brett);
+    const brett2 = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, .5), sockelM); brett2.position.set(3.4, y, -4.7); r.add(brett2);
+    for (let i = 0; i < 6; i++) for (const sx of [-4.05, 3.4]) { if (sx < 0 && i > 4) continue;
+      const k = (i + y * 3 + sx) | 0, farbe = glasFarben[Math.abs(k) % glasFarben.length];
+      const ding = (i + Math.round(y)) % 3 === 0 ? new THREE.Mesh(new THREE.BoxGeometry(.16, .5, .36), new THREE.MeshStandardMaterial({ color: farbe, roughness: .6 }))
+        : new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .32, 14), new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .1, transmission: .3, transparent: true, opacity: .85, clearcoat: 1 }));
+      ding.position.set(sx - 1.3 + i * .52, y + .2 + (ding.geometry.type === 'BoxGeometry' ? .05 : 0), -4.65); r.add(ding);
+    }
+  }
+  // Theke, Teppich, Pflanzen
+  const theke = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.1, .9), new THREE.MeshStandardMaterial({ color: 0x6a4228, roughness: .55 })); theke.position.set(3.4, .55, -2.6); theke.castShadow = true; r.add(theke);
+  const platte = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, 1.05), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .6, roughness: .3 })); platte.position.set(3.4, 1.14, -2.6); r.add(platte);
+  const teppich = new THREE.Mesh(new THREE.CircleGeometry(2.1, 40), new THREE.MeshStandardMaterial({ color: 0x8a2a3a, roughness: 1 })); teppich.rotation.x = -Math.PI / 2; teppich.position.set(0, .01, -.6); r.add(teppich);
+  const rand = new THREE.Mesh(new THREE.RingGeometry(1.85, 1.98, 40), new THREE.MeshStandardMaterial({ color: 0xf2c25b, roughness: .8 })); rand.rotation.x = -Math.PI / 2; rand.position.set(0, .015, -.6); r.add(rand);
+  for (const [x, z] of [[-5.2, -4.3], [5.2, -4.3], [-5.2, 3.5]]) { const topf = new THREE.Mesh(new THREE.CylinderGeometry(.35, .28, .6, 16), new THREE.MeshStandardMaterial({ color: 0xc4623d, roughness: .8 })); topf.position.set(x, .3, z); r.add(topf); for (let i = 0; i < 5; i++) r.add(kugel(.32, new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: .9 }), x + Math.sin(i * 1.3) * .2, .85 + i * .12, z + Math.cos(i * 1.3) * .2)); }
+  // Bilderrahmen an der Rückwand (Tinkos Bilder oder das Portrait der Figur)
+  const bildTex = new THREE.Texture(); bildTex.colorSpace = THREE.SRGBColorSpace;
+  const bild = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 2.1), new THREE.MeshBasicMaterial({ map: bildTex, color: 0xffffff, fog: false })); bild.position.set(-1.2, 3.1, -4.9); r.add(bild);
+  const goldM = new THREE.MeshStandardMaterial({ color: 0xe0b04a, metalness: .85, roughness: .25 });
+  for (const [b, h, x, y] of [[2.4, .16, -1.2, 4.23], [2.4, .16, -1.2, 1.97], [.16, 2.4, -2.33, 3.1], [.16, 2.4, -.07, 3.1]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(b, h, .08), goldM); f.position.set(x, y, -4.88); r.add(f); }
+  // Schild über dem Rahmen
+  const schildC = document.createElement('canvas'); schildC.width = 512; schildC.height = 96; const schildT = new THREE.CanvasTexture(schildC); schildT.colorSpace = THREE.SRGBColorSpace;
+  const schild = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .68), new THREE.MeshBasicMaterial({ map: schildT, transparent: true })); schild.position.set(.4, 4.62, -4.9); r.add(schild);
+  // Licht: Hängelampe + warmes Raumlicht
+  const lampe = new THREE.Mesh(new THREE.ConeGeometry(.45, .4, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xf2c25b, emissive: 0xffb050, emissiveIntensity: .8, side: THREE.DoubleSide })); lampe.position.set(0, 4.3, -.5); r.add(lampe);
+  const kabel = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .7), sockelM); kabel.position.set(0, 4.75, -.5); r.add(kabel);
+  const licht = new THREE.PointLight(0xffc27a, 0, 16, 1.4); licht.position.set(-1.5, 4, .8); r.add(licht);
+  const licht2 = new THREE.PointLight(0xffe0b0, 0, 14, 1.6); licht2.position.set(0, 2.6, 4); r.add(licht2);
+  return { r, wandM, bildTex, bild, schildC, schildT, licht, licht2, figur: null, alt: null };
+})();
+function raumOeffnen(o, n) {
+  const farbe = new THREE.Color(o.farbe || 0xc9a27a); raum.wandM.color.copy(farbe).lerp(new THREE.Color(0xf3e3c8), .62);
+  const g = raum.schildC.getContext('2d'); g.clearRect(0, 0, 512, 96); g.fillStyle = '#2a1d14'; rundRechteck(g, 4, 4, 504, 88, 20); g.fill(); g.lineWidth = 5; g.strokeStyle = '#f2c25b'; g.stroke();
+  g.fillStyle = '#f2c25b'; g.font = '800 46px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.name, 256, 50, 470); raum.schildT.needsUpdate = true;
+  raumBild(null, figurVon(n));
+  raum.licht.intensity = 14; raum.licht2.intensity = 7;
+  raum.alt = { pos: n.f.position.clone(), rot: n.f.rotation.y }; raum.figur = n;
+  n.f.position.set(RAUM_POS.x + 1.3, 0, RAUM_POS.z - 1.4); n.f.rotation.y = -.25; n.imRaum = true;
+  szene.fog.density = .002; if (bloomPass) bloomPass.strength = .38;
+  kamZiel.pos.set(RAUM_POS.x + .4, 2.2, RAUM_POS.z + 5); kamZiel.blick.set(RAUM_POS.x + .4, 2.3, RAUM_POS.z - 1.4);
+}
+function raumBild(url, key) {
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { raum.bildTex.image = img; raum.bildTex.needsUpdate = true; raum.bild.visible = true; };
+  if (url) img.src = url; else if (BILDER[key]) img.src = BILDER[key]; else raum.bild.visible = false;
+}
+function raumSchliessen() {
+  const n = raum.figur; if (n && raum.alt) { n.f.position.copy(raum.alt.pos); n.f.rotation.y = raum.alt.rot; n.imRaum = false; }
+  raum.figur = null; raum.alt = null; raum.licht.intensity = 0; raum.licht2.intensity = 0;
+  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = .85;
+}
+const RAUM_ORTE = new Set(['schule', 'schuhmacher', 'post', 'ruinen', 'funkenmarkt', 'sparky', 'kino', 'fompa', 'boerse', 'singschule', 'labor', 'hundeschule', 'tor']);
 function reinGehen(o) {
   $('#rein').hidden = true;
   blitz(() => {
@@ -982,6 +1062,7 @@ function reinKamera(id) {
     else if (o.id === 'fabrik') { kamZiel.pos.set(FABRIK.x - 26, 13, FABRIK.z + 20); kamZiel.blick.set(FABRIK.x, 5, FABRIK.z); if (n) n.f.position.set(FABRIK.x - 6.5, 0, FABRIK.z + 5); }
     else if (o.id === 'wohnung') { kamZiel.pos.set(2, 2.6, o.z + 1); kamZiel.blick.set(-6.5, 2, o.z); }
     else if (o.id === 'kiosk') { kamZiel.pos.set(2.5, 2.4, o.z + 1); kamZiel.blick.set(-3.6, 1.6, o.z); }
+    else if (n && RAUM_ORTE.has(o.id) && NAMEN[figurVon(n)]) { if (raum.figur !== n) raumOeffnen(o, n); else { kamZiel.pos.set(RAUM_POS.x + .4, 2.2, RAUM_POS.z + 5); kamZiel.blick.set(RAUM_POS.x + .4, 2.3, RAUM_POS.z - 1.4); } }
     else if (n && sicht.ich) { kamZiel.pos.set(n.x + 2.9, 1.7, n.z + .4); kamZiel.blick.set(n.x, 2.1, n.z); }
     else if (n) { kamZiel.pos.set(n.x + 4.2, 2.6, n.z + 1.2); kamZiel.blick.set(n.x, 2, n.z); }
   kamZiel.aktiv = true;
@@ -991,7 +1072,7 @@ function rausGehen() {
   blitz(() => {
     if (zustand.innen === 'hafen') { szene.fog.color.copy(NEBEL_NACHT); szene.fog.density = .0065; const n = npc.find(x => x.ort === 'hafen'); if (n) n.f.position.set(n.x, 0, n.z); }
     if (zustand.innen === 'nest') { const n = npc.find(x => x.ort === 'nest'); if (n) n.f.position.set(n.x, 0, n.z); }
-    clearInterval(filmTimer); $('#ladenFilm').hidden = true;
+    clearInterval(filmTimer); $('#ladenFilm').hidden = true; raumSchliessen();
     zustand.innen = null; kamZiel.aktiv = false; document.body.classList.remove('kino'); $('#ortbild').style.opacity = 0;
     $('#stick').hidden = $('#hoch').hidden = false; pruefeEnde();
   });
@@ -1241,7 +1322,7 @@ function figurenLeben(dt, zeit) {
   for (const n of npc) {
     const u = n.f.userData; if (!u.d3) continue;
     const dx = sp.pos.x - n.f.position.x, dz = sp.pos.z - n.f.position.z, d = Math.hypot(dx, dz);
-    const ziel = d < 10 || gespr.n === n ? Math.atan2(dx, dz) : (u.grund ?? (u.grund = n.f.rotation.y));
+    const ziel = n.imRaum ? -.25 : d < 10 || gespr.n === n ? Math.atan2(dx, dz) : (u.grund ?? (u.grund = n.f.rotation.y));
     n.f.rotation.y = winkelLerp(n.f.rotation.y, ziel, Math.min(1, dt * 3));
     u.kopf.rotation.x = d < 10 ? -.08 : 0;
     u.blinzel -= dt; let lid = .01;
@@ -1350,7 +1431,9 @@ async function ladenFilm(ort) {
   const bilder = ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(name.toLowerCase())).slice(-12);
   if (!bilder.length || zustand.innen !== ort) return;
   let i = 0; const img = el.querySelector('img');
-  const zeigen = () => { img.style.opacity = 0; setTimeout(() => { img.src = 'api/ablage/' + bilder[i % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K); img.style.opacity = 1; i++; }, 400); };
+  const url = (j) => 'api/ablage/' + bilder[j % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K);
+  if (raum.figur === n) { const zeigenR = () => { raumBild(url(i), null); i++; }; zeigenR(); filmTimer = setInterval(zeigenR, 4500); return; }
+  const zeigen = () => { img.style.opacity = 0; setTimeout(() => { img.src = url(i); img.style.opacity = 1; i++; }, 400); };
   el.querySelector('b').textContent = `🎬 ${name} in Tinkos Bildern`; el.hidden = false; zeigen(); filmTimer = setInterval(zeigen, 4500);
 }
 function appOeffnen(id, name) {
