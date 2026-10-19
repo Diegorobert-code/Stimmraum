@@ -68,6 +68,11 @@ body.kino .balken { height: 9vh; }
 @keyframes puls { 50% { box-shadow: 0 0 0 10px rgba(214, 65, 59, .25); } }
 body.redet #stick, body.redet #hoch { display: none; }
 @media (max-width: 600px) { .gespraech { right: 16px; left: 16px; width: auto; max-height: 52vh; } }
+.appfenster { position: fixed; inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); z-index: 12; display: flex; flex-direction: column; background: #0b1430; border: 2px solid var(--gold); border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(242, 194, 91, .35); }
+.appfenster .leiste { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(242, 194, 91, .12); }
+.appfenster .leiste b { flex: 1; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
+.appfenster .leiste button { all: unset; cursor: pointer; color: var(--gold-hell); font: 700 14px "Atkinson Hyperlegible", sans-serif; border: 1px solid var(--rand); border-radius: 999px; padding: 6px 12px; }
+.appfenster iframe { flex: 1; border: 0; width: 100%; background: #fff; }
 [hidden] { display: none !important; }
 .leise { opacity: .75; font-size: 13px; }
 </style>
@@ -92,6 +97,7 @@ body.redet #stick, body.redet #hoch { display: none; }
 <div id="hoch" hidden aria-label="springen">⤒</div>
 <button id="rein" type="button" hidden>Rein</button>
 <button id="reden" type="button" hidden>🎙 Reden</button>
+<div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
 <div class="gespraech" id="gespraech" hidden>
   <div class="kopfzeile"><h2 id="gesprTitel"></h2><button type="button" class="klein" id="gesprVergessen" title="Gedächtnis dieser Figur für dich löschen">Vergessen</button><button type="button" class="klein" id="gesprZu" aria-label="Gespräch beenden">✕</button></div>
   <div class="log" id="gesprLog"></div>
@@ -905,6 +911,8 @@ function karte(titel, text, knoepfe, platzhalter) {
   $('#karteTitel').textContent = titel; $('#karteText').textContent = text;
   const e = $('#karteEingabe'); e.hidden = !platzhalter; if (platzhalter) { e.value = ''; e.placeholder = platzhalter; }
   const k = $('#karteKnoepfe'); k.innerHTML = '';
+  const apps = zustand.innen && (LADEN_APPS[zustand.innen] || []);
+  if (apps && apps.length && !knoepfe.some(x => x[0].startsWith('📱'))) knoepfe = [...apps.map(([id, n]) => [`📱 ${n} öffnen`, () => appOeffnen(id, n)]), ...knoepfe];
   const wirt = zustand.innen && npc.find(x => x.ort === zustand.innen);
   if (wirt && NAMEN[figurVon(wirt)] && !knoepfe.some(x => x[0].startsWith('🎙'))) knoepfe = [[`🎙 Mit ${NAMEN[figurVon(wirt)]} reden`, () => gespraechOeffnen(wirt), true], ...knoepfe];
   for (const [t, f, gold] of knoepfe) { const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf' + (gold ? ' gold' : ''); b.textContent = t; b.onclick = f; k.appendChild(b); }
@@ -1272,6 +1280,14 @@ $('#gesprVergessen').onclick = async () => {
   try { await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, vergessen: true }) }); } catch {}
   $('#gesprLog').innerHTML = ''; zeile(NAMEN[gespr.fid], 'Erledigt. Ich habe es vergessen. Wir fangen neu an.');
 };
+// ---------- Apps als Läden (Diego 19.10.): im Laden die echte App öffnen, sie läuft auf unserem Server ----------
+const LADEN_APPS = { sparky: [['humanspark', 'Human Sparks']], nest: [['fiasnest', 'Fias Nest']], tor: [['otti', 'Otti'], ['mondschein', 'Mondschein']], schuhmacher: [['jackie', "Jackie's Advice"]], singschule: [['kiki', 'Kiki']], schule: [['mamaaffe', 'Mama Affe']], fompa: [['fompa', 'Fompa'], ['transkript', 'Transkript']], funkenmarkt: [['foodflow', 'Food and Flow']], boerse: [['tradeping', 'TradePing']] };
+LADEN_APPS.tor && ORTE.forEach(o => { if (LADEN_APPS[o.id]) o.rein = true; });
+function appOeffnen(id, name) {
+  $('#appFenster iframe').src = 'apps/' + id + '/' + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
+  $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
+}
+$('#appZu').onclick = () => { $('#appFenster').hidden = true; $('#appFenster iframe').src = 'about:blank'; };
 window.__kiverse = { sp, zustand, npc, sicht, gespraechOeffnen, reinGehen, ORTE };
 $('#reden').onclick = () => gespraechOeffnen(zustand.innen ? npc.find(x => x.ort === zustand.innen) : naechsteFigur());
 // ---------- Handy-Modus (Diego 18.10. 23:32): mitlaufen, sich selbst in der Welt sehen, KI-Blick durch die Kamera ----------

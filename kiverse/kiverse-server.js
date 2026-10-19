@@ -1034,10 +1034,74 @@ function json(res, code, daten) {
   res.end(JSON.stringify(daten));
 }
 
+
+// ---------- Apps als Läden (Diego 19.10.): die DR-Lab-Apps laufen hier auf dem Server ----------
+// /apps/<id>/… holt die Dateien vom App-Branch in DR_Lab (GitHub, öffentlich) und liefert sie mit richtigem Typ aus.
+// Mit ?k=<Einladung> bekommt die App die Sense Engine über /sense/<k>/… (der Schlüssel bleibt auf dem Server).
+const APP_REPO = 'https://raw.githubusercontent.com/Diegorobert-code/DR_Lab/';
+const KIVERSE_APPS = {
+  humanspark: { name: 'Human Sparks', branch: 'claude/humanspark-ideen-film', pfad: 'humanspark/index.html' },
+  fiasnest: { name: 'Fias Nest', branch: 'fiasnest-ideen-2026-10-19', pfad: 'schlaf/index.html' },
+  mondschein: { name: 'Mondschein', branch: 'otti-filmgeschichten', pfad: 'mondschein/index.html' },
+  otti: { name: 'Otti', branch: 'otti-filmgeschichten', pfad: 'otti/index.html' },
+  jackie: { name: "Jackie's Advice", branch: 'jackie-frauenhilfe-film', pfad: 'jackie/index.html' },
+  kiki: { name: 'Kiki', branch: 'kiki-trickfilm-ideen', pfad: 'kiki/index.html' },
+  mamaaffe: { name: 'Mama Affe', branch: 'mama-affe-ideen-2026-10-19', pfad: 'mama-affe/index.html' },
+  fompa: { name: 'Fompa', branch: 'fompa-ideen-2026-10-19', pfad: 'fompa/index.html' },
+  transkript: { name: 'Transkript', branch: 'fompa-ideen-2026-10-19', pfad: 'transkript/index.html' },
+  foodflow: { name: 'Food and Flow', branch: 'food-flow-ideen', pfad: 'appid/index.html' },
+  tradeping: { name: 'TradePing', branch: 'claude/tradeping-ideen', pfad: 'tradeping/index.html' },
+};
+const APP_TYPEN = { html: 'text/html; charset=utf-8', js: 'text/javascript; charset=utf-8', mjs: 'text/javascript; charset=utf-8', css: 'text/css; charset=utf-8', json: 'application/json; charset=utf-8', webmanifest: 'application/manifest+json', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', mp4: 'video/mp4', webm: 'video/webm', woff2: 'font/woff2', txt: 'text/plain; charset=utf-8', md: 'text/plain; charset=utf-8' };
+const appCache = new Map();
+async function appDatei(branch, datei) {
+  const schl = branch + '|' + datei, c = appCache.get(schl);
+  if (c && Date.now() - c.zeit < 5 * 60e3) return c;
+  const r = await fetch(APP_REPO + branch.split('/').map(encodeURIComponent).join('/') + '/' + datei, { signal: AbortSignal.timeout(20000) });
+  const e = { zeit: Date.now(), status: r.status, b: r.ok ? Buffer.from(await r.arrayBuffer()) : null };
+  if (appCache.size > 400) appCache.delete(appCache.keys().next().value);
+  if (e.b && e.b.length < 30 * 1024 * 1024) appCache.set(schl, e);
+  return e;
+}
+async function appSenden(req, res, url) {
+  const m = url.pathname.match(/^\/apps\/([a-z0-9]+)(?:\/(.*))?$/);
+  const app = m && KIVERSE_APPS[m[1]];
+  if (!app) return json(res, 404, { fehler: 'Diese App gibt es im KI-Verse nicht.' });
+  const k = url.searchParams.get('k') || '';
+  if (m[2] === undefined || m[2] === '') { res.writeHead(302, { Location: `/apps/${m[1]}/${app.pfad}${k ? '?k=' + encodeURIComponent(k) : ''}` }); return res.end(); }
+  const datei = m[2];
+  if (!/^[A-Za-z0-9._\-/]+$/.test(datei) || datei.split('/').some(t => t === '..' || t === '.')) return json(res, 400, { fehler: 'Ungültiger Pfad.' });
+  const e = await appDatei(app.branch, datei).catch(() => null);
+  if (!e || !e.b) return json(res, e?.status === 404 ? 404 : 502, { fehler: 'Datei nicht gefunden.' });
+  const typ = APP_TYPEN[(datei.split('.').pop() || '').toLowerCase()] || 'application/octet-stream';
+  let b = e.b;
+  if (typ.startsWith('text/html') && k && zugang(k)) {
+    // Die App spricht über diesen Server mit der Sense Engine (Adresse + Platzhalter statt Schlüssel)
+    const vor = `<script>try{localStorage.setItem('drlab-hermes-adresse',JSON.stringify(location.origin+'/sense/${encodeURIComponent(k)}'));localStorage.setItem('drlab-hermes-passwort',JSON.stringify('kiverse'));}catch(e){}</script>`;
+    const t = b.toString('utf8'), i = t.search(/<head[^>]*>/i);
+    b = Buffer.from(i >= 0 ? t.replace(/<head[^>]*>/i, x => x + vor) : vor + t);
+  }
+  res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
+  return res.end(b);
+}
+// Sense Engine für Apps im KI-Verse: nur mit gültiger Einladung, nur /v1/… und /erfahrung, Schlüssel setzt der Server
+async function senseWeiter(req, res, url) {
+  const m = url.pathname.match(/^\/sense\/([^/]+)(\/(?:v1\/[a-z0-9_\-/]+|erfahrung))$/);
+  if (!m || !zugang(decodeURIComponent(m[1]))) return json(res, 401, { fehler: 'Keine Einladung.' });
+  if (!NOVA_KEY) return json(res, 503, { fehler: 'Sense Engine ist nicht verbunden.' });
+  const daten = req.method === 'POST' ? await body(req, 8 * 1024 * 1024) : null;
+  const r = await fetch(NOVA_BASIS + m[2] + url.search, { method: req.method === 'POST' ? 'POST' : 'GET', signal: AbortSignal.timeout(90000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': String(req.headers['x-nova-app'] || 'KI-Verse App').slice(0, 60) },
+    body: daten ? JSON.stringify(daten) : undefined }).catch(() => null);
+  if (!r) return json(res, 502, { fehler: 'Sense Engine antwortet nicht.' });
+  res.writeHead(r.status, { 'Content-Type': r.headers.get('content-type') || 'application/json', 'Cache-Control': 'no-store' });
+  return res.end(Buffer.from(await r.arrayBuffer()));
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Authorization, X-Nova-App');
   res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   try {
@@ -1056,6 +1120,8 @@ const server = http.createServer(async (req, res) => {
     if (ma && ma[1] === WELT_CODE && ablageBildOk(ma[2])) return ablageSenden(res, ma[2]);
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
+    if (url.pathname.startsWith('/apps/') || url.pathname === '/apps') return await appSenden(req, res, url);
+    if (url.pathname.startsWith('/sense/')) return await senseWeiter(req, res, url);
     // Welt für Menschen: nur mit Einladung
     if (url.pathname.startsWith('/api/')) {
       const z = zugang(url.searchParams.get('k') || req.headers['x-kiverse-k']);
