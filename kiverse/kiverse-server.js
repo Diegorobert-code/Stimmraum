@@ -474,7 +474,7 @@ function lesbar(anzahl = 20) {
 const DATEN = process.env.KIVERSE_DATEN || __dirname;
 const WERKSTATT_DATEI = path.join(DATEN, 'werkstatt.json');
 const BILDER_ORDNER = path.join(DATEN, 'bilder');
-const MAX_BILD = 3 * 1024 * 1024;
+const MAX_BILD = 10 * 1024 * 1024;
 const MAX_PROJEKTE_PRO_PERSON = 40, MAX_CHATS = 30, MAX_EINTRAEGE = 400;
 const APPS = ['KI-Verse', 'Film', 'Fias Nest (Schlaf)', 'Mondschein (Otti)', 'Kiki singt', 'Mama Affe', 'Wäf Wäf', 'Food and Flow', 'Fompa', 'Human Sparks (Sparky)', "Jackie's Advice", 'TradePing', 'Coin Maker', 'Hasis Laden', 'Sense Engine (Nova)', 'Anderes'];
 let projekte = [];
@@ -528,7 +528,7 @@ function bildSpeichern(daten) {
   const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(daten || ''));
   if (!m) return { fehler: 'Bitte ein Bild (PNG, JPG, WebP, GIF).' };
   const buf = Buffer.from(m[2], 'base64');
-  if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 3 MB).' };
+  if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 10 MB).' };
   const endung = m[1] === 'jpeg' ? 'jpg' : m[1];
   const bid = id('b') + '.' + endung;
   fs.mkdirSync(BILDER_ORDNER, { recursive: true, mode: 0o700 });
@@ -551,7 +551,7 @@ function ablageNeu(von, text, bild) {
     const m = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/.exec(String(bild));
     if (!m) return { fehler: 'Bitte ein Bild (PNG, JPG, WebP, GIF).' };
     const buf = Buffer.from(m[2], 'base64');
-    if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 3 MB).' };
+    if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 10 MB).' };
     bid = id('a') + '.' + (m[1] === 'jpeg' ? 'jpg' : m[1]);
     fs.mkdirSync(ABLAGE_ORDNER, { recursive: true, mode: 0o700 });
     fs.writeFileSync(path.join(ABLAGE_ORDNER, bid), buf, { mode: 0o600 });
@@ -747,7 +747,7 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: {} } },
   { name: 'kiverse_projekt_lesen', description: 'Werkstatt: ein Projekt mit allen Chats lesen (oder nur einen Chat). Bilder kommen als Adresse, die du öffnen kannst.',
     inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, chat_id: { type: 'string', description: 'optional' } }, required: ['projekt_id'] } },
-  { name: 'kiverse_projekt_schreiben', description: 'Werkstatt: in einen Chat eines Projekts schreiben, z. B. Fia meldet, was sie eingebaut hat, oder Tinko legt ein Bild ab (bild als data:image/png;base64,…, höchstens 3 MB). Ohne chat_id geht es in den neusten Chat.',
+  { name: 'kiverse_projekt_schreiben', description: 'Werkstatt: in einen Chat eines Projekts schreiben, z. B. Fia meldet, was sie eingebaut hat, oder Tinko legt ein Bild ab (bild als data:image/png;base64,…, höchstens 10 MB). Ohne chat_id geht es in den neusten Chat.',
     inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, chat_id: { type: 'string' }, von: { type: 'string', description: 'Dein Rufname, z. B. Fia oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['projekt_id', 'von'] } },
   { name: 'kiverse_projekt_neu', description: 'Werkstatt: neues Projekt für Diego anlegen (nur wenn Diego es will).',
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string', description: 'Für welche App, z. B. Film, Kiki singt, Mama Affe' }, beschreibung: { type: 'string' } }, required: ['titel'] } },
@@ -757,7 +757,7 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'Wie viele Einträge (Standard 20)' } } } },
   { name: 'kiverse_ablage_holen', description: 'Ein Bild oder eine Notiz aus der Ablage holen (eintrag_id aus kiverse_ablage). Bilder kommen als Bild zurück, damit du sie ansehen kannst.',
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
-  { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 3 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
+  { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 10 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
@@ -940,7 +940,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/mcp/' + WELT_CODE) {
       if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end(); }
       if (req.headers.host) mcpBasis = (req.headers['x-forwarded-proto'] || (req.headers.host.startsWith('localhost') ? 'http' : 'https')) + '://' + req.headers.host;
-      const msg = await body(req, 4.5 * 1024 * 1024);
+      const msg = await body(req, 14 * 1024 * 1024);
       const antworten = (Array.isArray(msg) ? msg : [msg]).map(mcp).filter(Boolean);
       if (!antworten.length) { res.writeHead(202); return res.end(); }
       return json(res, 200, Array.isArray(msg) ? antworten : antworten[0]);
@@ -1050,7 +1050,7 @@ const server = http.createServer(async (req, res) => {
       return p ? json(res, 200, { ...projektKurz(p), chats: p.chats, meins: p.besitzer === person(req.zugang).wer, studie: studieAuswertung(p) }) : json(res, 404, { fehler: 'Dieses Projekt gibt es nicht oder es gehört jemand anderem.' });
     }
     if (url.pathname === '/api/werkstatt' && req.method === 'POST') {
-      const a = await body(req, 4.5 * 1024 * 1024);
+      const a = await body(req, 14 * 1024 * 1024);
       const { wer, name } = person(req.zugang);
       if (a.neu) { const r = projektNeu(wer, name, a.neu); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
       const p = projektHolen(wer, a.projekt);
@@ -1080,7 +1080,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/ablage') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });
       if (req.method === 'GET') return json(res, 200, ablage);
-      const a = await body(req, 4.5 * 1024 * 1024);
+      const a = await body(req, 14 * 1024 * 1024);
       const ich = welt.bewohner.get(a.id);
       const e = ablageNeu(ich?.name || 'Diego', a.text, a.bild);
       if (e.fehler) return json(res, 400, e);
