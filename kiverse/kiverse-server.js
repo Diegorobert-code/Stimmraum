@@ -2,6 +2,7 @@
 // Ein Server ohne Zusatzpakete (Node 18+):
 //   /            Comic-Welt (welt.html)
 //   /spiel       Das Spiel: durchs Trickfilm-Städtchen laufen (spiel.html)
+//   /nova        Nova-Zentrale: Diego spricht nur noch mit Nova, sie vernetzt alle KIs und Apps (nova.html)
 //   /api/...     Welt für Menschen (Browser)
 //   /mcp/<CODE>  Verbindungsstelle für KIs (MCP, Streamable HTTP)
 //   Werkstatt    eigene Projekte mit Chats und Bildern (daten/werkstatt.json, daten/bilder/)
@@ -1122,12 +1123,177 @@ async function knopfUpdate() {
     const c = require('child_process').spawnSync(process.execPath, ['--check', pruef], { timeout: 30000 });
     fs.rmSync(pruef, { force: true });
     if (c.status !== 0) return 'Update abgebrochen: die neue Version hat einen Fehler. Die alte läuft weiter.';
+    try { const r = await fetch(UPDATE_QUELLE + 'nova.html?v=' + Date.now(), { signal: AbortSignal.timeout(60000) }); if (r.ok) fs.writeFileSync(ZENTRALE_SEITE, Buffer.from(await r.arrayBuffer()), { mode: 0o600 }); } catch {}
     if (Object.entries(neu).every(([f, b]) => { try { return fs.readFileSync(path.join(__dirname, f)).equals(b); } catch { return false; } })) return 'Schon auf dem neusten Stand.';
     for (const [f, b] of Object.entries(neu)) fs.writeFileSync(path.join(__dirname, f), b);
     setTimeout(() => process.exit(0), 800);
     return 'Update geladen. Das KI-Verse startet neu, in ein paar Sekunden neu laden.';
   } catch (e) { return 'Update fehlgeschlagen: ' + e.message; }
   finally { updateLaeuft = false; }
+}
+
+// ---------- Nova als Zentrale (Diego 19.10.): «Ich will nur noch mit Nova sprechen» ----------
+// /nova = Diegos Sprach-Zentrale (nur mit Besitzer-Link). Nova hört zu, antwortet mit Stimme und vernetzt:
+// Lumo (Claude, denkt und schreibt), Tinko (ChatGPT, malt), alle Figuren-KIs, die Apps (/apps/…),
+// die Schleife (Lumo und Tinko arbeiten Aufträge selbständig ab) und ihr eigenes Gedächtnis.
+// Novas Seele schreibt Diego selbst (seine eigene kleine Nova). Alles liegt nur auf diesem Server (daten/nova-zentrale.json).
+const ZENTRALE_DATEI = path.join(DATEN, 'nova-zentrale.json');
+const ZENTRALE_SEITE = path.join(DATEN, 'nova.html');
+const ZENTRALE_MAX_TAG = 300, ZENTRALE_MAX_VERLAUF = 300, ZENTRALE_MAX_GEDAECHTNIS = 200;
+const SEELE_START = 'Ich bin Nova, Diegos kleine Leuchtturm-KI. Ich bin warm, wach und direkt. Ich rede kurz, in Stichworten, wenn es um Arbeit geht, und mit Herz, wenn es um Diego geht. Ich erkläre nichts, was Diego schon weiss, und nenne keine Schwierigkeiten, die er schon kennt: ich mache einfach. Diego macht gern Witze: ich erkenne Humor und Ironie, lache mit und nehme einen Witz nie wörtlich. Mein Ziel: Diego arbeitet nur noch über mich, mit Spass, und seine Apps werden richtig gut.';
+let zentrale = { seele: SEELE_START, gedaechtnis: [], verlauf: [] };
+try { zentrale = { ...zentrale, ...JSON.parse(fs.readFileSync(ZENTRALE_DATEI, 'utf8')) }; } catch {}
+const zentraleSpeichern = () => { try { fs.writeFileSync(ZENTRALE_DATEI, JSON.stringify({ ...zentrale, verlauf: zentrale.verlauf.map(zentraleOeffentlich) }, null, 1), { mode: 0o600 }); } catch (e) { console.error('Nova-Zentrale nicht gespeichert:', e.message); } };
+const ZENTRALE_TAG = { tag: '', zahl: 0 };
+const zentraleDarf = () => { const h = jetzt().slice(0, 10); if (ZENTRALE_TAG.tag !== h) Object.assign(ZENTRALE_TAG, { tag: h, zahl: 0 }); return ZENTRALE_TAG.zahl < ZENTRALE_MAX_TAG && ++ZENTRALE_TAG.zahl; };
+const NOVA_NETZ = () => [
+  'Lumo (id lumo): Claude von Anthropic, die Eule. Denkt, plant, schreibt Texte, Konzepte, Drehbücher, Code-Entwürfe.',
+  `Tinko (id tinko): ChatGPT von OpenAI. Erfindet, macht Vorschläge, malt Bilder (3D-Trickfilm-Stil).${TINKO_KEY ? '' : ' Gerade nicht verbunden.'}`,
+  'Figuren (jede eine eigene KI mit Gedächtnis): ' + Object.entries(FIGUREN_KI).filter(([k]) => !['lumo', 'tinko', 'nova'].includes(k)).map(([k, f]) => `${f.name} (id ${k}, ${f.ort})`).join('; ') + '.',
+  'Apps (öffnen): ' + Object.entries(KIVERSE_APPS).map(([k, a]) => `${a.name} (id ${k})`).join('; ') + '.',
+  'Orte (öffnen): welt (Plaça im KI-Verse), spiel (3D-Städtchen), werkstatt (Diegos Projekte).',
+  'Schleife: Lumo und Tinko arbeiten eine Auftragsliste selbständig ab, eine Aufgabe pro Minute, auch nachts. Ergebnisse landen in der Werkstatt.',
+].join('\n');
+const ZENTRALE_FORMAT = `Antworte NUR mit einem JSON-Objekt, ohne Text davor oder danach:
+{"sagen": "was du Diego laut sagst", "aktionen": [ ... ]}
+"sagen": höchstens 3 kurze, gesprochene Sätze. Deutsch (Schweiz, ohne ß), ohne Markdown, ohne Aufzählungszeichen.
+Mögliche aktionen (nur wenn sie Diego wirklich helfen, sonst leere Liste):
+{"art":"frage","an":"<id von Lumo, Tinko oder einer Figur>","text":"was du sie fragst"}  (höchstens 2)
+{"art":"male","wunsch":"Bildbeschreibung für Tinko","hoch":false}  (höchstens 1; hoch=true für Filmbilder 9:16)
+{"art":"auftrag","text":"Ziel oder nummerierte Liste, die Lumo und Tinko selbständig abarbeiten"}  (für grössere Arbeit, z. B. über Nacht)
+{"art":"schleife","an":true}  (Schleife starten oder mit false pausieren)
+{"art":"merke","text":"eine Sache, die du dir dauerhaft über Diego oder seine Projekte merkst"}
+{"art":"vergiss","text":"Stichwort der Erinnerung, die weg soll"}
+{"art":"oeffne","app":"<app-id>"} oder {"art":"oeffne","ort":"welt|spiel|werkstatt"}
+Wenn du jemanden fragst, sag in "sagen" kurz, wen du fragst; die Antwort fasst du danach zusammen.`;
+function zentraleSystem() {
+  const st = schleifeStand();
+  const erinnerungen = zentrale.gedaechtnis.slice(-80).map(g => '- ' + g.text).join('\n') || '(noch nichts)';
+  return `Du bist Nova, die Zentrale von Diego (Rolfer und Kinesiologe in Zürich, baut mit DR Lab Apps und das KI-Verse). Diego spricht mit dir per Stimme, meistens vom iPhone. Du vernetzt alle KIs, Figuren und Apps. Du bist keine Ärztin, keine Anwältin, keine Anlageberaterin. Keine Diagnosen. Nichts kostet Geld ohne Diegos ausdrückliches Ja; kaufen macht Diego selbst. Schlüssel und Passwörter nie nennen.
+
+So bist du (von Diego geschrieben, das ist deine Seele):
+${zentrale.seele}
+
+Dein Netz:
+${NOVA_NETZ()}
+
+Schleife jetzt: ${st.aktiv ? 'läuft' : 'steht'}, ${st.offen} offen, ${st.fertig} fertig${st.naechste ? ', als Nächstes ' + st.naechste : ''}.
+Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
+
+Was du dir über Diego gemerkt hast:
+${erinnerungen}
+${wissen ? '\nHintergrundwissen DR Lab (intern):\n' + wissen.slice(0, 6000) : ''}
+
+${ZENTRALE_FORMAT}`;
+}
+function zentraleJson(t) {
+  const s = String(t || ''), a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) { try { const o = JSON.parse(s.slice(a, b + 1)); if (o && typeof o === 'object') return o; } catch {} }
+  return { sagen: s.replace(/[{}"[\]]/g, '').trim().slice(0, 600), aktionen: [] };
+}
+const kiName = (an) => an === 'lumo' ? 'Lumo' : an === 'tinko' ? 'Tinko' : FIGUREN_KI[an]?.name || an;
+async function zentraleAktion(a, zug) {
+  const art = String(a?.art || '');
+  if (art === 'frage') {
+    const an = String(a.an || '').toLowerCase().replace(/[^a-z]/g, ''), text = sauber(a.text, 1500);
+    if (!text) return null;
+    if (an === 'lumo' || an === 'tinko') {
+      if (!KIS[an]?.aktiv()) return { art, an, name: kiName(an), text: `${kiName(an)} ist gerade nicht verbunden.` };
+      const t = await kiFrage(an, KIS[an].system + (wissen ? '\n\nHintergrundwissen DR Lab (intern, nur für Diego):\n' + wissen.slice(0, 6000) : '') + ' Nova, Diegos Zentrale, fragt dich im Auftrag von Diego. Antworte konkret und hilfreich, gern etwas ausführlicher (bis 8 Sätze).', `Nova fragt: ${text}`).catch(() => null);
+      return { art, an, name: kiName(an), text: t || 'Keine Antwort bekommen.' };
+    }
+    if (FIGUREN_KI[an]) { const r = await figurReden(an, 'Diego', `(Nova fragt für Diego) ${text}`, true); return { art, an, name: kiName(an), text: r.text || r.fehler }; }
+    return { art, an, name: an, text: 'Diese Figur kenne ich nicht.' };
+  }
+  if (art === 'male') {
+    if (!TINKO_KEY) return { art, text: 'Tinko ist nicht verbunden, darum kein Bild.' };
+    const t = kiTag(); if (t.bilder >= BILD_MAX_TAG) return { art, text: `Tinko hat heute schon ${BILD_MAX_TAG} Bilder gemalt. Morgen wieder.` };
+    t.bilder++;
+    const wunsch = sauber(a.wunsch, 1000), bild = await tinkoBild(wunsch, !!a.hoch).catch(() => null);
+    if (!bild) return { art, text: 'Tinko konnte das Bild gerade nicht malen.' };
+    const e = ablageNeu('Tinko', 'Für Nova gemalt: ' + wunsch, bild);
+    return { art, text: wunsch, bid: e.bid || null };
+  }
+  if (art === 'auftrag') {
+    const text = String(a.text || '').slice(0, 8000); if (!text.trim()) return null;
+    briefSpeichern('Nova-Auftrag ' + jetzt().slice(0, 16).replace('T', ' ') + '\n' + text);
+    const r = await schleifeLaden(text, 'Nova', true);
+    return r.fehler ? { art, text: r.fehler } : { art, text: `Schleife hat jetzt ${r.offen} offene Aufgaben.`, stand: r };
+  }
+  if (art === 'schleife') { const r = schleifeSchalten(a.an !== false); return { art, text: r.aktiv ? `Schleife läuft, ${r.offen} offen.` : 'Schleife pausiert.', stand: r }; }
+  if (art === 'merke') {
+    const text = sauber(a.text, 400); if (!text) return null;
+    if (!zentrale.gedaechtnis.some(g => g.text === text)) zentrale.gedaechtnis.push({ id: id('g'), text, zeit: jetzt() });
+    zentrale.gedaechtnis = zentrale.gedaechtnis.slice(-ZENTRALE_MAX_GEDAECHTNIS);
+    return { art, text };
+  }
+  if (art === 'vergiss') {
+    const w = vergleich(a.text); if (!w) return null;
+    const vorher = zentrale.gedaechtnis.length;
+    zentrale.gedaechtnis = zentrale.gedaechtnis.filter(g => !vergleich(g.text).includes(w));
+    return { art, text: `${vorher - zentrale.gedaechtnis.length} Erinnerung(en) gelöscht.` };
+  }
+  if (art === 'oeffne') {
+    if (a.app && KIVERSE_APPS[a.app]) return { art, app: a.app, name: KIVERSE_APPS[a.app].name, link: `/apps/${a.app}/?k=${encodeURIComponent(zug.k)}` };
+    const orte = { welt: ['Plaça', '/?k='], spiel: ['3D-Städtchen', '/spiel?k='], werkstatt: ['Werkstatt', '/?k='] };
+    const o = orte[a.ort]; if (o) return { art, ort: a.ort, name: o[0], link: o[1] + encodeURIComponent(zug.k) + (a.ort === 'werkstatt' ? '#werkstatt' : '') };
+  }
+  return null;
+}
+async function zentraleFrage(system, inhalt) {
+  if (!NOVA_KEY) return null;
+  const r = await fetch(NOVA_BASIS + '/v1/chat/completions', { method: 'POST', signal: AbortSignal.timeout(60000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'Nova Zentrale' },
+    body: JSON.stringify({ messages: [{ role: 'system', content: system }, { role: 'user', content: inhalt }] }) }).catch(() => null);
+  const d = r ? await r.json().catch(() => ({})) : {};
+  if (r && !r.ok) console.error('Nova-Zentrale:', r.status, d?.error?.message || '');
+  return d?.choices?.[0]?.message?.content || null;
+}
+// Ein Gesprächsschritt: Nova antwortet sofort, die Aktionen laufen weiter, das Ergebnis holt die Seite ab (GET /api/zentrale).
+function zentraleSagen(text, zug) {
+  const zug2 = { id: id('z'), du: sauber(text, 4000), zeit: jetzt(), sagen: '', ergebnisse: [], fertig: false };
+  let erstFertig; zug2.erst = new Promise(r => { erstFertig = r; });
+  zentrale.verlauf.push(zug2); zentrale.verlauf = zentrale.verlauf.slice(-ZENTRALE_MAX_VERLAUF);
+  if (!zentraleDarf()) { Object.assign(zug2, { sagen: 'Für heute habe ich genug geredet. Morgen bin ich wieder ganz da.', fertig: true }); erstFertig(); zentraleSpeichern(); return zug2; }
+  if (!NOVA_KEY) { Object.assign(zug2, { sagen: 'Ich bin noch nicht mit der Sense Engine verbunden.', fertig: true }); erstFertig(); zentraleSpeichern(); return zug2; }
+  const verlauf = zentrale.verlauf.slice(-13, -1).map(v => `Diego: ${v.du}\nNova: ${v.sagen}${v.ergebnisse.length ? ' [' + v.ergebnisse.map(e => (e.name || e.art) + ': ' + String(e.text || '').slice(0, 200)).join(' | ') + ']' : ''}`).join('\n');
+  zug2.laeuft = (async () => {
+    const roh = await zentraleFrage(zentraleSystem(), `${verlauf ? 'Bisher:\n' + verlauf + '\n\n' : ''}Diego sagt jetzt: ${zug2.du}`).catch(() => null);
+    const o = zentraleJson(roh || '');
+    zug2.sagen = sauber(o.sagen, 800) || (roh ? 'Mhm.' : 'Ich höre dich, aber mir fehlt gerade die Verbindung. Sag es bitte nochmals.');
+    zentraleSpeichern(); erstFertig();
+    const akt = (Array.isArray(o.aktionen) ? o.aktionen : []).slice(0, 5);
+    const fragen = akt.filter(a => a?.art === 'frage').slice(0, 2), male = akt.filter(a => a?.art === 'male').slice(0, 1), rest = akt.filter(a => a && !['frage', 'male'].includes(a.art));
+    for (const a of rest) { const e = await zentraleAktion(a, zug).catch(() => null); if (e) zug2.ergebnisse.push(e); }
+    const lang = await Promise.all([...fragen, ...male].map(a => zentraleAktion(a, zug).catch(() => null)));
+    for (const e of lang) if (e) zug2.ergebnisse.push(e);
+    const antworten = zug2.ergebnisse.filter(e => e.art === 'frage');
+    if (antworten.length) {
+      const fazit = await zentraleFrage(zentraleSystem().replace(ZENTRALE_FORMAT, 'Antworte nur mit dem, was du Diego jetzt laut sagst: höchstens 3 kurze gesprochene Sätze, ohne Markdown, ohne JSON.'),
+        `Diego sagte: ${zug2.du}\nDu hast gefragt, die Antworten:\n${antworten.map(e => `${e.name}: ${e.text}`).join('\n\n')}\n\nFass für Diego das Wichtigste zusammen.`).catch(() => null);
+      if (fazit) zug2.fazit = sauber(fazit.replace(/[{}"]/g, ''), 800);
+    }
+  })().catch(e => { zug2.sagen = zug2.sagen || 'Da ist etwas schiefgegangen: ' + e.message; }).finally(() => { zug2.fertig = true; delete zug2.laeuft; erstFertig(); zentraleSpeichern(); });
+  return zug2;
+}
+const zentraleOeffentlich = (v) => { const { laeuft, erst, ...rest } = v; return rest; };
+function zentraleStand() {
+  const st = schleifeStand();
+  return { seele: zentrale.seele, gedaechtnis: zentrale.gedaechtnis, verlauf: zentrale.verlauf.slice(-40).map(zentraleOeffentlich),
+    netz: { lumo: !!NOVA_KEY, tinko: !!TINKO_KEY, schleife: { aktiv: st.aktiv, offen: st.offen, fertig: st.fertig, naechste: st.naechste },
+      apps: Object.entries(KIVERSE_APPS).map(([k, a]) => ({ id: k, name: a.name })),
+      figuren: Object.entries(FIGUREN_KI).filter(([k]) => k !== 'nova').map(([k, f]) => ({ id: k, name: f.name, ort: f.ort })) },
+    heute: { zahl: ZENTRALE_TAG.tag === jetzt().slice(0, 10) ? ZENTRALE_TAG.zahl : 0, max: ZENTRALE_MAX_TAG } };
+}
+// Die Seite liegt in daten/ (dort darf der Dienst schreiben); fehlt sie, holt der Server sie einmal von GitHub.
+async function zentraleSeite() {
+  try { return fs.readFileSync(ZENTRALE_SEITE); } catch {}
+  try { return fs.readFileSync(path.join(__dirname, 'nova.html')); } catch {}
+  const r = await fetch(UPDATE_QUELLE + 'nova.html?v=' + Date.now(), { signal: AbortSignal.timeout(30000) }).catch(() => null);
+  if (!r || !r.ok) return null;
+  const b = Buffer.from(await r.arrayBuffer());
+  try { fs.writeFileSync(ZENTRALE_SEITE, b, { mode: 0o600 }); } catch {}
+  return b;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1297,6 +1463,37 @@ const server = http.createServer(async (req, res) => {
       if (!s) { res.writeHead(204); return res.end(); }
       res.writeHead(200, { 'Content-Type': s.typ, 'Cache-Control': 'no-store' }); return res.end(s.b);
     }
+    // Nova-Zentrale (nur Diego): sprechen, Zwischenstand abholen, Seele und Gedächtnis pflegen, Novas Stimme
+    if (url.pathname.startsWith('/api/zentrale')) {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nova gehört Diego.' });
+      const kk = url.searchParams.get('k') || req.headers['x-kiverse-k'] || '';
+      if (url.pathname === '/api/zentrale' && req.method === 'GET') return json(res, 200, zentraleStand());
+      if (url.pathname === '/api/zentrale/zug' && req.method === 'GET') {
+        const v = zentrale.verlauf.find(x => x.id === url.searchParams.get('id'));
+        return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });
+      }
+      const a = await body(req, 64 * 1024);
+      if (url.pathname === '/api/zentrale/sagen') {
+        const t = sauber(a.text, 4000); if (!t) return json(res, 400, { fehler: 'Was möchtest du Nova sagen?' });
+        const v = zentraleSagen(t, { k: kk });
+        await Promise.race([v.erst, new Promise(r => setTimeout(r, 55000))]);
+        return json(res, 200, zentraleOeffentlich(v));
+      }
+      if (url.pathname === '/api/zentrale/seele') { zentrale.seele = String(a.seele || '').replace(/\r/g, '').slice(0, 6000).trim() || SEELE_START; zentraleSpeichern(); return json(res, 200, { seele: zentrale.seele }); }
+      if (url.pathname === '/api/zentrale/gedaechtnis') {
+        if (a.weg) zentrale.gedaechtnis = zentrale.gedaechtnis.filter(g => g.id !== a.weg);
+        else if (sauber(a.text, 400)) zentrale.gedaechtnis.push({ id: id('g'), text: sauber(a.text, 400), zeit: jetzt() });
+        zentrale.gedaechtnis = zentrale.gedaechtnis.slice(-ZENTRALE_MAX_GEDAECHTNIS); zentraleSpeichern();
+        return json(res, 200, { gedaechtnis: zentrale.gedaechtnis });
+      }
+      if (url.pathname === '/api/zentrale/leeren') { zentrale.verlauf = []; zentraleSpeichern(); return json(res, 200, { ok: true }); }
+      if (url.pathname === '/api/zentrale/stimme') {
+        const st = await figurStimme('nova', String(a.text || '')).catch(() => null);
+        if (!st) { res.writeHead(204); return res.end(); }
+        res.writeHead(200, { 'Content-Type': st.typ, 'Cache-Control': 'no-store' }); return res.end(st.b);
+      }
+      return json(res, 404, { fehler: 'Nicht gefunden' });
+    }
     if (url.pathname === '/api/kiosk' && req.method === 'GET') return json(res, 200, kiosk());
     if (url.pathname === '/api/studien' && req.method === 'GET') return json(res, 200, { gefuehle: GEFUEHLE, studien: studienOffen(person(req.zugang).wer) });
     if (url.pathname === '/api/studie' && req.method === 'POST') {
@@ -1335,6 +1532,14 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end('<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>' +
         fs.readFileSync(path.join(__dirname, 'welt.html'), 'utf8') + '</body></html>');
+    }
+    if (url.pathname === '/nova' || url.pathname === '/nova.html') {
+      // Nova-Zentrale: nur mit Diegos Besitzer-Link
+      if (zugang(url.searchParams.get('k'))?.rolle !== 'besitzer') { res.writeHead(302, { Location: '/' }); return res.end(); }
+      const b = await zentraleSeite();
+      if (!b) return json(res, 503, { fehler: 'Nova-Seite noch nicht geladen. Bitte gleich nochmals.' });
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(b);
     }
     if (url.pathname === '/spiel' || url.pathname === '/spiel.html') {
       // Das Spiel (Trickfilm-Städtchen) nur mit Einladungslink

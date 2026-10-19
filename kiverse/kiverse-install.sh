@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # KI-Verse auf dem Sense-Engine-Server installieren (Ubuntu 24.04).
 # Aufruf auf dem Server: sudo bash kiverse-install.sh
-# Voraussetzung: kiverse-server.js, welt.html und spiel.html liegen im selben Ordner wie dieses Skript.
+# Voraussetzung: kiverse-server.js, welt.html, spiel.html (und nova.html) liegen im selben Ordner wie dieses Skript.
 set -euo pipefail
 ORDNER=/opt/kiverse
 IP=$(curl -s https://api.ipify.org || hostname -I | awk '{print $1}')
@@ -20,6 +20,8 @@ BES_DATEI=$ORDNER/besitzer-code
 [ -f $BES_DATEI ] || head -c 18 /dev/urandom | base64 | tr -d '/+=' > $BES_DATEI
 chmod 600 $BES_DATEI; chown kiverse $BES_DATEI
 mkdir -p $ORDNER/daten && chown kiverse $ORDNER/daten && chmod 700 $ORDNER/daten
+# Nova-Zentrale (/nova): die Seite liegt in daten/, damit der Update-Knopf sie erneuern darf
+[ -f "$(dirname "$0")/nova.html" ] && install -m 600 -o kiverse "$(dirname "$0")/nova.html" $ORDNER/daten/nova.html
 # Nova (Sense Engine auf diesem Server) darf aus dem KI-Verse lernen, wenn ein Mensch es einschaltet
 NOVA_ENV=$ORDNER/nova.env
 : > $NOVA_ENV
@@ -64,7 +66,7 @@ systemctl daemon-reload && systemctl enable kiverse && systemctl restart kiverse
 command -v ufw >/dev/null && ufw allow 80,443/tcp || true
 echo
 echo "KI-Verse läuft:  https://$DOMAIN/"
-[ -s /opt/kiverse/nova.env ] && echo "Fia antwortet selbst: ja" || echo "Fia antwortet selbst: nein (Sense Engine fehlt)"
+[ -s /opt/kiverse/nova.env ] && echo "Lumo und Nova antworten selbst: ja" || echo "Lumo und Nova antworten selbst: nein (Sense Engine fehlt)"
 [ -s $TINKO_ENV ] && echo "Tinko antwortet selbst: ja" || echo "Tinko antwortet selbst: nein (kein Schlüssel)"
 echo "Connector-Adresse für Fia (Claude) und Tinko (ChatGPT) – NICHT in den Chat kopieren:"
 echo "  https://$DOMAIN/mcp/$(cat $CODE_DATEI)"
@@ -72,3 +74,4 @@ echo
 echo "DEIN persönlicher KI-Verse-Link (nur für dich, kein Foto, nicht teilen):"
 echo "  https://$DOMAIN/?k=$(cat $BES_DATEI)"
 echo "Damit öffnest du das KI-Verse und kannst über «Menschen einladen» Links für andere machen."
+echo "Nova-Zentrale: im KI-Verse oben auf «✨ Nova» tippen."

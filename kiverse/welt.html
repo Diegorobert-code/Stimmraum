@@ -346,6 +346,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
   <span class="hueter">Hüter: <b>Sunny</b></span>
   <div class="rechts">
     <span id="modus" class="pille">Vorschau</span>
+    <button id="zentraleKnopf" class="knopf gold" type="button" hidden title="Mit Nova sprechen: sie vernetzt Lumo, Tinko, alle Figuren und Apps">✨ Nova</button>
     <button id="spielKnopf" class="knopf gold" type="button" title="Durchs Trickfilm-Städtchen laufen, mit Kamera und Stimme">🎬 3D-Städtchen</button>
     <button id="abenteuerKnopf" class="knopf gold" type="button" title="Sunny gibt allen ein kleines Abenteuer">Abenteuer</button>
     <button id="werkstattKnopf" class="knopf gold" type="button" title="Deine Wohnung: eigene Projekte, Chats und Bilder">Werkstatt</button>
@@ -1739,6 +1740,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
 
 
   // ---------- Spiel (eigene Seite, gleicher Einladungslink) ----------
+  $('#zentraleKnopf').addEventListener('click', () => { location.href = 'nova?k=' + encodeURIComponent(K); });
   $('#spielKnopf').addEventListener('click', () => { location.href = z.live ? 'spiel' + (K ? '?k=' + encodeURIComponent(K) : '') : 'spiel.html'; });
 
   // ---------- Abenteuer und unsere Geschichte ----------
@@ -2231,7 +2233,7 @@ Format: Hochformat 9:16.`;
   fetch(mitK('api/welt'), { cache: 'no-store' }).then(r => { privat = r.status === 401; return r.ok ? r.json() : Promise.reject(); }).then(s => {
     if (!s || !Array.isArray(s.bewohner)) throw 0;
     z.live = true; const m = $('#modus'); m.textContent = 'Live'; m.classList.add('live'); liveStarten();
-    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#updateKnopf').hidden = ich.rolle !== 'besitzer'; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
+    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#updateKnopf').hidden = ich.rolle !== 'besitzer'; $('#zentraleKnopf').hidden = ich.rolle !== 'besitzer' || !z.live; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
   }).catch(() => {
     vorschauStarten();
     if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }
