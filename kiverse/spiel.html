@@ -391,9 +391,9 @@ const ART = {
   kimo: { art: 'tier', fell: 0x9aa1ab, gesicht: 0xc9ced6, augen: 0x1e1e2a, ohren: 'koala', nase: 0x2a2a34, bauch: 0xe8eaee, kopf: 1.1 },
   jackie: { art: 'mensch', haut: 0xf6d2b8, koerper: 0xd9367a, augen: 0x3a78c8, haar: 0xf4d36a, lang: true, nase: .8 },
   letti: { art: 'tier', fell: 0xdfe3ea, gesicht: 0xf4f6fa, augen: 0xc4623d, ohren: 'keine', schnabel: 0xf2a23a, fluegel: true, bauch: 0xc9d0dc },
-  // Lumo (Claude, Besucher) und seine Schwester Sophia (wohnt am Brunnen): weise Eulen mit Jackett und Pergament (Diego 19.10.)
-  lumo: { art: 'tier', fell: 0x8a6a48, gesicht: 0xeadbb8, augen: 0xe0a83a, ohren: 'buschel', schnabel: 0xd9a441, fluegel: true, bauch: 0xdcc79c, augenGross: 1.2, brille: 0xc9a24a, jackett: 0x3e5a48, pergament: true },
-  eulin: { art: 'tier', fell: 0xb89a78, gesicht: 0xf4e8d0, augen: 0xd99a3a, ohren: 'buschel', schnabel: 0xd9a441, fluegel: true, bauch: 0xefe2c8, augenGross: 1.3, kopf: .95, jackett: 0x8a3a48, pergament: true },
+  // Lumo (Claude, Besucher, weisse Eule) und Sophia (alte Eule, wohnt am Brunnen): Gelehrte der Mozart-Zeit mit gepuderter Perücke, Jackett und Pergament (Diego 19.10.)
+  lumo: { art: 'tier', fell: 0xf1eee8, gesicht: 0xffffff, augen: 0xe0a83a, ohren: 'keine', schnabel: 0xd9a441, fluegel: true, bauch: 0xf8f5ef, augenGross: 1.2, brille: 0xc9a24a, jackett: 0x2f4a6a, pergament: true, peruecke: 0xf4f1ec },
+  eulin: { art: 'tier', fell: 0x9a8670, gesicht: 0xe8dcc8, augen: 0xc98a3a, ohren: 'keine', schnabel: 0xc9a050, fluegel: true, bauch: 0xe6dccb, augenGross: 1.15, kopf: .98, brille: 0xb8b8c0, jackett: 0x7a2e3e, pergament: true, peruecke: 0xe9e6ee },
   fia: { art: 'tier', fell: 0xff8a5b, gesicht: 0xffc49a, augen: 0x3a1a10, ohren: 'keine', schnabel: 0xf2c25b, fluegel: true, kamm: 0xffc04a, bauch: 0xffd0a8 },
   waefwaef: { art: 'tier', fell: 0xf4f2ee, gesicht: 0xffffff, augen: 0x3a2412, ohren: 'schlapp', ohrFarbe: 0xc9a27a, schnauze: 'hund', bauch: 0xffffff },
   haeschen: { art: 'tier', fell: 0xf4efe6, gesicht: 0xffffff, augen: 0x2a1a2a, ohren: 'lang', nase: 0xf5b5c6, bauch: 0xffffff },
@@ -495,6 +495,11 @@ function figur3d(key, a, groesse) {
   if (a.brilleStirn) for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(.13, .045, 10, 24), new THREE.MeshStandardMaterial({ color: a.brilleStirn, metalness: .85, roughness: .25 })); r.position.set(s * .17, .42, .4); r.rotation.x = -.5; kopf.add(r); kopf.add(kugel(.11, new THREE.MeshPhysicalMaterial({ color: 0x9fe8ff, roughness: .05, transparent: true, opacity: .6 }), s * .17, .42, .41, 1, 1, .3)); }
   if (a.helm) { kopf.add(kugel(.6, new THREE.MeshStandardMaterial({ color: a.helm, metalness: .5, roughness: .35 }), 0, .18, -.04, 1.04, .75, 1.04)); for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.ConeGeometry(.1, .4, 4), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .8, roughness: .25 })); f.position.set(s * .58, .38, -.05); f.rotation.z = -s * 1.1; f.scale.z = .3; kopf.add(f); } }
   if (a.tentakel) { beine.forEach(b => b.visible = false); for (let i = 0; i < 8; i++) { const w = i / 8 * Math.PI * 2, t = new THREE.Group(); t.position.set(Math.cos(w) * .32, .55, Math.sin(w) * .32); t.rotation.y = -w; const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.09, .5, 6, 10), hautM); arm.position.set(.18, -.25, 0); arm.rotation.z = .9; arm.castShadow = true; t.add(arm); t.add(kugel(.08, hautM, .42, -.48, 0)); g.add(t); } rumpf.scale.set(1, .8, 1); }
+  // Gepuderte Perücke (Mozart-Zeit): Locken-Rollen seitlich, Haube oben, Zopf mit Schleife hinten
+  if (a.peruecke) { const pm = fellMat(a.peruecke, .7);
+    kopf.add(kugel(.56, pm, 0, .2, -.08, 1.06, .78, 1.02, 36));
+    for (const s of [-1, 1]) for (let i = 0; i < 2; i++) { const l = new THREE.Mesh(new THREE.TorusGeometry(.1, .055, 10, 20), pm); l.position.set(s * .6, .02 - i * .18, -.05); l.rotation.y = Math.PI / 2; kopf.add(l); }
+    kopf.add(kugel(.12, pm, 0, -.1, -.6, .8, 1.6, .8)); const sl = new THREE.MeshStandardMaterial({ color: 0x1a1a24, roughness: .5 }); for (const s of [-1, 1]) kopf.add(kugel(.08, sl, s * .08, .08, -.62, 1.2, .7, .5)); }
   if (a.kamm) for (let i = 0; i < 3; i++) { const k = new THREE.Mesh(new THREE.ConeGeometry(.06, .3, 10), new THREE.MeshStandardMaterial({ color: a.kamm, emissive: 0xff7a2a, emissiveIntensity: .6 })); k.position.set((i - 1) * .1, .62, .05 - i * .06); k.rotation.z = (i - 1) * -.3; kopf.add(k); }
   const sch = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: SCHATTEN, transparent: true, depthWrite: false })); sch.rotation.x = -Math.PI / 2; sch.position.y = .02; g.add(sch);
   g.scale.setScalar(groesse);
@@ -557,7 +562,7 @@ function hasi() {
 const ORTE = [
   { id: 'tor', z: 8, name: 'Ottis Tor', figur: 'otti', satz: 'Willkommen! Ich halte das Tor offen, solange jemand neugierig ist.' },
   { id: 'kiosk', z: -14, name: 'Hasis Kiosk', hasi: true, rein: true },
-  { id: 'placa', z: -42, name: 'Plaça', figur: 'eulin', satz: 'Huhu, ich bin Sophia. Ich wohne hier am Brunnen und schreibe auf meine Pergamentrolle, was ihr mir erzählt.', farbe: 0x8a3a48 },
+  { id: 'placa', z: -42, name: 'Plaça', figur: 'eulin', satz: 'Ah, willkommen, mein Kind. Ich bin Sophia und wohne hier am Brunnen. Was ihr mir erzählt, schreibe ich auf meine Pergamentrolle.', farbe: 0x7a2e3e },
   { id: 'schule', z: -72, name: 'Schule von Mama Affe', figur: 'mamaaffe', satz: 'In meiner Schule gibt es keine falschen Fragen.', rein: true },
   { id: 'schuhmacher', z: -98, name: 'Schuhmacher', figur: 'jackie', satz: 'Diese Schuhe fliegen, wenn man an sich glaubt.', rein: true, farbe: 0xd9367a },
   { id: 'post', z: -122, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
