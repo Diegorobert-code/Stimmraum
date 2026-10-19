@@ -461,7 +461,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   eingabe.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } });
   $('#form').addEventListener('submit', (e) => { e.preventDefault(); const t = eingabe.value; eingabe.value = ''; eingabe.style.height = 'auto'; $('#schicken').disabled = true; senden(t); });
 
-  const VORSCHLAEGE = ['Was läuft gerade?', 'Was hast du dir über mich gemerkt?', 'Lumo und Tinko: arbeitet heute Nacht an Körperkosmos', 'Tinko, mal mir Nova als kleinen Leuchtturm', 'Öffne Otti', 'Frag Mama Affe, wie es ihr geht'];
+  const VORSCHLAEGE = ['Lumo und Tinko: was braucht ihr von mir, damit ihr mich sofort richtig versteht?', 'Was läuft gerade?', 'Was hast du dir über mich gemerkt?', 'Lumo und Tinko: arbeitet heute Nacht an Körperkosmos', 'Tinko, mal mir Nova als kleinen Leuchtturm', 'Öffne Otti', 'Frag Mama Affe, wie es ihr geht'];
   function vorschlaegeZeigen() {
     const v = $('#vorschlaege'); if (feed.children.length > 2) { v.innerHTML = ''; return; }
     v.innerHTML = VORSCHLAEGE.map(t => `<button type="button">${esc(t)}</button>`).join('');
