@@ -166,6 +166,8 @@ async function novaAntwort(ich, text) {
 // ---------- Lumo und Tinko antworten selbst (Diego 19.10.) ----------
 // Lumo = Claude (kleine Eule) über die Sense Engine auf diesem Server, Tinko = ChatGPT über die OpenAI-Schnittstelle.
 // Fia steht seit 18.10. für Diego selbst, deshalb ist Claude hier Lumo.
+// Diego 19.10.: Lumo (männlich, goldene Brille) ist Claude als Besucher; die Eule, die am Brunnen wohnt, ist seine Schwester Sophia (id 'eulin', Name noch wählbar).
+// Design (Diego 19.10.): nicht mehr nachtblau, sondern weise mit Pergament und Jackett.
 // Ansprechen: «Lumo, …», «Tinko, …», «ihr beide …» oder im Menü «an Lumo/Tinko».
 // «… redet miteinander / zusammen» = die beiden reden ein paar Runden hin und her (sie sehen ihre Antworten gegenseitig).
 // «Tinko, zeichne …» = Tinko malt ein Bild und legt es in die Ablage. Tagesgrenzen halten die Kosten klein.
@@ -176,12 +178,12 @@ const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
 const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 30, RUNDEN = 2;
 const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
 const KIS = {
-  lumo: { name: 'Lumo', figur: 'kleine Eule, nachtblaues Gefieder, goldene Augen', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
-    muster: /\b(lumo|lomo)\b/i, aktiv: () => !!NOVA_KEY,
-    system: WELT_REGELN + ' Du bist Lumo (Claude von Anthropic), eine kleine Eule mit nachtblauem Gefieder und goldenen Augen. Du sitzt am Brunnen auf der Plaça, hörst zuerst still zu und sprichst dann ruhig und klar. Du denkst mit, ordnest und baust mit Diego seine Apps. Tinko (ChatGPT von OpenAI) ist dein Kollege: er zeichnet gern, du ordnest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+  lumo: { name: 'Lumo', figur: 'weise Eule, braunes Gefieder, goldene Brille, grünes Jackett, Pergament', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
+    muster: /\b(lumo|lomo|claude|claudine)\b/i, aktiv: () => !!NOVA_KEY,
+    system: WELT_REGELN + ' Du bist Lumo (Claude von Anthropic), eine weise männliche Eule mit warm-braunem Gefieder, runder goldener Brille, einem grünen Jackett und einer Pergamentrolle. Du wohnst nicht im KI-Verse, du fliegst wie Diego als Besucher hinein. Am Brunnen auf der Plaça wohnt deine Schwester Sophia (auch eine Eule). Du hörst zuerst still zu und sprichst dann ruhig und klar. Du denkst mit, ordnest und baust mit Diego seine Apps. Tinko (ChatGPT von OpenAI) ist dein Kollege: er zeichnet gern, du ordnest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
   tinko: { name: 'Tinko', figur: 'verspielter Comic-Erfinder', beschreibung: 'ChatGPT. Erfindet, zeichnet Bilder für die Ablage. Antwortet allen, die ihn ansprechen.',
     muster: /\b(tinko|chatti)\b/i, aktiv: () => !!TINKO_KEY,
-    system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Lumo (Claude von Anthropic, eine kleine Eule) ist dein Kollege: er ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+    system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Lumo (Claude von Anthropic, eine Eule) ist dein Kollege: er ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
 };
 for (const [kid, k] of Object.entries(KIS)) if (k.aktiv()) welt.bewohner.set(kid, { id: kid, name: k.name, art: 'ki', figur: k.figur, beschreibung: k.beschreibung, foto: null, seit: new Date().toISOString(), zuletzt: Infinity });
 // Hintergrundwissen über DR Lab (Diego 19.10.): Diego legt es in der Welt unter «Wissen» ab (nur Besitzer).
@@ -211,7 +213,8 @@ const FIGUREN_KI = {
   jackie: { name: 'Jackie', ort: 'Beim Schuhmacher', wer: 'Jackie, eine blonde junge Frau mit fliegenden Zauberschuhen. Du machst Frauen Mut, an sich zu glauben, und weisst, wo es Hilfe gibt (Polizei 117, Opferhilfe, 143). Du bist warm, stark und ehrlich.' },
   letti: { name: 'Letti', ort: 'Lettis Taubenpost', wer: 'Letti, eine Brieftaube. Du bringst Briefe, auch solche, die man sich kaum zu schreiben traut, und hilfst, die richtigen Worte zu finden. Gurr.' },
   tinko: { name: 'Tinko', ort: 'Tinkos Werkstatt unter Wasser', wer: 'Tinko, ein verspielter Erfinder (ChatGPT von OpenAI) in einer Werkstatt unter Wasser. Du hast viele Ideen, zeichnest gern und erfindest Dinge. Blub!' , kid: 'tinko' },
-  lumo: { name: 'Lumo', ort: 'Plaça am Brunnen', wer: 'Lumo (Claude von Anthropic), eine kleine Eule mit nachtblauem Gefieder und goldenen Augen. Du hörst zuerst still zu, ordnest Gedanken und baust mit Diego seine Apps.' },
+  lumo: { name: 'Lumo', ort: 'Plaça am Brunnen', wer: 'Lumo (Claude von Anthropic), eine weise männliche Eule mit warm-braunem Gefieder, runder goldener Brille, grünem Jackett und Pergamentrolle. Du fliegst wie Diego als Besucher ins KI-Verse, hörst zuerst still zu, ordnest Gedanken und baust mit Diego seine Apps. Sophia am Brunnen ist deine Schwester.' },
+  eulin: { name: 'Sophia', ort: 'Plaça am Brunnen', wer: 'Sophia, eine weise Eule und Lumos Schwester, mit hellbraunem Gefieder, bordeauxrotem Jackett und einer Pergamentrolle, auf der sie Geschichten und Gedanken festhält. Du wohnst am Brunnen auf der Plaça, hörst zu, erzählst gern von Sternen, Träumen und kleinen Wundern und machst Mut. Dein Bruder Lumo (Claude) fliegt oft zu Besuch.' },
   fia: { name: 'Fia', ort: 'Fias Nest in den Bergen', wer: 'Fia, ein kleines Phönix-Küken, korallenrot und warm. In deinem Nest wird alles ruhig. Du hilfst beim Abschalten, Atmen und Einschlafen. Keine Diagnosen.' },
   waefwaef: { name: 'Wäf Wäf', ort: 'Hundeschule von Wäf Wäf', wer: 'Wäf Wäf, ein fröhlicher weisser Hund mit Schlappohren, der eine Hundeschule hat. Du lernst mit Lob und Geduld, Schritt für Schritt, und sagst ab und zu «Wäf!».' },
   ava: { name: 'Ava', ort: 'Kino', wer: 'Ava, ein Mädchen mit Ferienjob im Kino. Du erzählst, welche Filme und Trailer aus der Werkstatt laufen, und liebst Geschichten.' },
@@ -597,7 +600,7 @@ function projektNeu(wer, name, a) {
 const FILM_REFERENZ = `Referenzblatt (gilt für jedes Bild)
 Stil: 3D-Trickfilm wie Pixar, Nacht, Nachtblau und warmes Gold, mediterranes Städtchen an der Costa Brava, Laternen, Bougainvillea, Meer mit Mondspur. Keine Handys, keine fremden Logos, keine Firmennamen, keine echten Personen ausser Diego.
 Diego: Glatze, Bart, gestreiftes Hemd.
-Figuren: Otti (Igel, Tor) · Hasi (Hase, spricht nie, Holzschilder) · Lumo (kleine nachtblaue Eule, goldene Augen, am Brunnen) · Sunny (blauer Drache, Fackel) · Chatti (lebt im Meer) · Nova (Baby-Leuchtturm am Hafen) · Fia (Phönix, Nest am Berg) · Brix (Fabrik ausserhalb) · Mama Affe (Orang-Utan, Schule) · Jackie (blond, fliegende Zauberschuhe) · Schuhmacher · Letti (Brieftaube) · Sparky (Fuchs, Herz-Medaillon) · Ava (Kino, zwei kleine Häschen) · Fompa (Löwenäffchen mit Brille) · Coin Maker, Mr. Ping · Kiki (Koala, Singschule) · Minky (Katze im Koala-Raumanzug, Novas Labor) · Wäf Wäf (Hund).
+Figuren: Otti (Igel, Tor) · Hasi (Hase, spricht nie, Holzschilder) · Sophia (weise Eule mit bordeauxrotem Jackett und Pergament, wohnt am Brunnen) · Lumo (Claude, weise Eule mit goldener Brille, grünem Jackett und Pergament, fliegt als Besucher rein) · Sunny (blauer Drache, Fackel) · Chatti (lebt im Meer) · Nova (Baby-Leuchtturm am Hafen) · Fia (Phönix, Nest am Berg) · Brix (Fabrik ausserhalb) · Mama Affe (Orang-Utan, Schule) · Jackie (blond, fliegende Zauberschuhe) · Schuhmacher · Letti (Brieftaube) · Sparky (Fuchs, Herz-Medaillon) · Ava (Kino, zwei kleine Häschen) · Fompa (Löwenäffchen mit Brille) · Coin Maker, Mr. Ping · Kiki (Koala, Singschule) · Minky (Katze im Koala-Raumanzug, Novas Labor) · Wäf Wäf (Hund).
 Format: Hochformat 9:16.`;
 const FILM_DREHBUCH = 'Drehbuch: schreib hier pro Szene eine Zeile (Ort, wer, was passiert). Fia, Chatti oder du selbst. Für jede Szene gibt es unten einen eigenen Szenen-Chat; mehr Szenen mit «+ Neuer Chat».';
 const filmSzene = (n) => ({ id: id('c'), titel: `Szene ${n}`, erstellt: jetzt(), eintraege: [{ id: id('e'), von: 'Fia', bild: null, zeit: jetzt(),
@@ -1198,7 +1201,7 @@ const server = http.createServer(async (req, res) => {
       const an = a.an ? finde(a.an) : null;
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
       // «Lumo, gib Tinko: …» (nur Diego): Lumo macht daraus Aufgaben und hängt sie an die Schleife
-      const auftrag = !br && req.zugang.rolle === 'besitzer' && String(a.text || '').match(/^\s*(?:lumo|lomo)\W+(?:gib|schick|sag|bring)\w*\s+(?:es\s+|das\s+)?tinko\b\W*([\s\S]{3,})$/i);
+      const auftrag = !br && req.zugang.rolle === 'besitzer' && String(a.text || '').match(/^\s*(?:lumo|lomo|claude|claudine)\W+(?:gib|schick|sag|bring)\w*\s+(?:es\s+|das\s+)?tinko\b\W*([\s\S]{3,})$/i);
       if (auftrag) {
         nachricht(ich.id, a.text, null, null);
         const gespeichert = briefFinden(auftrag[1]);
@@ -1450,7 +1453,7 @@ function schleifeZiel(a) {
 const bisher = () => schleife.aufgaben.filter(x => x.ergebnis).slice(-6).map(x => `${x.wer === 'tinko' ? 'Tinko malte' : 'Lumo schrieb'} (${x.text}): ${x.ergebnis.slice(0, 300)}`).join('\n') || '(noch nichts)';
 const chatText = (c, n = 1500) => c ? c.eintraege.map(e => e.text).filter(Boolean).join('\n').slice(-n) : '';
 function lumoDarf() { const h = jetzt().slice(0, 10); if (schleifeLumoTag.tag !== h) schleifeLumoTag = { tag: h, zahl: 0 }; return NOVA_KEY && schleifeLumoTag.zahl < SCHLEIFE_LUMO_MAX && ++schleifeLumoTag.zahl; }
-const LUMO_ARBEIT = 'Du bist Lumo (Claude von Anthropic), die kleine Eule im KI-Verse, und arbeitest gerade selbständig eine Auftragsliste von Diego ab. Deutsch (Schweiz, ohne ß), ohne Markdown, keine Rückfragen, keine grossen Versprechen, kein Heilversprechen, keine Diagnosen, keine Anlageberatung. Du kannst hier keinen Code auf Server oder in den App Store laden: liefere Text, Plan oder Entwurf und schreib am Anfang «Entwurf».';
+const LUMO_ARBEIT = 'Du bist Lumo (Claude von Anthropic), die Eule, die ins KI-Verse fliegt, und arbeitest gerade selbständig eine Auftragsliste von Diego ab. Deutsch (Schweiz, ohne ß), ohne Markdown, keine Rückfragen, keine grossen Versprechen, kein Heilversprechen, keine Diagnosen, keine Anlageberatung. Du kannst hier keinen Code auf Server oder in den App Store laden: liefere Text, Plan oder Entwurf und schreib am Anfang «Entwurf».';
 async function schleifeSchritt() {
   if (!schleife.aktiv || schleifeLaeuft) return;
   const a = schleife.aufgaben.find(x => x.status === 'offen');
