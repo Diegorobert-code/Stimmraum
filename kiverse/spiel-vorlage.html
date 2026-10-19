@@ -1061,6 +1061,8 @@ async function kameraAn(seite) {
 async function mitlaufenSetzen(an) {
   if (an) await sensorenErlauben();
   handy.mitlaufen = an; handy.r0 = null; handy.weg = 0; $('#schrittAnzeige').hidden = !an;
+  // Beim Mitlaufen bleibt der Bildschirm an (sonst schläft das Handy beim Gehen ein)
+  try { if (an && navigator.wakeLock) handy.wach = await navigator.wakeLock.request('screen'); else if (!an) { handy.wach?.release(); handy.wach = null; } } catch {}
   $('#stick').style.opacity = an ? .35 : '';
 }
 // Selfie: das eigene Gesicht live im goldenen Rahmen auf dem Kopf der Figur
@@ -1108,6 +1110,7 @@ function handyKarte(fehler) {
     [[handy.mitlaufen ? '👣 Mitlaufen aus' : '👣 Mitlaufen: Handy drehen und gehen', umschalten(() => handy.ar ? kiBlickSetzen(false).then(() => mitlaufenSetzen(false)) : mitlaufenSetzen(!handy.mitlaufen)), !handy.mitlaufen],
      [handy.selfie ? '🤳 Mich ausblenden' : '🤳 Mich in der Welt sehen (Selfie-Kamera)', umschalten(() => selfieSetzen(!handy.selfie))],
      [handy.ar ? '🌍 KI-Blick aus' : '🌍 KI-Blick: die KI-Welt durch die Kamera', umschalten(() => kiBlickSetzen(!handy.ar))],
+     ...(handy.mitlaufen ? [['🧭 Neu ausrichten: geradeaus ist jetzt die Gasse', () => { handy.r0 = null; handyKarte(); }]] : []),
      ['Weiter', () => { $('#karte').hidden = true; }, true]]);
 }
 $('#handyKnopf').onclick = () => handyKarte();
