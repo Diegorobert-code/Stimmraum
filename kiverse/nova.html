@@ -127,6 +127,37 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
 .toast { position: fixed; left: 50%; top: calc(var(--sicher-oben) + 12px); transform: translate(-50%, -140%); transition: transform .3s; z-index: 20;
   background: #1a2752; border: 1px solid var(--linie); padding: 10px 16px; border-radius: 14px; font-size: 14px; max-width: 90vw; }
 .toast.an { transform: translate(-50%, 0); }
+/* Fenster Ergebnisse */
+.rund { position: relative; }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold); color: #2a1d00; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.badge[hidden] { display: none; }
+.fenster { position: fixed; inset: 0; z-index: 15; background: #0a1430; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.fenster.an { transform: none; }
+.fkopf { display: flex; align-items: center; gap: 8px; padding: calc(var(--sicher-oben) + 8px) 16px 8px; border-bottom: 1px solid var(--linie); }
+.fkopf h2 { flex: 1; margin: 0; font-size: 17px; font-weight: 600; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fleiste { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--linie); }
+.fleiste[hidden] { display: none; }
+.fleiste .knopf { flex: 1 1 auto; text-align: center; text-decoration: none; color: var(--text); }
+.finhalt { flex: 1; overflow-y: auto; padding: 14px 16px calc(var(--sicher-unten) + 24px); min-width: 0; }
+.ekarte { display: block; width: 100%; text-align: left; padding: 12px 14px; border-radius: 16px; background: var(--glas); border: 1px solid var(--linie); margin-bottom: 10px; color: var(--text); font-size: 15px; }
+.ekarte b { display: block; font-size: 16px; margin-bottom: 3px; }
+.ekarte small { color: var(--leise); display: block; line-height: 1.35; }
+.ekarte.neu { border-color: rgba(243,201,105,.6); }
+.ekarte.neu b::after { content: ' • neu'; color: var(--gold2); font-weight: 500; font-size: 13px; }
+.doku { font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; }
+.doku h1, .doku h2, .doku h3 { font-size: 18px; margin: 18px 0 8px; color: var(--gold2); }
+.doku h1 { font-size: 21px; }
+.doku p { margin: 8px 0; }
+.doku ul, .doku ol { padding-left: 22px; margin: 6px 0; }
+.doku li { margin: 3px 0; }
+.doku a { color: #9cc3ff; }
+.doku blockquote { margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--gold); background: rgba(255,255,255,.04); border-radius: 0 10px 10px 0; }
+.doku hr { border: 0; border-top: 1px solid var(--linie); margin: 16px 0; }
+.code { position: relative; margin: 10px 0; border-radius: 14px; background: rgba(0,0,0,.35); border: 1px solid var(--linie); }
+.code pre { margin: 0; padding: 12px; padding-top: 44px; overflow-x: auto; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.code button { position: absolute; top: 6px; right: 6px; padding: 7px 12px; border-radius: 10px; border: 0; background: var(--gold); color: #2a1d00; font-weight: 600; font-size: 14px; }
+.doku table { border-collapse: collapse; display: block; overflow-x: auto; font-size: 14px; }
+.doku td, .doku th { border: 1px solid var(--linie); padding: 5px 8px; }
 @media (min-width: 900px) { .buehne { height: 340px; } #nova { width: 240px; height: 270px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
@@ -137,6 +168,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   <header class="kopf">
     <a class="zurueck" id="zurueck" href="/">‹ KI-Verse</a>
     <h1>Nova</h1>
+    <button class="rund" id="ergKnopf" type="button" aria-label="Ergebnisse">📂<span class="badge" id="ergBadge" hidden></span></button>
     <button class="rund" id="menuKnopf" type="button" aria-label="Netz, Gedächtnis und Seele">☰</button>
   </header>
   <div class="netz" id="netz" aria-live="polite"></div>
@@ -220,6 +252,11 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
     <button type="button" data-r="seele">✨ Seele</button>
   </div>
   <div class="blattinhalt" id="blattinhalt"></div>
+</div>
+<div class="fenster" id="fenster" role="dialog" aria-modal="true" aria-label="Ergebnisse">
+  <div class="fkopf"><button class="rund" id="fZurueck" type="button" aria-label="Zurück">‹</button><h2 id="fTitel">📂 Ergebnisse</h2><button class="rund" id="fZu" type="button" aria-label="Schliessen">✕</button></div>
+  <div class="fleiste" id="fLeiste" hidden></div>
+  <div class="finhalt" id="fInhalt"></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -490,10 +527,89 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   let toastZeit = 0;
   function toast(t) { const x = $('#toast'); x.textContent = t; x.classList.add('an'); clearTimeout(toastZeit); toastZeit = setTimeout(() => x.classList.remove('an'), 3200); }
 
+
+  // ---------- Fenster «Ergebnisse»: alles direkt hier lesen, kopieren, öffnen ----------
+  async function kopieren(t) {
+    try { await navigator.clipboard.writeText(t); }
+    catch { const a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;top:-1000px'; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); }
+    toast('Kopiert ✓');
+  }
+  const linkArt = (u) => /^https?:\/\//.test(u) ? u : '#';
+  function inline(t) {
+    return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, a, u) => `<a href="${linkArt(u.replace(/&amp;/g, '&'))}" target="_blank" rel="noopener">${a}</a>`)
+      .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (m, v, u) => `${v}<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+  }
+  let codeTeile = [];
+  function markdown(md) {
+    codeTeile = [];
+    const z = md.split('\n'), out = []; let i = 0, liste = '';
+    const listeZu = () => { if (liste) { out.push(`</${liste}>`); liste = ''; } };
+    while (i < z.length) {
+      const l = z[i];
+      if (/^\s*```/.test(l)) {
+        listeZu(); const teil = []; i++;
+        while (i < z.length && !/^\s*```/.test(z[i])) teil.push(z[i++]);
+        i++; codeTeile.push(teil.join('\n'));
+        out.push(`<div class="code"><button type="button" data-kopie="${codeTeile.length - 1}">Kopieren</button><pre>${esc(teil.join('\n'))}</pre></div>`); continue;
+      }
+      if (/^\s*\|.*\|\s*$/.test(l)) {
+        listeZu(); const rows = [];
+        while (i < z.length && /^\s*\|.*\|\s*$/.test(z[i])) { if (!/^\s*\|[\s:|-]+\|\s*$/.test(z[i])) rows.push(z[i].trim().slice(1, -1).split('|').map(c => `<td>${inline(c.trim())}</td>`).join('')); i++; }
+        out.push(`<table>${rows.map(r => `<tr>${r}</tr>`).join('')}</table>`); continue;
+      }
+      let m;
+      if ((m = l.match(/^(#{1,3})\s+(.*)/))) { listeZu(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); }
+      else if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(l)) { listeZu(); out.push('<hr>'); }
+      else if ((m = l.match(/^\s*[-*•]\s+(.*)/))) { if (liste !== 'ul') { listeZu(); out.push('<ul>'); liste = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = l.match(/^\s*\d+[.)]\s+(.*)/))) { if (liste !== 'ol') { listeZu(); out.push('<ol>'); liste = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = l.match(/^\s*>\s?(.*)/))) { listeZu(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); }
+      else if (!l.trim()) listeZu();
+      else { listeZu(); out.push(`<p>${inline(l)}</p>`); }
+      i++;
+    }
+    listeZu(); return out.join('');
+  }
+  const F = { offen: null, liste: [] };
+  function ergBadge(n) { const b = $('#ergBadge'); b.hidden = !n; b.textContent = n > 9 ? '9+' : n || ''; }
+  async function ergListe() {
+    F.offen = null; $('#fTitel').textContent = '📂 Ergebnisse'; $('#fLeiste').hidden = true; $('#fZurueck').style.visibility = 'hidden';
+    const h = $('#fInhalt'); h.innerHTML = '<p class="hinweis">Lädt …</p>';
+    try {
+      F.liste = (await api('api/zentrale/ergebnisse')).ergebnisse;
+      ergBadge(F.liste.filter(e => e.neu).length);
+      h.innerHTML = F.liste.length ? F.liste.map(e => `<button class="ekarte ${e.neu ? 'neu' : ''}" type="button" data-e="${esc(e.id)}"><b>${esc(e.titel)}</b><small>${esc(e.von)} · ${new Date(e.zeit).toLocaleString('de-CH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small><small>${esc(e.vorschau)}</small></button>`).join('')
+        : '<p class="hinweis">Noch nichts da. Hier landen alle fertigen Ergebnisse, Briefe und Texte zum Kopieren, direkt in Nova, ohne fremde Links.</p>';
+      h.querySelectorAll('[data-e]').forEach(b => b.onclick = () => ergZeigen(b.dataset.e));
+    } catch (e) { h.innerHTML = `<p class="hinweis">${esc(e.message)}</p>`; }
+  }
+  async function ergZeigen(eid) {
+    const h = $('#fInhalt'); h.innerHTML = '<p class="hinweis">Lädt …</p>'; $('#fZurueck').style.visibility = 'visible';
+    try {
+      const e = await api('api/zentrale/ergebnis?id=' + encodeURIComponent(eid)); F.offen = e;
+      $('#fTitel').textContent = e.titel;
+      const l = $('#fLeiste'); l.hidden = false;
+      l.innerHTML = `<button class="knopf gold" type="button" id="fAlles">📋 Alles kopieren</button>${e.link ? `<a class="knopf" href="${esc(e.link)}" target="_blank" rel="noopener">↗︎ Öffnen</a>` : ''}${navigator.share ? '<button class="knopf" type="button" id="fTeilen">Teilen</button>' : ''}<button class="knopf" type="button" id="fWeg">🗑</button>`;
+      h.innerHTML = `<p class="hinweis">${esc(e.von)} · ${new Date(e.zeit).toLocaleString('de-CH')}</p><div class="doku">${markdown(e.text)}</div>`;
+      h.scrollTop = 0;
+      h.querySelectorAll('[data-kopie]').forEach(b => b.onclick = () => kopieren(codeTeile[+b.dataset.kopie]));
+      $('#fAlles').onclick = () => kopieren(e.text);
+      if ($('#fTeilen')) $('#fTeilen').onclick = () => navigator.share({ title: e.titel, text: e.text }).catch(() => {});
+      $('#fWeg').onclick = async () => { if (!confirm('Dieses Ergebnis löschen?')) return; await api('api/zentrale/ergebnis-weg', { id: e.id }).catch(x => toast(x.message)); ergListe(); };
+      history.replaceState(null, '', '#e=' + e.id);
+    } catch (x) { h.innerHTML = `<p class="hinweis">${esc(x.message)}</p>`; }
+  }
+  const fensterAuf = (eid) => { $('#fenster').classList.add('an'); eid ? ergZeigen(eid) : ergListe(); };
+  const fensterZu = () => { $('#fenster').classList.remove('an'); history.replaceState(null, '', location.pathname + location.search); laden(false); };
+  $('#ergKnopf').onclick = () => fensterAuf();
+  $('#fZu').onclick = fensterZu;
+  $('#fZurueck').onclick = () => ergListe();
+  { const m = location.hash.match(/^#e=([a-z0-9_]+)/); if (m) fensterAuf(m[1]); }
+
   async function laden(alles = true) {
     try {
       stand = await api('api/zentrale');
-      netzZeigen();
+      netzZeigen(); ergBadge(stand.ergebnisse?.neu || 0);
       if (alles) {
         feed.innerHTML = '';
         let tag = '';
@@ -512,7 +628,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
     } catch (e) { setze('ruhig', e.message); }
   }
   laden();
-  setInterval(() => { if (document.visibilityState === 'visible' && !sendet) api('api/zentrale').then(s => { stand = s; netzZeigen(); }).catch(() => {}); }, 30000);
+  setInterval(() => { if (document.visibilityState === 'visible' && !sendet) api('api/zentrale').then(s => { stand = s; netzZeigen(); ergBadge(s.ergebnisse?.neu || 0); }).catch(() => {}); }, 30000);
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
   // Begrüssung winkt beim Öffnen
   setTimeout(() => { N.winken = performance.now(); }, 600);

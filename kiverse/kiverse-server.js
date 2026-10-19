@@ -870,6 +870,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
   { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 10 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
+  { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -994,6 +996,10 @@ function werkzeug(name, a = {}) {
       if (e.fehler) return text(e.fehler, true);
       sunny(`${e.von} hat ${e.bid ? 'ein Bild' : 'eine Notiz'} in die Ablage gelegt${e.text ? ': ' + e.text.slice(0, 120) : '.'}`, 'brief');
       return text(`Abgelegt (${e.id}).`);
+    }
+    case 'kiverse_ergebnis': {
+      const e = ergebnisNeu(a);
+      return e.fehler ? text(e.fehler, true) : text(`In Novas Fenster «📂 Ergebnisse» gelegt (${e.id}). Diego sieht es unter «✨ Nova».`);
     }
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
@@ -1182,6 +1188,7 @@ Dein Netz:
 ${NOVA_NETZ()}
 
 Schleife jetzt: ${st.aktiv ? 'läuft' : 'steht'}, ${st.offen} offen, ${st.fertig} fertig${st.naechste ? ', als Nächstes ' + st.naechste : ''}.
+Fertige Ergebnisse in deinem Fenster «📂 Ergebnisse» (oben rechts, Diego liest und kopiert dort): ${ergebnisse.slice(-8).reverse().map(e => (e.neu ? '[neu] ' : '') + e.titel + ' (' + e.von + ')').join('; ') || 'noch keine'}.
 Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
 
 Was du dir über Diego gemerkt hast:
@@ -1287,8 +1294,26 @@ function zentraleStand() {
     netz: { lumo: !!NOVA_KEY, tinko: !!TINKO_KEY, schleife: { aktiv: st.aktiv, offen: st.offen, fertig: st.fertig, naechste: st.naechste },
       apps: Object.entries(KIVERSE_APPS).map(([k, a]) => ({ id: k, name: a.name })),
       figuren: Object.entries(FIGUREN_KI).filter(([k]) => k !== 'nova').map(([k, f]) => ({ id: k, name: f.name, ort: f.ort })) },
-    heute: { zahl: ZENTRALE_TAG.tag === jetzt().slice(0, 10) ? ZENTRALE_TAG.zahl : 0, max: ZENTRALE_MAX_TAG } };
+    heute: { zahl: ZENTRALE_TAG.tag === jetzt().slice(0, 10) ? ZENTRALE_TAG.zahl : 0, max: ZENTRALE_MAX_TAG },
+    ergebnisse: { zahl: ergebnisse.length, neu: ergebnisse.filter(e => e.neu).length } };
 }
+// Ergebnisse für Diego: fertige Texte, Briefe und Kopierbares direkt in Novas Fenster, ohne fremde Links.
+const ERGEBNIS_DATEI = path.join(DATEN, 'nova-ergebnisse.json');
+const ERGEBNIS_MAX = 200, ERGEBNIS_MAX_TEXT = 300000;
+let ergebnisse = [];
+try { ergebnisse = JSON.parse(fs.readFileSync(ERGEBNIS_DATEI, 'utf8')); } catch {}
+const ergebnisseSpeichern = () => { try { fs.writeFileSync(ERGEBNIS_DATEI, JSON.stringify(ergebnisse), { mode: 0o600 }); } catch (e) { console.error('Ergebnisse nicht gespeichert:', e.message); } };
+function ergebnisNeu(a) {
+  const titel = sauber(a.titel, 160), textInhalt = String(a.text == null ? '' : a.text).replace(/\r/g, '').slice(0, ERGEBNIS_MAX_TEXT);
+  if (!titel || !textInhalt.trim()) return { fehler: 'Titel und Text fehlen.' };
+  const link = /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? String(a.link).slice(0, 600) : '';
+  if (a.ersetzt) ergebnisse = ergebnisse.filter(e => e.id !== a.ersetzt);
+  const e = { id: id('e'), von: sauber(a.von, 60) || 'Claude', titel, text: textInhalt, link, zeit: jetzt(), neu: true };
+  ergebnisse.push(e); ergebnisse = ergebnisse.slice(-ERGEBNIS_MAX); ergebnisseSpeichern();
+  return e;
+}
+const ergebnisKurz = (e) => ({ id: e.id, von: e.von, titel: e.titel, link: e.link, zeit: e.zeit, neu: !!e.neu, laenge: e.text.length, vorschau: e.text.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[#*`>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) });
+
 // Die Seite liegt in daten/ (dort darf der Dienst schreiben); fehlt sie, holt der Server sie einmal von GitHub.
 async function zentraleSeite() {
   try { return fs.readFileSync(ZENTRALE_SEITE); } catch {}
@@ -1487,6 +1512,17 @@ const server = http.createServer(async (req, res) => {
       if (url.pathname === '/api/zentrale/zug' && req.method === 'GET') {
         const v = zentrale.verlauf.find(x => x.id === url.searchParams.get('id'));
         return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });
+      }
+      if (url.pathname === '/api/zentrale/ergebnisse' && req.method === 'GET') return json(res, 200, { ergebnisse: ergebnisse.slice().reverse().map(ergebnisKurz) });
+      if (url.pathname === '/api/zentrale/ergebnis' && req.method === 'GET') {
+        const e = ergebnisse.find(x => x.id === url.searchParams.get('id'));
+        if (!e) return json(res, 404, { fehler: 'Unbekannt.' });
+        if (e.neu) { e.neu = false; ergebnisseSpeichern(); }
+        return json(res, 200, e);
+      }
+      if (url.pathname === '/api/zentrale/ergebnis-weg' && req.method === 'POST') {
+        const a = await body(req, 8 * 1024); ergebnisse = ergebnisse.filter(e => e.id !== a.id); ergebnisseSpeichern();
+        return json(res, 200, { ok: true });
       }
       const a = await body(req, 64 * 1024);
       if (url.pathname === '/api/zentrale/sagen') {
