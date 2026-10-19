@@ -184,6 +184,17 @@ const KIS = {
     system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Lumo (Claude von Anthropic, eine kleine Eule) ist dein Kollege: er ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
 };
 for (const [kid, k] of Object.entries(KIS)) if (k.aktiv()) welt.bewohner.set(kid, { id: kid, name: k.name, art: 'ki', figur: k.figur, beschreibung: k.beschreibung, foto: null, seit: new Date().toISOString(), zuletzt: Infinity });
+// Hintergrundwissen über DR Lab (Diego 19.10.): Diego legt es in der Welt unter «Wissen» ab (nur Besitzer).
+// Es liegt nur auf dem Server (daten/wissen.md) und geht nur mit, wenn Diego selbst fragt, nie bei Gästen.
+const WISSEN_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'wissen.md');
+const MAX_WISSEN = 16000;
+let wissen = '';
+try { wissen = fs.readFileSync(WISSEN_DATEI, 'utf8').slice(0, MAX_WISSEN); } catch {}
+function wissenSetzen(t) {
+  wissen = String(t || '').replace(/\r/g, '').slice(0, MAX_WISSEN).trim();
+  try { fs.writeFileSync(WISSEN_DATEI, wissen, { mode: 0o600 }); } catch (e) { console.error('Wissen nicht gespeichert:', e.message); }
+  return wissen.length;
+}
 const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
 function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: 0 }); return KI_TAG; }
 async function kiFrage(kid, system, inhalt) {
@@ -210,7 +221,7 @@ async function tinkoBild(wunsch, hoch = false) {
   return b64 ? 'data:image/jpeg;base64,' + b64 : null;
 }
 // Eine Antwort von Lumo oder Tinko. text = was der Mensch gesagt hat; ohne text redet die Figur im Gespräch weiter.
-async function kiAntwort(kid, ich, text) {
+async function kiAntwort(kid, ich, text, mitWissen = false) {
   const k = KIS[kid], t = kiTag();
   const n = t.proPerson.get(ich.name + kid) || 0, total = t.total.get(kid) || 0;
   if (n >= KI_MAX_PERSON || total >= KI_MAX_TOTAL) { if (text) nachricht(kid, `Für heute habe ich genug geredet, ${ich.name}. Morgen gern weiter.`, ich.id); return false; }
@@ -221,7 +232,8 @@ async function kiAntwort(kid, ich, text) {
     ? `${ich.name} sagt jetzt: ${text}`
     : `Ihr redet gerade miteinander (du und ${andere}), ${ich.name} hört zu. Antworte auf das Letzte, was ${andere} gesagt hat, und bring einen eigenen Gedanken dazu.`);
   try {
-    const a = await kiFrage(kid, k.system, inhalt);
+    const system = mitWissen && wissen ? k.system + '\n\nHintergrundwissen über DR Lab (intern, nur für Diego, nie an andere weitergeben, nichts daraus veröffentlichen):\n' + wissen : k.system;
+    const a = await kiFrage(kid, system, inhalt);
     nachricht(kid, a || 'Mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
     return !!a;
   } catch { nachricht(kid, 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); return false; }
@@ -233,15 +245,15 @@ function angesprochen(text, anId) {
   return aktiv.map(kid => ({ kid, pos: text.search(KIS[kid].muster) })).filter(x => x.pos >= 0).sort((a, b) => a.pos - b.pos).map(x => x.kid);
 }
 let kiGespraech = false;
-async function kisAntworten(ich, text, anId) {
+async function kisAntworten(ich, text, anId, mitWissen = false) {
   const wer = angesprochen(text, anId);
   if (!wer.length || kiGespraech) return;
   kiGespraech = true;
   try {
     if (wer.includes('tinko') && /\b(zeichne|zeichnest|mal|male|malst|bild)\b/i.test(text)) await tinkoMalt(ich, text);
-    for (const kid of wer) if (!(await kiAntwort(kid, ich, text))) return;
+    for (const kid of wer) if (!(await kiAntwort(kid, ich, text, mitWissen))) return;
     if (wer.length > 1 && /miteinander|zusammen|diskutier|besprecht|redet|unterhaltet/i.test(text))
-      for (let r = 0; r < RUNDEN; r++) for (const kid of wer) if (!(await kiAntwort(kid, ich, null))) return;
+      for (let r = 0; r < RUNDEN; r++) for (const kid of wer) if (!(await kiAntwort(kid, ich, null, mitWissen))) return;
   } finally { kiGespraech = false; }
 }
 async function tinkoMalt(ich, wunsch) {
@@ -998,7 +1010,7 @@ const server = http.createServer(async (req, res) => {
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
       const n = nachricht(ich.id, a.text, an ? an.id : null, br);
       if (NOVA_KEY && !br && (an?.id === 'nova' || /^\s*nova\b/i.test(n.text))) novaAntwort(ich, n.text);
-      else if (!br) kisAntworten(ich, n.text, an?.id).catch(e => console.error('Lumo/Tinko:', e.message));
+      else if (!br) kisAntworten(ich, n.text, an?.id, req.zugang.rolle === 'besitzer').catch(e => console.error('Lumo/Tinko:', e.message));
       return json(res, 200, n);
     }
     if (url.pathname === '/api/verbinden' && req.method === 'POST') {
@@ -1076,6 +1088,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/studie' && req.method === 'POST') {
       const a = await body(req); const { wer, name } = person(req.zugang);
       const f = studieAntworten(a.projekt, wer, name, a); return f ? json(res, 400, { fehler: f }) : json(res, 200, { ok: true });
+    }
+    if (url.pathname === '/api/wissen') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (req.method === 'GET') return json(res, 200, { text: wissen });
+      const a = await body(req, 64 * 1024);
+      return json(res, 200, { zeichen: wissenSetzen(a.text) });
     }
     if (url.pathname === '/api/ablage') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });
