@@ -180,7 +180,9 @@ const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
-const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 30, RUNDEN = 2;
+const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '500', 10), RUNDEN = 2;
+// Monatsdeckel für Tinkos Bilder (einfache Qualität ca. 1 Rp. pro Bild → 15'000 Bilder ≈ CHF 165/Monat). Zähler überlebt Neustarts.
+const BILD_MAX_MONAT = parseInt(process.env.BILD_MAX_MONAT || '15000', 10);
 const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
 const KIS = {
   lumo: { name: 'Lumo', figur: 'weisse Eule, Gelehrter der Mozart-Zeit: gepuderte Perücke, goldene Brille, Jackett, Pergament', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
@@ -272,6 +274,20 @@ async function figurStimme(fid, text) {
 }
 const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
 function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: 0 }); return KI_TAG; }
+const BILD_MONAT_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'bilder-monat.json');
+let BILD_MONAT = { monat: '', zahl: 0 };
+try { BILD_MONAT = JSON.parse(fs.readFileSync(BILD_MONAT_DATEI, 'utf8')); } catch {}
+function bildMonat() { const m = jetzt().slice(0, 7); if (BILD_MONAT.monat !== m) BILD_MONAT = { monat: m, zahl: 0 }; return BILD_MONAT; }
+// Gibt einen Hinweistext zurück, wenn Tinko heute oder diesen Monat nicht mehr malen darf, sonst ''.
+function bildGesperrt() {
+  if (kiTag().bilder >= BILD_MAX_TAG) return `Tinko hat heute schon ${BILD_MAX_TAG} Bilder gemalt. Morgen wieder.`;
+  if (bildMonat().zahl >= BILD_MAX_MONAT) return `Tinko hat diesen Monat schon ${BILD_MAX_MONAT} Bilder gemalt. Nächsten Monat wieder.`;
+  return '';
+}
+function bildZaehlen() {
+  kiTag().bilder++; bildMonat().zahl++;
+  try { fs.writeFileSync(BILD_MONAT_DATEI, JSON.stringify(BILD_MONAT)); } catch {}
+}
 async function kiFrage(kid, system, inhalt) {
   const nachrichten = [{ role: 'system', content: system }, { role: 'user', content: inhalt }];
   const r = kid === 'tinko'
@@ -344,9 +360,9 @@ function kisAntworten(ich, text, anId, mitWissen = false) {
   return kiKette;
 }
 async function tinkoMalt(ich, wunsch) {
-  const t = kiTag();
-  if (t.bilder >= BILD_MAX_TAG) return nachricht('tinko', `Heute habe ich schon ${BILD_MAX_TAG} Bilder gemalt. Morgen male ich gern wieder.`, ich.id);
-  t.bilder++;
+  const gesperrt = bildGesperrt();
+  if (gesperrt) return nachricht('tinko', gesperrt.replace('Tinko hat', 'Ich habe'), ich.id);
+  bildZaehlen();
   nachricht('tinko', 'Ich male das jetzt, einen Moment …', ich.id);
   try {
     const daten = await tinkoBild(sauber(wunsch, 600));
@@ -1218,8 +1234,8 @@ async function zentraleAktion(a, zug) {
   }
   if (art === 'male') {
     if (!TINKO_KEY) return { art, text: 'Tinko ist nicht verbunden, darum kein Bild.' };
-    const t = kiTag(); if (t.bilder >= BILD_MAX_TAG) return { art, text: `Tinko hat heute schon ${BILD_MAX_TAG} Bilder gemalt. Morgen wieder.` };
-    t.bilder++;
+    const gesperrt = bildGesperrt(); if (gesperrt) return { art, text: gesperrt };
+    bildZaehlen();
     const wunsch = sauber(a.wunsch, 1000), bild = await tinkoBild(wunsch, !!a.hoch).catch(() => null);
     if (!bild) return { art, text: 'Tinko konnte das Bild gerade nicht malen.' };
     const e = ablageNeu('Tinko', 'Für Nova gemalt: ' + wunsch, bild);
@@ -1483,8 +1499,8 @@ const server = http.createServer(async (req, res) => {
         if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego kann Tinko malen lassen.' });
         if (!TINKO_KEY) return json(res, 400, { fehler: 'Tinko ist auf diesem Server noch nicht verbunden.' });
         const wunsch = sauber(a.malen.wunsch, 600); if (!wunsch) return json(res, 400, { fehler: 'Schreib zuerst, was Tinko malen soll.' });
-        const t = kiTag(); if (t.bilder >= BILD_MAX_TAG) return json(res, 400, { fehler: `Tinko hat heute schon ${BILD_MAX_TAG} Bilder gemalt. Morgen wieder.` });
-        t.bilder++;
+        const gesperrt = bildGesperrt(); if (gesperrt) return json(res, 400, { fehler: gesperrt });
+        bildZaehlen();
         const daten = await tinkoBild(wunsch, p.app === 'Film');
         if (!daten) return json(res, 400, { fehler: 'Das Bild ist Tinko nicht gelungen. Versuch es mit anderen Worten.' });
         const r = eintragen(p, a.malen.chat, 'Tinko', 'Gemalt: ' + wunsch, daten); return r.fehler ? json(res, 400, r) : json(res, 200, r);
@@ -1717,9 +1733,9 @@ async function schleifeSchritt() {
   if (!a) { schleife.aktiv = false; schleifeSpeichern(); sunny('Lumo und Tinko haben die ganze Liste abgearbeitet. Alles liegt in der Werkstatt.', 'stern'); return; }
   const heute = jetzt().slice(0, 10);
   if (schleife.pauseTag === heute) return;
-  if (a.wer === 'tinko' && (!TINKO_KEY || kiTag().bilder >= BILD_MAX_TAG)) {
+  if (a.wer === 'tinko' && (!TINKO_KEY || bildGesperrt())) {
     schleife.pauseTag = heute; schleifeSpeichern();
-    return sunny(TINKO_KEY ? `Tinko hat heute ${BILD_MAX_TAG} Bilder gemalt. Die Schleife macht morgen weiter.` : 'Tinko ist auf diesem Server nicht verbunden (kein Schlüssel). Die Schleife wartet.', 'stern');
+    return sunny(TINKO_KEY ? `${bildGesperrt()} Die Schleife wartet so lange.` : 'Tinko ist auf diesem Server nicht verbunden (kein Schlüssel). Die Schleife wartet.', 'stern');
   }
   if (a.wer === 'lumo' && !NOVA_KEY) { schleife.pauseTag = heute; schleifeSpeichern(); return sunny('Lumo ist auf diesem Server nicht verbunden. Die Schleife wartet.', 'stern'); }
   schleifeLaeuft = true;
@@ -1732,7 +1748,7 @@ async function schleifeSchritt() {
       let motiv = `${a.gruppe}. ${a.text}`;
       if (lumoDarf()) motiv = (await kiFrage('lumo', LUMO_ARBEIT + ' Jetzt: Schreib Tinko das Bildmotiv für genau ein Bild, in höchstens 3 Sätzen, nur das Motiv (Ort, Figuren mit Aussehen, was passiert, Licht). Keine Schrift im Bild.',
         `Auftrag: ${a.gruppe} – ${a.text}\n\nDeine Texte bisher (Drehbuch usw.):\n${schleife.aufgaben.filter(x => x.wer === 'lumo' && x.ergebnis).map(x => x.ergebnis).join('\n\n').slice(-6000) || '(noch keine)'}\n\nZuletzt erledigt:\n${bisher()}\n\nAus der Werkstatt (Drehbuch/Szene):\n${vorlage || '(nichts)'}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 6000)}`)) || motiv;
-      kiTag().bilder++;
+      bildZaehlen();
       const bild = await tinkoBild(sauber(motiv, 900), !!a.film);
       if (!bild) throw new Error('Tinko hat kein Bild geliefert');
       const r = eintragen(p, c?.id, 'Tinko', `Gemalt (Schleife): ${motiv}`, bild); if (r.fehler) throw new Error(r.fehler);
