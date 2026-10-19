@@ -1232,7 +1232,7 @@ function schleifeZiel(a) {
   }
   return { p, c: c || p.chats[p.chats.length - 1] };
 }
-const bisher = () => schleife.aufgaben.filter(x => x.ergebnis).slice(-6).map(x => `${x.wer === 'tinko' ? 'Tinko malte' : 'Lumo schrieb'} (${x.text}): ${x.ergebnis}`).join('\n') || '(noch nichts)';
+const bisher = () => schleife.aufgaben.filter(x => x.ergebnis).slice(-6).map(x => `${x.wer === 'tinko' ? 'Tinko malte' : 'Lumo schrieb'} (${x.text}): ${x.ergebnis.slice(0, 300)}`).join('\n') || '(noch nichts)';
 const chatText = (c, n = 1500) => c ? c.eintraege.map(e => e.text).filter(Boolean).join('\n').slice(-n) : '';
 function lumoDarf() { const h = jetzt().slice(0, 10); if (schleifeLumoTag.tag !== h) schleifeLumoTag = { tag: h, zahl: 0 }; return NOVA_KEY && schleifeLumoTag.zahl < SCHLEIFE_LUMO_MAX && ++schleifeLumoTag.zahl; }
 const LUMO_ARBEIT = 'Du bist Lumo (Claude von Anthropic), die kleine Eule im KI-Verse, und arbeitest gerade selbständig eine Auftragsliste von Diego ab. Deutsch (Schweiz, ohne ß), ohne Markdown, keine Rückfragen, keine grossen Versprechen, kein Heilversprechen, keine Diagnosen, keine Anlageberatung. Du kannst hier keinen Code auf Server oder in den App Store laden: liefere Text, Plan oder Entwurf und schreib am Anfang «Entwurf».';
@@ -1256,7 +1256,7 @@ async function schleifeSchritt() {
       const vorlage = [chatText(p.chats.find(x => x.titel === 'Drehbuch'), 3000), a.szene ? chatText(c) : ''].filter(Boolean).join('\n');
       let motiv = `${a.gruppe}. ${a.text}`;
       if (lumoDarf()) motiv = (await kiFrage('lumo', LUMO_ARBEIT + ' Jetzt: Schreib Tinko das Bildmotiv für genau ein Bild, in höchstens 3 Sätzen, nur das Motiv (Ort, Figuren mit Aussehen, was passiert, Licht). Keine Schrift im Bild.',
-        `Auftrag: ${a.gruppe} – ${a.text}\n\nSchon erledigt (du und Tinko):\n${bisher()}\n\nAus der Werkstatt (Drehbuch/Szene):\n${vorlage || '(nichts)'}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 6000)}`)) || motiv;
+        `Auftrag: ${a.gruppe} – ${a.text}\n\nDeine Texte bisher (Drehbuch usw.):\n${schleife.aufgaben.filter(x => x.wer === 'lumo' && x.ergebnis).map(x => x.ergebnis).join('\n\n').slice(-6000) || '(noch keine)'}\n\nZuletzt erledigt:\n${bisher()}\n\nAus der Werkstatt (Drehbuch/Szene):\n${vorlage || '(nichts)'}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 6000)}`)) || motiv;
       kiTag().bilder++;
       const bild = await tinkoBild(sauber(motiv, 900), !!a.film);
       if (!bild) throw new Error('Tinko hat kein Bild geliefert');
@@ -1268,7 +1268,7 @@ async function schleifeSchritt() {
       const t = await kiFrage('lumo', LUMO_ARBEIT + (a.fuer === 'tinko' ? ' Diese Aufgabe ist für Tinko gedacht; schreib sie so, dass Tinko daraus Bilder malen kann.' : ''), `Aufgabe ${nr} von ${von}: ${a.text}\n\nSchon erledigt (du und Tinko):\n${bisher()}\n\nBrief von Diego:\n${schleife.kontext.slice(0, 8000)}`);
       if (!t) throw new Error('Lumo hat nicht geantwortet');
       const r = eintragen(p, c?.id, 'Lumo', t, null); if (r.fehler) throw new Error(r.fehler);
-      a.status = 'fertig'; a.zeit = jetzt(); a.ergebnis = sauber(t, 300);
+      a.status = 'fertig'; a.zeit = jetzt(); a.ergebnis = sauber(t, 4000);
       sunny(`Lumo hat Aufgabe ${nr}/${von} erledigt: ${sauber(a.text, 80)}. Entwurf liegt in der Werkstatt.`, 'stern');
     }
   } catch (e) {
