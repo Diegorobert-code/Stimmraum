@@ -557,8 +557,8 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <h2>Schleife für Lumo und Tinko</h2>
     <p>Füg hier deinen Letti-Brief oder Bauplan ein. Lumo und Tinko arbeiten die nummerierten Listen selbständig ab, eine Aufgabe pro Minute: Tinko malt jedes Bild frisch, Lumo schreibt das Motiv und seine Entwürfe. Alles landet in der Werkstatt. Höchstens 30 Bilder pro Tag, dann geht es am nächsten Tag weiter.</p>
     <textarea id="schleifeText" maxlength="20000" rows="10" aria-label="Brief" placeholder="LETTI-BRIEF AN TINKO …" style="width:100%;box-sizing:border-box;background:var(--nacht);border:1px solid var(--rand);border-radius:10px;padding:9px 11px;color:var(--text)"></textarea>
-    <p class="hinweis" id="schleifeInfo"></p>
-    <div class="zeilen"><button class="knopf gold" type="button" id="schleifeStart">Liste starten</button><button class="knopf" type="button" id="schleifeAnAus">Anhalten</button><button class="knopf" type="button" id="schleifeZu">Schliessen</button></div>
+    <p class="hinweis" id="schleifeInfo" style="white-space:pre-line"></p>
+    <div class="zeilen"><button class="knopf gold" type="button" id="schleifeStart">Liste starten</button><button class="knopf" type="button" id="schleifeMerken">Nur speichern</button><button class="knopf" type="button" id="schleifeAnAus">Anhalten</button><button class="knopf" type="button" id="schleifeZu">Schliessen</button></div>
   </div>
 </div>
 
@@ -2172,7 +2172,7 @@ Format: Hochformat 9:16.`;
   let schleifeAktiv = false;
   const schleifeZeigen = (r) => {
     schleifeAktiv = !!r.aktiv; $('#schleifeAnAus').textContent = r.aktiv ? 'Anhalten' : 'Weitermachen';
-    $('#schleifeInfo').textContent = !r.total ? 'Noch keine Liste.' : `${r.aktiv ? (r.pause ? 'Pause bis morgen.' : 'Läuft.') : 'Angehalten.'} Fertig ${r.fertig}, schon da ${r.uebersprungen}, offen ${r.offen}, Fehler ${r.fehler} (von ${r.total}).` + (r.naechste ? ` Als Nächstes: ${r.naechste}` : '');
+    $('#schleifeInfo').textContent = !r.total ? 'Noch keine Liste.' : `${r.aktiv ? (r.pause ? 'Pause bis morgen.' : 'Läuft.') : 'Angehalten.'} Fertig ${r.fertig}, schon da ${r.uebersprungen}, offen ${r.offen}, Fehler ${r.fehler} (von ${r.total}).` + (r.naechste ? ` Als Nächstes: ${r.naechste}` : '') + (r.briefe?.length ? `\nGespeicherte Briefe (sag auf der Plaça «Lumo, gib Tinko …» mit ein paar Wörtern aus dem Namen): ${r.briefe.join(' · ')}` : '');
   };
   $('#schleifeKnopf').addEventListener('click', async () => {
     $('#schleife').hidden = false; $('#schleifeInfo').textContent = '';
@@ -2182,6 +2182,10 @@ Format: Hochformat 9:16.`;
   $('#schleifeStart').addEventListener('click', async () => {
     const text = $('#schleifeText').value.trim(); if (!text) { $('#schleifeText').focus(); return; }
     try { schleifeZeigen(await api('api/schleife', { text })); $('#schleifeText').value = ''; } catch (e) { $('#schleifeInfo').textContent = 'Nicht gestartet: ' + e.message; }
+  });
+  $('#schleifeMerken').addEventListener('click', async () => {
+    const text = $('#schleifeText').value.trim(); if (!text) { $('#schleifeText').focus(); return; }
+    try { schleifeZeigen(await api('api/schleife', { text, nurSpeichern: true })); $('#schleifeText').value = ''; } catch (e) { $('#schleifeInfo').textContent = 'Nicht gespeichert: ' + e.message; }
   });
   $('#schleifeAnAus').addEventListener('click', async () => {
     try { schleifeZeigen(await api('api/schleife', { aktiv: !schleifeAktiv })); } catch (e) { $('#schleifeInfo').textContent = e.message; }

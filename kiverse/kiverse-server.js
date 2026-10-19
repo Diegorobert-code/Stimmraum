@@ -1032,6 +1032,16 @@ const server = http.createServer(async (req, res) => {
       ich.zuletzt = Date.now();
       const an = a.an ? finde(a.an) : null;
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
+      // «Lumo, gib Tinko: …» (nur Diego): Lumo macht daraus Aufgaben und hängt sie an die Schleife
+      const auftrag = !br && req.zugang.rolle === 'besitzer' && String(a.text || '').match(/^\s*(?:lumo|lomo)\W+(?:gib|schick|sag|bring)\w*\s+(?:es\s+|das\s+)?tinko\b\W*([\s\S]{3,})$/i);
+      if (auftrag) {
+        nachricht(ich.id, a.text, null, null);
+        const gespeichert = briefFinden(auftrag[1]);
+        nachricht('lumo', gespeichert ? `Mach ich. Ich gebe Tinko «${gespeichert.name}» und hänge es an die Schleife.` : 'Mach ich. Ich schreibe Tinko daraus eine Liste und hänge sie an die Schleife.', ich.id);
+        const r = await schleifeLaden(gespeichert ? gespeichert.text : auftrag[1], ich.name || 'Diego', true);
+        if (r.fehler) nachricht('lumo', r.fehler, ich.id);
+        return json(res, 200, { ok: true });
+      }
       const n = nachricht(ich.id, a.text, an ? an.id : null, br);
       if (NOVA_KEY && !br && (an?.id === 'nova' || /^\s*nova\b/i.test(n.text))) novaAntwort(ich, n.text);
       else if (!br) kisAntworten(ich, n.text, an?.id, req.zugang.rolle === 'besitzer').catch(e => console.error('Lumo/Tinko:', e.message));
@@ -1123,7 +1133,8 @@ const server = http.createServer(async (req, res) => {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
       if (req.method === 'GET') return json(res, 200, schleifeStand());
       const a = await body(req, 64 * 1024);
-      if (a.text) { const r = await schleifeLaden(a.text, 'Diego'); return json(res, r.fehler ? 400 : 200, r); }
+      if (a.text && a.nurSpeichern) { briefSpeichern(a.text); return json(res, 200, schleifeStand()); }
+      if (a.text) { briefSpeichern(a.text); const r = await schleifeLaden(a.text, 'Diego'); return json(res, r.fehler ? 400 : 200, r); }
       return json(res, 200, schleifeSchalten(a.aktiv));
     }
     if (url.pathname === '/api/ablage') {
@@ -1167,9 +1178,23 @@ const server = http.createServer(async (req, res) => {
 // Die Tagesgrenzen bleiben (BILD_MAX_TAG Bilder, SCHLEIFE_LUMO_MAX Lumo-Antworten); danach Pause bis morgen.
 const SCHLEIFE_DATEI = path.join(DATEN, 'schleife.json');
 const SCHLEIFE_LUMO_MAX = 60, SCHLEIFE_TAKT = parseInt(process.env.SCHLEIFE_TAKT || '60000', 10), MAX_AUFGABEN = 300;
-let schleife = { aktiv: false, kontext: '', aufgaben: [], pauseTag: '' };
+let schleife = { aktiv: false, kontext: '', aufgaben: [], pauseTag: '', briefe: [] };
 try { schleife = { ...schleife, ...JSON.parse(fs.readFileSync(SCHLEIFE_DATEI, 'utf8')) }; } catch {}
 const schleifeSpeichern = () => { try { fs.writeFileSync(SCHLEIFE_DATEI, JSON.stringify(schleife, null, 1), { mode: 0o600 }); } catch (e) { console.error('Schleife nicht gespeichert:', e.message); } };
+// Gespeicherte Briefe: Name = erste Zeile. «Lumo, gib Tinko Pixar-Film» findet den Brief über die Wörter im Namen.
+function briefSpeichern(text) {
+  const name = sauber(String(text).split('\n').map(z => z.trim()).find(Boolean) || 'Brief', 120);
+  schleife.briefe = (schleife.briefe || []).filter(b => b.name !== name).concat({ name, text: String(text).slice(0, 20000), zeit: jetzt() }).slice(-30);
+  schleifeSpeichern();
+  return name;
+}
+function briefFinden(wunsch) {
+  const w = vergleich(wunsch).split(' ').filter(x => x.length > 2 && !['den', 'die', 'das', 'brief', 'letti', 'transkription', 'bitte'].includes(x));
+  if (!w.length) return null;
+  const punkte = (schleife.briefe || []).map(b => ({ b, n: w.filter(x => vergleich(b.name).includes(x)).length }));
+  const best = punkte.sort((a, b) => b.n - a.n || (b.b.zeit > a.b.zeit ? 1 : -1))[0];
+  return best && best.n >= Math.min(2, w.length) ? best.b : null;
+}
 let schleifeLaeuft = false, schleifeLumoTag = { tag: '', zahl: 0 };
 const ohneNummer = (s) => s.replace(/^\s*\d+\.\s*/, '').trim();
 const gruppeVon = (s) => sauber(ohneNummer(s).split(/:\s/)[0].replace(/[«»"]/g, ''), 80);
@@ -1202,7 +1227,7 @@ function schleifeLesen(text) {
 }
 // Ohne Liste (z. B. «Baut zusammen ein KI-Verse») plant Lumo zuerst selbst eine Liste für sich und Tinko.
 const LUMO_PLAN = ' Jetzt: Mach aus Diegos Ziel eine Arbeitsliste für dich und Tinko, damit ihr es zusammen selbständig umsetzt. Genau dieses Format, sonst nichts:\nTINKO – BILDER\n1. …\nLUMO – BAU\n1. …\nTinko malt (je Punkt genau ein Bild, höchstens 15 Punkte), du schreibst Texte, Pläne und Entwürfe (höchstens 12 Punkte). Reihenfolge so, dass ihr aufeinander aufbaut.';
-async function schleifeLaden(text, wer) {
+async function schleifeLaden(text, wer, anhaengen = false) {
   let aufgaben = schleifeLesen(text), plan = '';
   if (!aufgaben.length && NOVA_KEY) {
     plan = await kiFrage('lumo', LUMO_ARBEIT + LUMO_PLAN, `Diegos Ziel:\n${String(text).slice(0, 8000)}${wissen ? '\n\nHintergrund DR Lab:\n' + wissen.slice(0, 6000) : ''}`).catch(() => null) || '';
@@ -1213,6 +1238,7 @@ async function schleifeLaden(text, wer) {
   const t = aufgaben.filter(a => a.wer === 'tinko'), l = aufgaben.filter(a => a.wer !== 'tinko');
   if (t.length && l.length) { aufgaben = []; const n = Math.max(t.length, l.length); for (let i = 0; i < n; i++) { if (l[i]) aufgaben.push(l[i]); if (t[i]) aufgaben.push(t[i]); } }
   text = plan ? `Diegos Ziel:\n${text}\n\nLumos Liste:\n${plan}` : text;
+  if (anhaengen) { aufgaben = schleife.aufgaben.filter(a => a.status === 'offen').concat(aufgaben).slice(0, MAX_AUFGABEN); text = (schleife.kontext + '\n\n' + text).slice(-12000); }
   Object.assign(schleife, { aktiv: true, kontext: String(text).slice(0, 12000), aufgaben, pauseTag: '' });
   schleifeSpeichern();
   const b = aufgaben.filter(a => a.wer === 'tinko').length;
@@ -1224,7 +1250,7 @@ function schleifeStand() {
   const naechste = schleife.aufgaben.find(a => a.status === 'offen');
   return { aktiv: schleife.aktiv, offen: zaehl('offen'), fertig: zaehl('fertig'), uebersprungen: zaehl('schon da'), fehler: zaehl('fehler'),
     total: schleife.aufgaben.length, naechste: naechste ? `${naechste.wer === 'tinko' ? 'Tinko' : 'Lumo'}: ${naechste.text}` : null,
-    pause: schleife.pauseTag === jetzt().slice(0, 10), letzte: schleife.aufgaben.filter(a => a.status !== 'offen').slice(-8).map(a => ({ wer: a.wer, text: a.text, status: a.status })) };
+    pause: schleife.pauseTag === jetzt().slice(0, 10), briefe: (schleife.briefe || []).map(b => b.name), letzte: schleife.aufgaben.filter(a => a.status !== 'offen').slice(-8).map(a => ({ wer: a.wer, text: a.text, status: a.status })) };
 }
 function schleifeSchalten(an) { schleife.aktiv = !!an; schleife.pauseTag = ''; schleifeSpeichern(); return schleifeStand(); }
 // Werkstatt-Projekt von Diego zur Gruppe finden oder anlegen; bei Filmen den Szenen-Chat.
