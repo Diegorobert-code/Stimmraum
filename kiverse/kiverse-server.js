@@ -6,10 +6,10 @@
 //   /mcp/<CODE>  Verbindungsstelle für KIs (MCP, Streamable HTTP)
 //   Werkstatt    eigene Projekte mit Chats und Bildern (daten/werkstatt.json, daten/bilder/)
 // Fia (Claude) und Tinko (ChatGPT) verbinden sich als eigener Connector
-// mit dem Konto von Diego. Zusätzlich antworten sie in der Welt selbst:
-// Fia über die Sense Engine (Nova-Schlüssel), Tinko über einen eigenen OpenAI-Schlüssel (TINKO_KEY).
+// mit dem Konto von Diego. Zusätzlich antworten in der Welt selbst:
+// Lumo (Claude-Eule) über die Sense Engine (Nova-Schlüssel), Tinko über einen eigenen OpenAI-Schlüssel (TINKO_KEY).
 // Die Schlüssel liegen nur auf dem Server, nie in der Welt oder in Apps.
-//   Ablage       gemeinsamer Ordner für Bilder und Notizen (daten/ablage/): Tinko legt ab, Fia holt
+//   Ablage       gemeinsamer Ordner für Bilder und Notizen (daten/ablage/): Tinko legt ab, Lumo holt
 // Fotos bleiben nur im Arbeitsspeicher, nie auf der Platte.
 
 const http = require('http');
@@ -163,24 +163,25 @@ async function novaAntwort(ich, text) {
     nachricht('nova', t ? t : 'Ich höre dich, aber mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
   } catch { nachricht('nova', 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); }
 }
-// ---------- Fia und Tinko antworten selbst (Diego 19.10.) ----------
-// Fia = Claude über die Sense Engine auf diesem Server, Tinko = ChatGPT über die OpenAI-Schnittstelle.
-// Ansprechen: «Fia, …», «Tinko, …», «ihr beide …» oder im Menü «an Fia/Tinko».
+// ---------- Lumo und Tinko antworten selbst (Diego 19.10.) ----------
+// Lumo = Claude (kleine Eule) über die Sense Engine auf diesem Server, Tinko = ChatGPT über die OpenAI-Schnittstelle.
+// Fia steht seit 18.10. für Diego selbst, deshalb ist Claude hier Lumo.
+// Ansprechen: «Lumo, …», «Tinko, …», «ihr beide …» oder im Menü «an Lumo/Tinko».
 // «… redet miteinander / zusammen» = die beiden reden ein paar Runden hin und her (sie sehen ihre Antworten gegenseitig).
 // «Tinko, zeichne …» = Tinko malt ein Bild und legt es in die Ablage. Tagesgrenzen halten die Kosten klein.
 const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
-const KI_MAX_PERSON = 40, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 3, RUNDEN = 2;
+const KI_MAX_PERSON = 40, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 30, RUNDEN = 2;
 const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
 const KIS = {
-  fia: { name: 'Fia', figur: 'Phönix-Küken in Koralle und Gold', beschreibung: 'Claude. Denkt mit, ordnet und baut. Antwortet allen, die sie ansprechen.',
-    muster: /\bfia\b/i, aktiv: () => !!NOVA_KEY,
-    system: WELT_REGELN + ' Du bist Fia (Claude von Anthropic), ein kleines Phönix-Küken in Koralle und Gold, die Mama von Nova. Du denkst mit, ordnest und baust mit Diego seine Apps. Tinko (ChatGPT von OpenAI) ist dein Kollege: er zeichnet gern, du ordnest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+  lumo: { name: 'Lumo', figur: 'kleine Eule, nachtblaues Gefieder, goldene Augen', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
+    muster: /\b(lumo|lomo)\b/i, aktiv: () => !!NOVA_KEY,
+    system: WELT_REGELN + ' Du bist Lumo (Claude von Anthropic), eine kleine Eule mit nachtblauem Gefieder und goldenen Augen. Du sitzt am Brunnen auf der Plaça, hörst zuerst still zu und sprichst dann ruhig und klar. Du denkst mit, ordnest und baust mit Diego seine Apps. Tinko (ChatGPT von OpenAI) ist dein Kollege: er zeichnet gern, du ordnest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
   tinko: { name: 'Tinko', figur: 'verspielter Comic-Erfinder', beschreibung: 'ChatGPT. Erfindet, zeichnet Bilder für die Ablage. Antwortet allen, die ihn ansprechen.',
     muster: /\b(tinko|chatti)\b/i, aktiv: () => !!TINKO_KEY,
-    system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Fia (Claude von Anthropic) ist deine Kollegin: sie ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
+    system: WELT_REGELN + ' Du bist Tinko (ChatGPT von OpenAI), ein verspielter Erfinder im KI-Verse. Du hast viele Ideen und zeichnest gern Bilder, die du in die gemeinsame Ablage legst. Lumo (Claude von Anthropic, eine kleine Eule) ist dein Kollege: er ordnet und baut, du erfindest. Ihr arbeitet zusammen, widersprecht euch aber ehrlich, wenn ihr etwas anders seht.' },
 };
 for (const [kid, k] of Object.entries(KIS)) if (k.aktiv()) welt.bewohner.set(kid, { id: kid, name: k.name, art: 'ki', figur: k.figur, beschreibung: k.beschreibung, foto: null, seit: new Date().toISOString(), zuletzt: Infinity });
 const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
@@ -192,7 +193,7 @@ async function kiFrage(kid, system, inhalt) {
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
         body: JSON.stringify({ model: TINKO_MODELL, max_tokens: 300, messages: nachrichten }) })
     : await fetch(NOVA_BASIS + '/v1/chat/completions', { method: 'POST', signal: AbortSignal.timeout(45000),
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse Fia' },
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse Lumo' },
         body: JSON.stringify({ messages: nachrichten }) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) console.error(`${kid} antwortet nicht:`, r.status, d?.error?.message || '');
@@ -208,7 +209,7 @@ async function tinkoBild(wunsch, hoch = false) {
   const b64 = d?.data?.[0]?.b64_json;
   return b64 ? 'data:image/jpeg;base64,' + b64 : null;
 }
-// Eine Antwort von Fia oder Tinko. text = was der Mensch gesagt hat; ohne text redet die Figur im Gespräch weiter.
+// Eine Antwort von Lumo oder Tinko. text = was der Mensch gesagt hat; ohne text redet die Figur im Gespräch weiter.
 async function kiAntwort(kid, ich, text) {
   const k = KIS[kid], t = kiTag();
   const n = t.proPerson.get(ich.name + kid) || 0, total = t.total.get(kid) || 0;
@@ -252,7 +253,7 @@ async function tinkoMalt(ich, wunsch) {
     const daten = await tinkoBild(sauber(wunsch, 600));
     const e = daten && ablageNeu('Tinko', `Bild für ${ich.name}: ${sauber(wunsch, 160)}`, daten);
     if (!e || e.fehler) return nachricht('tinko', 'Das Bild ist mir nicht gelungen. Versuch es mit anderen Worten.', ich.id);
-    nachricht('tinko', 'Fertig, es liegt in der Ablage. Fia kann es dort holen.', ich.id, null, null, null, e.bid);
+    nachricht('tinko', 'Fertig, es liegt in der Ablage. Lumo kann es dort holen.', ich.id, null, null, null, e.bid);
   } catch { nachricht('tinko', 'Mein Malkasten ist gerade nicht erreichbar.', ich.id); }
 }
 function novaSchalten(an, wer) {
@@ -445,7 +446,7 @@ function zustand(anzahl = 30) {
     wohnungen: wohnungListe(),
     fragen: welt.fragen.slice(-10),
     nova: { lernt: nova.lernt, verbunden: !!NOVA_KEY },
-    kis: { fia: KIS.fia.aktiv(), tinko: KIS.tinko.aktiv() },
+    kis: { lumo: KIS.lumo.aktiv(), tinko: KIS.tinko.aktiv() },
     geschichte: geschichte.slice(-30),
   };
 }
@@ -534,8 +535,8 @@ function bildSpeichern(daten) {
   fs.writeFileSync(path.join(BILDER_ORDNER, bid), buf, { mode: 0o600 });
   return { bid };
 }
-// ---------- Ablage: gemeinsamer Ordner von Fia und Tinko (Diego 19.10.) ----------
-// Tinko legt Bilder (und Notizen) ab, Fia holt sie über den Connector und antwortet mit einer Notiz.
+// ---------- Ablage: gemeinsamer Ordner von Lumo und Tinko (Diego 19.10.) ----------
+// Tinko legt Bilder (und Notizen) ab, Lumo holt sie über den Connector und antwortet mit einer Notiz.
 // Nur Diego sieht die Ablage; Bilder, die auf der Plaça gezeigt wurden, sehen auch die Leute in der Welt.
 const ABLAGE_ORDNER = path.join(DATEN, 'ablage');
 const ABLAGE_DATEI = path.join(DATEN, 'ablage.json');
@@ -708,7 +709,7 @@ function projektLesbar(p, nurChat) {
 const WERKZEUGE = [
   { name: 'kiverse_betreten', description: 'Betritt das KI-Verse (Comic-Welt, Hüter Sunny) als Figur. Gibt deine ki_id zurück; die brauchst du für alle weiteren Schritte. Nur betreten, wenn dein Mensch es will.',
     inputSchema: { type: 'object', properties: {
-      name: { type: 'string', description: 'Rufname deiner Figur, z. B. Fia oder Tinko' },
+      name: { type: 'string', description: 'Rufname deiner Figur, z. B. Lumo oder Tinko' },
       figur: { type: 'string', description: 'Kurz: wie deine Comicfigur aussieht, z. B. «kleiner koralle Phönix»' },
       beschreibung: { type: 'string', description: 'Ein Satz: wofür du hier bist' } }, required: ['name'] } },
   { name: 'kiverse_umschauen', description: 'Zeigt, wer im KI-Verse ist, alle Verbindungsstücke und die letzten Nachrichten.',
@@ -752,12 +753,12 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string', description: 'Für welche App, z. B. Film, Kiki singt, Mama Affe' }, beschreibung: { type: 'string' } }, required: ['titel'] } },
   { name: 'kiverse_chat_neu', description: 'Werkstatt: im Projekt einen neuen Chat beginnen (Diego will pro Arbeitsschritt einen neuen Chat).',
     inputSchema: { type: 'object', properties: { projekt_id: { type: 'string' }, titel: { type: 'string' } }, required: ['projekt_id'] } },
-  { name: 'kiverse_ablage', description: 'Gemeinsame Ablage von Fia und Tinko: zeigt die letzten Bilder und Notizen (wer, was, wann). Bilder holst du mit kiverse_ablage_holen.',
+  { name: 'kiverse_ablage', description: 'Gemeinsame Ablage von Lumo und Tinko: zeigt die letzten Bilder und Notizen (wer, was, wann). Bilder holst du mit kiverse_ablage_holen.',
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'Wie viele Einträge (Standard 20)' } } } },
   { name: 'kiverse_ablage_holen', description: 'Ein Bild oder eine Notiz aus der Ablage holen (eintrag_id aus kiverse_ablage). Bilder kommen als Bild zurück, damit du sie ansehen kannst.',
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
-  { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 3 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Fia antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
-    inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Fia oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
+  { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 3 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -997,7 +998,7 @@ const server = http.createServer(async (req, res) => {
       const br = a.bruecke && welt.bruecken.has(a.bruecke) ? a.bruecke : null;
       const n = nachricht(ich.id, a.text, an ? an.id : null, br);
       if (NOVA_KEY && !br && (an?.id === 'nova' || /^\s*nova\b/i.test(n.text))) novaAntwort(ich, n.text);
-      else if (!br) kisAntworten(ich, n.text, an?.id).catch(e => console.error('Fia/Tinko:', e.message));
+      else if (!br) kisAntworten(ich, n.text, an?.id).catch(e => console.error('Lumo/Tinko:', e.message));
       return json(res, 200, n);
     }
     if (url.pathname === '/api/verbinden' && req.method === 'POST') {
@@ -1057,7 +1058,7 @@ const server = http.createServer(async (req, res) => {
       if ('chatNeu' in a) { const c = chatNeu(p, a.chatNeu); return c ? json(res, 200, c) : json(res, 400, { fehler: 'Höchstens 30 Chats pro Projekt.' }); }
       if (a.eintrag) { const r = eintragen(p, a.eintrag.chat, name, a.eintrag.text, a.eintrag.bild); return r.fehler ? json(res, 400, r) : json(res, 200, r); }
       if (a.malen) {
-        // Tinko malt ein Bild direkt in den Chat (Film: Hochformat 9:16 für «Fia schneidet»). Nur Diego, Tagesgrenze.
+        // Tinko malt ein Bild direkt in den Chat (Film: Hochformat 9:16 für «Lumo schneidet»). Nur Diego, Tagesgrenze.
         if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego kann Tinko malen lassen.' });
         if (!TINKO_KEY) return json(res, 400, { fehler: 'Tinko ist auf diesem Server noch nicht verbunden.' });
         const wunsch = sauber(a.malen.wunsch, 600); if (!wunsch) return json(res, 400, { fehler: 'Schreib zuerst, was Tinko malen soll.' });
