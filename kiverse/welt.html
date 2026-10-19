@@ -352,6 +352,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
     <button id="geschichteKnopf" class="knopf" type="button" title="Unsere Geschichte, von Nova aus dem Spielen geschrieben">Geschichte</button>
     <button id="gaesteKnopf" class="knopf" type="button" hidden>Menschen einladen</button>
     <button id="wissenKnopf" class="knopf" type="button" hidden>📚 Wissen</button>
+    <button id="updateKnopf" class="knopf" type="button" hidden title="Neuste Version vom KI-Verse holen (nur du)">🔄 Update</button>
     <button id="schleifeKnopf" class="knopf" type="button" hidden>🔁 Schleife</button>
     <button id="novaKnopf" class="knopf" type="button" hidden title="Nova hört zu und lernt aus den Gesprächen">Nova lernt: aus</button>
     <button id="kameraKnopf" class="knopf" type="button" aria-label="Kamera steuert deine Figur">Kamera</button>
@@ -2164,6 +2165,14 @@ Format: Hochformat 9:16.`;
   }
   $('#gaesteKnopf').addEventListener('click', () => { $('#gaeste').hidden = false; $('#gastNeu').hidden = true; gaesteZeigen(); });
   $('#gaesteZu').addEventListener('click', () => { $('#gaeste').hidden = true; });
+  // Update-Knopf (Diego 19.10.): neuste Version holen ohne Terminal, nur für Diego
+  $('#updateKnopf').addEventListener('click', async () => {
+    const k = $('#updateKnopf'); if (!confirm('Neuste Version vom KI-Verse holen? Der Server startet dafür kurz neu.')) return;
+    k.disabled = true; k.textContent = '🔄 lädt …';
+    try { const r = await api('api/update', {}); alert(r.text); if (/startet neu/.test(r.text)) setTimeout(() => location.reload(), 6000); }
+    catch (e) { alert('Update ging nicht: ' + e.message); }
+    finally { k.disabled = false; k.textContent = '🔄 Update'; }
+  });
   $('#wissenKnopf').addEventListener('click', async () => {
     $('#wissen').hidden = false; $('#wissenInfo').textContent = '';
     try { $('#wissenText').value = (await api('api/wissen')).text || ''; } catch (e) { $('#wissenInfo').textContent = e.message; }
@@ -2222,7 +2231,7 @@ Format: Hochformat 9:16.`;
   fetch(mitK('api/welt'), { cache: 'no-store' }).then(r => { privat = r.status === 401; return r.ok ? r.json() : Promise.reject(); }).then(s => {
     if (!s || !Array.isArray(s.bewohner)) throw 0;
     z.live = true; const m = $('#modus'); m.textContent = 'Live'; m.classList.add('live'); liveStarten();
-    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
+    api('api/ich').then(ich => { z.rolle = ich.rolle; $('#gaesteKnopf').hidden = ich.rolle !== 'besitzer'; $('#wissenKnopf').hidden = ich.rolle !== 'besitzer'; $('#updateKnopf').hidden = ich.rolle !== 'besitzer'; $('#schleifeKnopf').hidden = ich.rolle !== 'besitzer'; novaZeigen({}); if (ich.name) $('#einName').value = ich.name; }).catch(() => {});
   }).catch(() => {
     vorschauStarten();
     if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }

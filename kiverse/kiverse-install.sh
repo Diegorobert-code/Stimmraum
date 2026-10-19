@@ -10,6 +10,8 @@ command -v node >/dev/null || { apt-get update -y && apt-get install -y nodejs; 
 command -v caddy >/dev/null || apt-get install -y caddy
 mkdir -p $ORDNER && cp "$(dirname "$0")"/kiverse-server.js "$(dirname "$0")"/welt.html "$(dirname "$0")"/spiel.html $ORDNER/
 id kiverse >/dev/null 2>&1 || useradd --system --no-create-home kiverse
+# Update-Knopf (Diego 19.10.): nur Diego drückt ihn mit seinem Besitzer-Link; der Dienst erneuert dann seine drei Programmdateien
+chown kiverse $ORDNER/kiverse-server.js $ORDNER/welt.html $ORDNER/spiel.html
 CODE_DATEI=$ORDNER/einladungscode
 [ -f $CODE_DATEI ] || head -c 12 /dev/urandom | base64 | tr -d '/+=' > $CODE_DATEI
 chmod 600 $CODE_DATEI; chown kiverse $CODE_DATEI

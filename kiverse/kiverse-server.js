@@ -1098,6 +1098,35 @@ async function senseWeiter(req, res, url) {
   return res.end(Buffer.from(await r.arrayBuffer()));
 }
 
+
+// ---------- Update-Knopf (Diego 19.10.): nur Diego mit seinem Besitzer-Link, kein Terminal mehr ----------
+// Holt die drei Programmdateien vom Branch kiverse-server, prüft sie und startet neu (systemd startet sofort wieder).
+const UPDATE_QUELLE = 'https://raw.githubusercontent.com/diegorobert-code/stimmraum/kiverse-server/kiverse/';
+let updateLaeuft = false;
+async function knopfUpdate() {
+  if (updateLaeuft) return 'Ein Update läuft schon.';
+  updateLaeuft = true;
+  try {
+    const neu = {};
+    for (const f of ['kiverse-server.js', 'welt.html', 'spiel.html']) {
+      const r = await fetch(UPDATE_QUELLE + f + '?v=' + Date.now(), { signal: AbortSignal.timeout(60000) });
+      if (!r.ok) return `Update abgebrochen: ${f} nicht erreichbar (${r.status}).`;
+      neu[f] = Buffer.from(await r.arrayBuffer());
+    }
+    if (neu['kiverse-server.js'].length < 20000 || neu['spiel.html'].length < 20000) return 'Update abgebrochen: Dateien zu klein.';
+    const pruef = path.join(require('os').tmpdir(), 'kiverse-pruef-' + Date.now() + '.js');
+    fs.writeFileSync(pruef, neu['kiverse-server.js']);
+    const c = require('child_process').spawnSync(process.execPath, ['--check', pruef], { timeout: 30000 });
+    fs.rmSync(pruef, { force: true });
+    if (c.status !== 0) return 'Update abgebrochen: die neue Version hat einen Fehler. Die alte läuft weiter.';
+    if (Object.entries(neu).every(([f, b]) => { try { return fs.readFileSync(path.join(__dirname, f)).equals(b); } catch { return false; } })) return 'Schon auf dem neusten Stand.';
+    for (const [f, b] of Object.entries(neu)) fs.writeFileSync(path.join(__dirname, f), b);
+    setTimeout(() => process.exit(0), 800);
+    return 'Update geladen. Das KI-Verse startet neu, in ein paar Sekunden neu laden.';
+  } catch (e) { return 'Update fehlgeschlagen: ' + e.message; }
+  finally { updateLaeuft = false; }
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1128,6 +1157,7 @@ const server = http.createServer(async (req, res) => {
       if (!z) return json(res, 401, { fehler: 'Dieses KI-Verse ist privat. Bitte Diego um deinen Einladungslink.' });
       req.zugang = z;
     }
+    if (url.pathname === '/api/update' && req.method === 'POST') return req.zugang.rolle === 'besitzer' ? json(res, 200, { text: await knopfUpdate() }) : json(res, 403, { fehler: 'Nur Diego.' });
     if (url.pathname === '/api/ich' && req.method === 'GET') return json(res, 200, req.zugang);
     if (url.pathname === '/api/gaeste' && req.zugang?.rolle === 'besitzer') {
       if (req.method === 'GET') return json(res, 200, gaeste.map(({ id, name, seit }) => ({ id, name, seit })));
