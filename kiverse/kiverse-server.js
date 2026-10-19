@@ -238,23 +238,35 @@ async function kiAntwort(kid, ich, text, mitWissen = false) {
     return !!a;
   } catch { nachricht(kid, 'Ich bin gerade nicht erreichbar. Sunny passt auf, bis ich zurück bin.', ich.id); return false; }
 }
-function angesprochen(text, anId) {
+function angesprochen(text, anId, ich) {
   const aktiv = Object.keys(KIS).filter(kid => KIS[kid].aktiv());
   if (anId && aktiv.includes(anId)) return [anId];
   if (/\b(ihr beide|euch beide|ihr zwei|euch zwei|beide)\b/i.test(text)) return aktiv;
-  return aktiv.map(kid => ({ kid, pos: text.search(KIS[kid].muster) })).filter(x => x.pos >= 0).sort((a, b) => a.pos - b.pos).map(x => x.kid);
+  const genannt = aktiv.map(kid => ({ kid, pos: text.search(KIS[kid].muster) })).filter(x => x.pos >= 0).sort((a, b) => a.pos - b.pos).map(x => x.kid);
+  if (genannt.length || anId) return genannt;
+  // Ohne Namen: wer zuletzt (in den letzten 10 Minuten) mit dieser Person geredet hat, redet weiter
+  const seit = Date.now() - 10 * 60e3;
+  for (let i = welt.nachrichten.length - 1; i >= 0; i--) {
+    const m = welt.nachrichten[i];
+    if (Date.parse(m.zeit) < seit) break;
+    if (m.an === ich.id && aktiv.includes(m.von)) return [m.von];
+  }
+  return [];
 }
-let kiGespraech = false;
-async function kisAntworten(ich, text, anId, mitWissen = false) {
-  const wer = angesprochen(text, anId);
-  if (!wer.length || kiGespraech) return;
-  kiGespraech = true;
-  try {
+// Gespräche laufen nacheinander (Warteschlange), damit keine Nachricht verloren geht
+let kiKette = Promise.resolve(), kiWartend = 0;
+function kisAntworten(ich, text, anId, mitWissen = false) {
+  const wer = angesprochen(text, anId, ich);
+  if (!wer.length) return Promise.resolve();
+  if (kiWartend >= 6) { nachricht(wer[0], 'Einen Moment, ich komme kaum nach. Schreib es gleich nochmals.', ich.id); return Promise.resolve(); }
+  kiWartend++;
+  kiKette = kiKette.then(async () => {
     if (wer.includes('tinko') && /\b(zeichne|zeichnest|mal|male|malst|bild)\b/i.test(text)) await tinkoMalt(ich, text);
     for (const kid of wer) if (!(await kiAntwort(kid, ich, text, mitWissen))) return;
     if (wer.length > 1 && /miteinander|zusammen|diskutier|besprecht|redet|unterhaltet/i.test(text))
       for (let r = 0; r < RUNDEN; r++) for (const kid of wer) if (!(await kiAntwort(kid, ich, null, mitWissen))) return;
-  } finally { kiGespraech = false; }
+  }).catch(e => console.error('Lumo/Tinko:', e.message)).finally(() => { kiWartend--; });
+  return kiKette;
 }
 async function tinkoMalt(ich, wunsch) {
   const t = kiTag();
