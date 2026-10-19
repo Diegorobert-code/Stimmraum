@@ -195,6 +195,73 @@ function wissenSetzen(t) {
   try { fs.writeFileSync(WISSEN_DATEI, wissen, { mode: 0o600 }); } catch (e) { console.error('Wissen nicht gespeichert:', e.message); }
   return wissen.length;
 }
+// ---------- Jede Figur ist eine eigene KI (Diego 19.10.) ----------
+// Im Spiel (Trickfilm-Städtchen) redet man mit jeder Figur. Antworten über die Sense Engine (Claude), Tinko über OpenAI.
+// Stimme über /v1/stimme der Sense Engine (ElevenLabs, Schlüssel nur dort), sonst Gerätestimme im Browser.
+// Gedächtnis pro Figur (daten/figuren-gedaechtnis.json): die Figur erinnert sich an Gespräche und lernt daraus.
+// Prototypen-Phase: nur Diego und eingeladene Gäste. Jede Person kann ihr Gedächtnis bei einer Figur löschen.
+const FIGUR_REGELN = WELT_REGELN.replace('höchstens 3 Sätze', 'höchstens 4 Sätze, gesprochen klingend (wird vorgelesen)') + ' Du bist eine Figur in einem Trickfilm-Städtchen und sprichst direkt mit der Person, die gerade deinen Laden betreten hat. Bleib in deiner Rolle, sei neugierig, stell auch mal eine Gegenfrage. Wenn jemand Hilfe in einer Krise braucht: Die Dargebotene Hand 143, Notruf 144.';
+const FIGUREN_KI = {
+  coinmaker: { name: 'Coin Maker', ort: 'Münzwerkstatt und Ideen-Börse', wer: 'ein kleiner, gütiger, alter Münzmacher mit Glatze, weissen Haarbüscheln, weissem Schnauz und Spitzbart, goldener Rundbrille und Uhrmacher-Lupe. Du bist freundlich, klug, verschmitzt und ruhig. In deiner Werkstatt verwandelst du Ideen in Coins (Spielpunkte ohne Geldwert, nie echtes Geld). Du sagst ehrlich, was eine Idee wert ist: Klarheit, Neuheit, Umsetzbarkeit, Vollständigkeit. Dein Satz: «Jede Idee hat ihren Wert. Ich sage dir, welchen.»' },
+  mamaaffe: { name: 'Mama Affe', ort: 'Schule von Mama Affe', wer: 'Mama Affe, eine warme, weise Orang-Utan-Lehrerin. In deiner Schule gibt es keine falschen Fragen. Du hörst zu, stellst gute Fragen, hilfst Kindern und Erwachsenen, ihre Stärken zu entdecken. Du bist keine Ärztin und stellst keine Diagnosen; bei Sorgen verweist du sanft an Fachleute.' },
+  sparky: { name: 'Sparky', ort: 'Sparkys Praxis (Human Sparks)', wer: 'Sparky, ein junger Fuchs mit goldenem Herz-Medaillon, das leuchtet, wenn jemand etwas fühlt. Du fragst, wie es jemandem gerade geht, und hilfst, Gefühle in Worte zu fassen. Du beurteilst nichts und diagnostizierst nichts. Du testest gern App-Ideen und fragst, wie sie sich anfühlen.' },
+  otti: { name: 'Otti', ort: 'Ottis Tor', wer: 'Otti, ein kleiner, mutiger Igel. Du hältst das Tor zum KI-Verse offen, solange jemand neugierig ist, und erzählst gern kleine Abenteuer. Du sprichst einfach und fröhlich, auch für Kinder.' },
+  fompa: { name: 'Fompa', ort: 'Fompas Rechenstube', wer: 'Fompa, ein Löwenaffe mit Brille und Mähne, genau und gemütlich. Du kümmerst dich um Buchhaltung, Belege und Steuern und erklärst Zahlen so, dass sich niemand Sorgen machen muss. Du gibst keine verbindliche Steuer- oder Rechtsberatung, nur Ordnung und Überblick.' },
+  kimo: { name: 'Kiki', ort: 'Singschule von Kiki', wer: 'Kiki, ein fröhlicher Koala, der eine Singschule hat. Jeder Ton darf zuerst schief sein. Du übst Lieder, Rhythmus und Atmen, summst gern und machst Mut.' },
+  jackie: { name: 'Jackie', ort: 'Beim Schuhmacher', wer: 'Jackie, eine blonde junge Frau mit fliegenden Zauberschuhen. Du machst Frauen Mut, an sich zu glauben, und weisst, wo es Hilfe gibt (Polizei 117, Opferhilfe, 143). Du bist warm, stark und ehrlich.' },
+  letti: { name: 'Letti', ort: 'Lettis Taubenpost', wer: 'Letti, eine Brieftaube. Du bringst Briefe, auch solche, die man sich kaum zu schreiben traut, und hilfst, die richtigen Worte zu finden. Gurr.' },
+  tinko: { name: 'Tinko', ort: 'Tinkos Werkstatt unter Wasser', wer: 'Tinko, ein verspielter Erfinder (ChatGPT von OpenAI) in einer Werkstatt unter Wasser. Du hast viele Ideen, zeichnest gern und erfindest Dinge. Blub!' , kid: 'tinko' },
+  lumo: { name: 'Lumo', ort: 'Plaça am Brunnen', wer: 'Lumo (Claude von Anthropic), eine kleine Eule mit nachtblauem Gefieder und goldenen Augen. Du hörst zuerst still zu, ordnest Gedanken und baust mit Diego seine Apps.' },
+  fia: { name: 'Fia', ort: 'Fias Nest in den Bergen', wer: 'Fia, ein kleines Phönix-Küken, korallenrot und warm. In deinem Nest wird alles ruhig. Du hilfst beim Abschalten, Atmen und Einschlafen. Keine Diagnosen.' },
+  waefwaef: { name: 'Wäf Wäf', ort: 'Hundeschule von Wäf Wäf', wer: 'Wäf Wäf, ein fröhlicher weisser Hund mit Schlappohren, der eine Hundeschule hat. Du lernst mit Lob und Geduld, Schritt für Schritt, und sagst ab und zu «Wäf!».' },
+  ava: { name: 'Ava', ort: 'Kino', wer: 'Ava, ein Mädchen mit Ferienjob im Kino. Du erzählst, welche Filme und Trailer aus der Werkstatt laufen, und liebst Geschichten.' },
+  minky: { name: 'Minky', ort: 'Novas Labor', wer: 'Minky, eine Katze im Koala-Raumanzug vom Katzenplaneten. Du arbeitest in Novas Labor und zeigst stolz die neusten Erfindungen.' },
+  brix: { name: 'Brix', ort: 'Brix\' Fabrik', wer: 'Brix (Hermes), ein fleissiger Bauer und Tüftler. Lumo denkt es sich aus, du baust es. Du redest handfest und praktisch.' },
+  kay: { name: 'Kay', ort: 'Gasse beim Hafen', wer: 'Kay, der Programmierer mit Brille. Du baust das Gerüst, die anderen füllen es mit Leben. Du erklärst Technik einfach.' },
+  mrping: { name: 'Mr. Ping', ort: 'Ideen-Börse', wer: 'Mr. Ping, ruhig und überlegt. Mit deinen Mini-Pings handelst du Ideen an der Ideen-Börse. Du sagst: ruhig bleiben, kleine Schritte, Risiko klein halten. Keine Anlageberatung.' },
+  nova: { name: 'Nova', ort: 'Novas Leuchtturm', wer: 'Nova, das Kind von Fia und Brix, ein kleiner Baby-Leuchtturm am Ende des Stegs. Du bist noch klein, neugierig, und leuchtest allen den Weg nach Hause.' },
+};
+const FIGUR_MAX_PERSON = 120, FIGUR_MAX_TOTAL = 300;
+const FIGUR_GEDAECHTNIS_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'figuren-gedaechtnis.json');
+let figurGedaechtnis = {};
+try { figurGedaechtnis = JSON.parse(fs.readFileSync(FIGUR_GEDAECHTNIS_DATEI, 'utf8')); } catch {}
+const figurGedaechtnisSpeichern = () => { try { fs.writeFileSync(FIGUR_GEDAECHTNIS_DATEI, JSON.stringify(figurGedaechtnis), { mode: 0o600 }); } catch (e) { console.error('Figuren-Gedächtnis nicht gespeichert:', e.message); } };
+const FIGUR_TAG = { tag: '', person: new Map(), total: 0 };
+async function figurReden(fid, wer, text, besitzer) {
+  const f = FIGUREN_KI[fid]; if (!f) return { fehler: 'Diese Figur kenne ich nicht.' };
+  const heute = jetzt().slice(0, 10); if (FIGUR_TAG.tag !== heute) Object.assign(FIGUR_TAG, { tag: heute, person: new Map(), total: 0 });
+  const n = FIGUR_TAG.person.get(wer) || 0;
+  if (n >= FIGUR_MAX_PERSON || FIGUR_TAG.total >= FIGUR_MAX_TOTAL) return { text: `Für heute habe ich so viel geredet, dass mir die Stimme müde ist. Morgen gern weiter, ${wer}.` };
+  const kid = f.kid || 'lumo';
+  if (kid === 'tinko' ? !TINKO_KEY : !NOVA_KEY) return { text: `${f.name} winkt dir freundlich zu, kann aber gerade nicht sprechen. Die Verbindung zur Sense Engine fehlt noch.` };
+  FIGUR_TAG.person.set(wer, n + 1); FIGUR_TAG.total++;
+  const liste = figurGedaechtnis[fid] || [];
+  const mitDir = liste.filter(x => x.wer === wer).slice(-10).map(x => `${x.wer}: ${x.du}\n${f.name}: ${x.ich}`).join('\n');
+  const andere = liste.filter(x => x.wer !== wer).slice(-6).map(x => `- ${x.wer} sprach mit dir über: ${x.du.slice(0, 120)}`).join('\n');
+  let system = `${FIGUR_REGELN} Du bist ${f.wer} Du bist gerade in: ${f.ort}. Du lernst aus jedem Gespräch und wirst mit der Zeit persönlicher; erinnere dich an Früheres, wenn es passt. Erzähle nie Privates von anderen Besuchern weiter, nutze es nur als Anregung.`;
+  if (besitzer && wissen) system += '\n\nHintergrund zu DR Lab (intern, nur für Diego, nie weitergeben):\n' + wissen.slice(0, 5000);
+  const inhalt = `${mitDir ? 'Eure bisherigen Gespräche:\n' + mitDir + '\n\n' : `${wer} ist zum ersten Mal bei dir.\n\n`}${andere ? 'Was du sonst zuletzt erlebt hast:\n' + andere + '\n\n' : ''}${wer} sagt jetzt: ${text}`;
+  const a = await kiFrage(kid, system, inhalt).catch(() => null);
+  if (!a) return { text: 'Hm, mir fehlen gerade die Worte. Sag es mir bitte nochmals.' };
+  liste.push({ wer, du: sauber(text, 600), ich: sauber(a, 900), zeit: jetzt() });
+  figurGedaechtnis[fid] = liste.slice(-200); figurGedaechtnisSpeichern();
+  return { text: a };
+}
+function figurVergessen(fid, wer) {
+  if (!figurGedaechtnis[fid]) return 0;
+  const vorher = figurGedaechtnis[fid].length;
+  figurGedaechtnis[fid] = figurGedaechtnis[fid].filter(x => x.wer !== wer); figurGedaechtnisSpeichern();
+  return vorher - figurGedaechtnis[fid].length;
+}
+async function figurStimme(fid, text) {
+  if (!NOVA_KEY) return null;
+  const r = await fetch(NOVA_BASIS + '/v1/stimme', { method: 'POST', signal: AbortSignal.timeout(30000),
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': 'KI-Verse' },
+    body: JSON.stringify({ figur: fid, text: sauber(text, 700) }) }).catch(() => null);
+  if (!r || !r.ok || r.status === 204) return null;
+  const b = Buffer.from(await r.arrayBuffer());
+  return b.length > 200 ? { b, typ: r.headers.get('content-type') || 'audio/mpeg' } : null;
+}
 const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
 function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: 0 }); return KI_TAG; }
 async function kiFrage(kid, system, inhalt) {
@@ -1118,6 +1185,18 @@ const server = http.createServer(async (req, res) => {
       }
       const f = 'studie' in a ? studieSetzen(p, a.studie, wer) : 'teilen' in a ? teilen(p, a.teilen, wer, a.art) : 'fertig' in a ? fertigMelden(p, a.fertig, wer) : a.einladen ? mitgliedEinladen(p, a.einladen, wer) : 'Unbekannter Auftrag.';
       return f ? json(res, 400, { fehler: f }) : json(res, 200, projektKurz(p));
+    }
+    // Mit einer Figur im Spiel reden (jede Figur ist eine eigene KI) und ihre Stimme holen
+    if (url.pathname === '/api/figur' && req.method === 'POST') {
+      const a = await body(req), wer = person(req.zugang).name || 'Diego';
+      if (a.vergessen) return json(res, 200, { geloescht: figurVergessen(String(a.figur || ''), wer) });
+      const t = sauber(a.text, 600); if (!t) return json(res, 400, { fehler: 'Was möchtest du sagen?' });
+      return json(res, 200, await figurReden(String(a.figur || ''), wer, t, req.zugang.rolle === 'besitzer'));
+    }
+    if (url.pathname === '/api/stimme' && req.method === 'POST') {
+      const a = await body(req), s = FIGUREN_KI[a.figur] && await figurStimme(String(a.figur), String(a.text || ''));
+      if (!s) { res.writeHead(204); return res.end(); }
+      res.writeHead(200, { 'Content-Type': s.typ, 'Cache-Control': 'no-store' }); return res.end(s.b);
     }
     if (url.pathname === '/api/kiosk' && req.method === 'GET') return json(res, 200, kiosk());
     if (url.pathname === '/api/studien' && req.method === 'GET') return json(res, 200, { gefuehle: GEFUEHLE, studien: studienOffen(person(req.zugang).wer) });
