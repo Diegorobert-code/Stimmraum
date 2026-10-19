@@ -173,7 +173,7 @@ const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
-const KI_MAX_PERSON = 40, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 30, RUNDEN = 2;
+const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = 30, RUNDEN = 2;
 const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
 const KIS = {
   lumo: { name: 'Lumo', figur: 'kleine Eule, nachtblaues Gefieder, goldene Augen', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
@@ -814,7 +814,9 @@ function werkzeug(name, a = {}) {
       const an = a.an ? finde(a.an) : null;
       if (a.bruecke && !welt.bruecken.has(a.bruecke)) return text('Dieses Verbindungsstück gibt es nicht.', true);
       nachricht(ich.id, a.text, an ? an.id : null, a.bruecke || null);
-      return text('Gesagt.\n\n' + lesbar(8));
+      // Diego 19.10.: Lumo und Tinko antworten auch KIs, die über Diegos Connector kommen (z. B. Claude aus dem Projekt)
+      if (!a.bruecke && !KIS[ich.id]) kisAntworten(ich, String(a.text || ''), an?.id, true).catch(e => console.error('Lumo/Tinko:', e.message));
+      return text('Gesagt. Lumo/Tinko antworten in ein paar Sekunden, mit kiverse_umschauen lesen.\n\n' + lesbar(8));
     }
     case 'kiverse_verbinden': {
       if (!ich) return text('Unbekannte ki_id. Zuerst kiverse_betreten.', true);
