@@ -1440,7 +1440,7 @@ async function zentraleAktion(a, zug) {
   }
   if (art === 'oeffne') {
     if (a.app && KIVERSE_APPS[a.app]) return { art, app: a.app, name: KIVERSE_APPS[a.app].name, link: `/apps/${a.app}/?k=${encodeURIComponent(zug.k)}` };
-    const orte = { welt: ['Plaça', '/?k='], spiel: ['3D-Städtchen', '/spiel?k='], werkstatt: ['Werkstatt', '/?k='] };
+    const orte = { welt: ['Plaça', '/?welt=1&k='], spiel: ['3D-Städtchen', '/spiel?k='], werkstatt: ['Werkstatt', '/?welt=1&k='] };
     const o = orte[a.ort]; if (o) return { art, ort: a.ort, name: o[0], link: o[1] + encodeURIComponent(zug.k) + (a.ort === 'werkstatt' ? '#werkstatt' : '') };
   }
   return null;
@@ -1792,6 +1792,11 @@ const server = http.createServer(async (req, res) => {
     const mbild = url.pathname.match(/^\/api\/bild\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
     if (mbild) return bildErlaubt(mbild[1], person(req.zugang).wer) ? bildSenden(res, mbild[1]) : json(res, 404, { fehler: 'Bild nicht gefunden.' });
     if (url.pathname === '/' || url.pathname === '/welt.html') {
+      // Diego 20.10.: beim Öffnen steht zuerst Nova da und hört zu; die Welt kommt mit ?welt=1 («‹ KI-Verse» in Nova)
+      if (zugang(url.searchParams.get('k'))?.rolle === 'besitzer' && url.pathname === '/' && !url.searchParams.has('welt')) {
+        const b = await zentraleSeite();
+        if (b) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(b); }
+      }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end('<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style></head><body>' +
         fs.readFileSync(path.join(__dirname, 'welt.html'), 'utf8') + '</body></html>');
