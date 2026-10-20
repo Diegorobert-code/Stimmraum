@@ -626,7 +626,7 @@ function projektNeu(wer, name, a) {
 // Filme über das KI-Verse (Diego 18.10.): ein Film-Projekt bekommt einen Film-Ordner mit Referenzblatt, Drehbuch und
 // einem Chat pro Szene (Auftrag für Chatti, Bild ablegen, Untertitel). «Fia schneidet» macht im Browser den Film daraus.
 const FILM_REFERENZ = `Referenzblatt (gilt für jedes Bild)
-Stil: 3D-Trickfilm wie Pixar, Nacht, Nachtblau und warmes Gold, mediterranes Städtchen an der Costa Brava, Laternen, Bougainvillea, Meer mit Mondspur. Keine Handys, keine fremden Logos, keine Firmennamen, keine echten Personen ausser Diego.
+Stil: hochwertiger 3D-Animationsfilm, weiches Kinolicht, Nacht, Nachtblau und warmes Gold, mediterranes Städtchen an der Costa Brava, Laternen, Bougainvillea, Meer mit Mondspur. Keine Handys, keine fremden Logos, keine Firmennamen, keine echten Personen ausser Diego.
 Diego: Glatze, Bart, gestreiftes Hemd.
 Figuren: Otti (Igel, Tor) · Hasi (Hase, spricht nie, Holzschilder) · Sophia (alte weise Eule, Gelehrte der Mozart-Zeit mit gepuderter Perücke, bordeauxrotem Jackett und Pergament, wohnt am Brunnen) · Lumo (Claude, weisse Eule, Gelehrter der Mozart-Zeit mit Perücke, goldener Brille, Jackett und Pergament, fliegt als Besucher rein) · Sunny (blauer Drache, Fackel) · Chatti (lebt im Meer) · Nova (Baby-Leuchtturm am Hafen) · Fia (Phönix, Nest am Berg) · Brix (Fabrik ausserhalb) · Mama Affe (Orang-Utan, Schule) · Jackie (blond, fliegende Zauberschuhe) · Schuhmacher · Letti (Brieftaube) · Sparky (Fuchs, Herz-Medaillon) · Ava (Kino, zwei kleine Häschen) · Fompa (Löwenäffchen mit Brille) · Coin Maker, Mr. Ping · Kiki (Koala, Singschule) · Minky (Katze im Koala-Raumanzug, Novas Labor) · Wäf Wäf (Hund).
 Format: Hochformat 9:16.`;
@@ -722,7 +722,7 @@ async function soraStart({ motiv, bild, sekunden, hoch, pro }) {
   const kosten = sek * SORA_USD_SEKUNDE[modell] * CHF_PRO_USD, m = soraMonat();
   if (m.chf + kosten > SORA_DECKEL_CHF) return { fehler: `Monatsdeckel erreicht (${soraStand()}). Nächsten Monat wieder.` };
   const f = new FormData();
-  f.append('model', modell); f.append('prompt', 'Stil: 3D-Animationsfilm wie Pixar, warm, flüssige Bewegung, keine Schrift. ' + sauber(motiv, 1500));
+  f.append('model', modell); f.append('prompt', 'Stil: hochwertiger 3D-Animationsfilm, weiches Kinolicht, warme Farben, ausdrucksstarke Figuren, flüssige Bewegung, keine Schrift. ' + sauber(motiv, 1500));
   f.append('seconds', String(sek)); f.append('size', hoch === false ? '1280x720' : '720x1280');
   if (bild) {
     const b = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(bild));
@@ -946,7 +946,7 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
-  { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, Pixar-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
+  { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, 3D-Animationsfilm-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
     inputSchema: { type: 'object', properties: { motiv: { type: 'string', description: 'Was im Clip passiert: Figuren mit Aussehen, Bewegung, Kamera, Licht' }, bild: { type: 'string', description: 'optional, Startbild als data:image/jpeg;base64,…' }, sekunden: { type: 'number', description: '4, 8 oder 12' }, hoch: { type: 'boolean', description: 'true = 9:16 Hochformat (Standard), false = 16:9' }, pro: { type: 'boolean', description: 'true = Sora 2 Pro (3x teurer), nur für die besten Szenen' } }, required: ['motiv'] } },
   { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
     inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
@@ -1708,7 +1708,7 @@ const SCHLEIFE_LUMO_MAX = 60, SCHLEIFE_TAKT = parseInt(process.env.SCHLEIFE_TAKT
 let schleife = { aktiv: false, kontext: '', aufgaben: [], pauseTag: '', briefe: [] };
 try { schleife = { ...schleife, ...JSON.parse(fs.readFileSync(SCHLEIFE_DATEI, 'utf8')) }; } catch {}
 const schleifeSpeichern = () => { try { fs.writeFileSync(SCHLEIFE_DATEI, JSON.stringify(schleife, null, 1), { mode: 0o600 }); } catch (e) { console.error('Schleife nicht gespeichert:', e.message); } };
-// Gespeicherte Briefe: Name = erste Zeile. «Lumo, gib Tinko Pixar-Film» findet den Brief über die Wörter im Namen.
+// Gespeicherte Briefe: Name = erste Zeile. «Lumo, gib Tinko KI-Pixel-Film» findet den Brief über die Wörter im Namen.
 function briefSpeichern(text) {
   const name = sauber(String(text).split('\n').map(z => z.trim()).find(Boolean) || 'Brief', 120);
   schleife.briefe = (schleife.briefe || []).filter(b => b.name !== name).concat({ name, text: String(text).slice(0, 20000), zeit: jetzt() }).slice(-30);
