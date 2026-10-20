@@ -1568,6 +1568,8 @@ async function zentraleSeite() {
 
 // ---------- Handy koppeln ohne Terminal (Diego 20.10.: «verbrauchergerechte Variante») ----------
 // Claude erzeugt über den Connector einen 6-stelligen Code; Diego tippt ihn auf /koppeln und bekommt seinen Besitzer-Link.
+const NOVA_APP_HASH = process.env.NOVA_APP_HASH || '226ec9802628fc91552e27814957bee88db067676e8f7d8311ae2e90ff61597b';
+let novaAppUpdate = 0;
 let KOPPEL = null;
 function koppelNeu() { KOPPEL = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), bis: Date.now() + 15 * 60000, fehler: 0 }; return KOPPEL.code; }
 function koppelPruefen(c) {
@@ -1607,6 +1609,25 @@ const server = http.createServer(async (req, res) => {
     if (mf && mf[1] === WELT_CODE) { try { const d = fs.readFileSync(path.join(FILM_ORDNER, mf[2] + '.mp4')); res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'private, max-age=86400' }); return res.end(d); } catch { return json(res, 404, { fehler: 'Clip nicht gefunden.' }); } }
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
+    // Sprech-Nova (ElevenLabs-Agent) darf am Server nur: Stand, Sichern, Update, Auftrag an Claude, Ergebnisse lesen. Ihr Schlüssel liegt nur bei ElevenLabs, hier nur sein Hash.
+    if (url.pathname === '/nova-app/server' && req.method === 'POST') {
+      const h = crypto.createHash('sha256').update(String(req.headers['x-nova-app'] || '')).digest('hex');
+      if (!req.headers['x-nova-app'] || !crypto.timingSafeEqual(Buffer.from(h), Buffer.from(NOVA_APP_HASH))) return json(res, 401, { fehler: 'Kein Zugang.' });
+      const a = await body(req, 1024), was = String(a.was || 'stand');
+      if (was === 'sichern') return json(res, 200, { text: serverSichern() });
+      if (was === 'auftrag') {
+        const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
+        if (!t) return json(res, 200, { text: 'Was soll ich Claude sagen?' });
+        claudeAuftragNeu(t, 'Diego über die Sprech-Nova'); return json(res, 200, { text: 'Bei Claude abgegeben. Die Antwort kommt in «Ergebnisse».' });
+      }
+      if (was === 'ergebnisse') return json(res, 200, { text: ergebnisse.slice(-3).reverse().map(e => (e.titel || 'Ergebnis') + ': ' + ergebnisKurz(e).vorschau).join(' | ') || 'Noch keine Ergebnisse.' });
+      if (was === 'update') {
+        if (Date.now() - novaAppUpdate < 10 * 60000) return json(res, 200, { text: 'Das letzte Update ist erst ein paar Minuten her. Später nochmal.' });
+        novaAppUpdate = Date.now();
+        return json(res, 200, { text: await knopfUpdate(4000) });
+      }
+      return json(res, 200, { text: serverText() });
+    }
     if (url.pathname === '/koppeln') {
       if (req.method === 'POST') { const a = await body(req, 1024); return json(res, 200, koppelPruefen(a.code)); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(KOPPEL_SEITE);
