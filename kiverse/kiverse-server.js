@@ -730,9 +730,17 @@ async function soraStart({ motiv, bild, sekunden, hoch, pro }) {
     const typ = b[1] === 'jpg' ? 'jpeg' : b[1];
     f.append('input_reference', new Blob([Buffer.from(b[2], 'base64')], { type: 'image/' + typ }), 'start.' + (typ === 'jpeg' ? 'jpg' : typ));
   }
-  const r = await fetch(TINKO_BASIS + '/v1/videos', { method: 'POST', body: f, signal: AbortSignal.timeout(60000), headers: { Authorization: 'Bearer ' + TINKO_KEY } });
-  const roh = await r.text().catch(() => ''); let d = {}; try { d = JSON.parse(roh); } catch {}
-  if (!r.ok || !d.id) { console.error('Sora:', r.status, roh.slice(0, 500)); return { fehler: `Sora startet nicht (${r.status}): ` + (d?.error?.message || d?.error?.code || roh.replace(/\s+/g, ' ').slice(0, 300) || 'ohne Text') }; }
+  let r = await fetch(TINKO_BASIS + '/v1/videos', { method: 'POST', body: f, signal: AbortSignal.timeout(60000), headers: { Authorization: 'Bearer ' + TINKO_KEY } });
+  let roh = await r.text().catch(() => '');
+  // Ohne Startbild nimmt die API auch JSON; zweiter Versuch, falls multipart abgelehnt wird
+  if (!r.ok && !bild) {
+    r = await fetch(TINKO_BASIS + '/v1/videos', { method: 'POST', signal: AbortSignal.timeout(60000), headers: { Authorization: 'Bearer ' + TINKO_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: modell, prompt: f.get('prompt'), seconds: String(sek), size: f.get('size') }) });
+    roh = await r.text().catch(() => '');
+  }
+  let d = {}; try { d = JSON.parse(roh); } catch {}
+  const spur = `server=${r.headers.get('server') || '-'} req=${r.headers.get('x-request-id') ? 'ja' : 'nein'}`;
+  if (!r.ok || !d.id) { console.error('Sora:', r.status, roh.slice(0, 500)); return { fehler: `Sora startet nicht (${r.status}): ` + (d?.error?.message || d?.error?.code || roh.replace(/\s+/g, ' ').slice(0, 300) || 'ohne Text') + ` [${spur}]` }; }
   m.chf += kosten; const cid = id('film');
   m.clips[cid] = { oid: d.id, status: 'läuft', zeit: jetzt(), sek, modell }; soraSpeichern();
   soraWarten(cid);
