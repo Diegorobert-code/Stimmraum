@@ -1246,7 +1246,48 @@ async function senseWeiter(req, res, url) {
 // Holt die drei Programmdateien vom Branch kiverse-server, prüft sie und startet neu (systemd startet sofort wieder).
 const UPDATE_QUELLE = 'https://raw.githubusercontent.com/diegorobert-code/stimmraum/kiverse-server/kiverse/';
 let updateLaeuft = false;
-async function knopfUpdate() {
+let letztesUpdate = '';
+
+// ---------- Nova bedient den Server (Diego 20.10.: «Nova soll Zugriff auf den Server bekommen») ----------
+// Bewusst nur feste, sichere Handgriffe: Stand ansehen, Update holen, Daten sichern. Keine Befehlszeile, keine Schlüssel.
+const SERVER_START = jetzt();
+const SICHERUNG_ORDNER = path.join(DATEN, 'sicherung'), SICHERUNG_MAX = 14;
+const mb = (b) => Math.round(b / 1048576);
+function serverStand() {
+  const os = require('os');
+  let platte = '';
+  try { const f = fs.statfsSync(DATEN); platte = `${Math.round(f.bavail * f.bsize / 1073741824)} GB frei von ${Math.round(f.blocks * f.bsize / 1073741824)} GB`; } catch {}
+  let daten = 0; try { for (const f of fs.readdirSync(DATEN)) { const st = fs.statSync(path.join(DATEN, f)); if (st.isFile()) daten += st.size; } } catch {}
+  let sicherungen = []; try { sicherungen = fs.readdirSync(SICHERUNG_ORDNER).sort(); } catch {}
+  return {
+    laeuftSeit: SERVER_START, letztesUpdate: letztesUpdate || null,
+    speicher: `${mb(os.totalmem() - os.freemem())} von ${mb(os.totalmem())} MB belegt`,
+    last: os.loadavg().map(x => x.toFixed(2)).join(' / ') + ` (${os.cpus().length} CPU)`,
+    platte, daten: `${(daten / 1048576).toFixed(1)} MB Daten`,
+    lumo: !!NOVA_KEY, tinko: !!TINKO_KEY,
+    sicherung: sicherungen.length ? sicherungen[sicherungen.length - 1] : null, sicherungen: sicherungen.length,
+  };
+}
+function serverText(st = serverStand()) {
+  return [`läuft seit ${new Date(st.laeuftSeit).toLocaleString('de-CH', { timeZone: 'Europe/Zurich', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`,
+    st.speicher, 'Last ' + st.last, st.platte, st.daten, `Lumo ${st.lumo ? 'verbunden' : 'nicht verbunden'}, Tinko ${st.tinko ? 'verbunden' : 'nicht verbunden'}`,
+    st.sicherung ? `letzte Sicherung ${st.sicherung} (${st.sicherungen} gesamt)` : 'noch keine Sicherung'].filter(Boolean).join(' · ');
+}
+function serverSichern() {
+  const name = jetzt().slice(0, 16).replace(/[:T]/g, '-');
+  const ziel = path.join(SICHERUNG_ORDNER, name);
+  fs.mkdirSync(ziel, { recursive: true, mode: 0o700 });
+  let zahl = 0;
+  for (const f of fs.readdirSync(DATEN)) {
+    if (!f.endsWith('.json')) continue;
+    const q = path.join(DATEN, f);
+    if (fs.statSync(q).isFile()) { fs.copyFileSync(q, path.join(ziel, f)); fs.chmodSync(path.join(ziel, f), 0o600); zahl++; }
+  }
+  const alle = fs.readdirSync(SICHERUNG_ORDNER).sort();
+  for (const alt of alle.slice(0, Math.max(0, alle.length - SICHERUNG_MAX))) fs.rmSync(path.join(SICHERUNG_ORDNER, alt), { recursive: true, force: true });
+  return `Gesichert: ${zahl} Dateien in «${name}» (die letzten ${SICHERUNG_MAX} bleiben).`;
+}
+async function knopfUpdate(verz = 800) {
   if (updateLaeuft) return 'Ein Update läuft schon.';
   updateLaeuft = true;
   try {
@@ -1265,7 +1306,8 @@ async function knopfUpdate() {
     try { const r = await fetch(UPDATE_QUELLE + 'nova.html?v=' + Date.now(), { signal: AbortSignal.timeout(60000) }); if (r.ok) fs.writeFileSync(ZENTRALE_SEITE, Buffer.from(await r.arrayBuffer()), { mode: 0o600 }); } catch {}
     if (Object.entries(neu).every(([f, b]) => { try { return fs.readFileSync(path.join(__dirname, f)).equals(b); } catch { return false; } })) return 'Schon auf dem neusten Stand.';
     for (const [f, b] of Object.entries(neu)) fs.writeFileSync(path.join(__dirname, f), b);
-    setTimeout(() => process.exit(0), 800);
+    letztesUpdate = jetzt();
+    setTimeout(() => process.exit(0), verz);
     return 'Update geladen. Das KI-Verse startet neu, in ein paar Sekunden neu laden.';
   } catch (e) { return 'Update fehlgeschlagen: ' + e.message; }
   finally { updateLaeuft = false; }
@@ -1306,6 +1348,7 @@ Mögliche aktionen (nur wenn sie Diego wirklich helfen, sonst leere Liste):
 {"art":"tinko_frei","text":"was Tinko (ChatGPT) ab jetzt wissen darf"}  (nur wenn Diego es ausdrücklich für Tinko freigibt; Tinko bekommt sonst nichts Internes; nie Klienten-, Gesundheits- oder Finanzdaten)
 {"art":"vergiss","text":"Stichwort der Erinnerung, die weg soll"}
 {"art":"oeffne","app":"<app-id>"} oder {"art":"oeffne","ort":"welt|spiel|werkstatt"}
+{"art":"server","was":"stand|update|sichern"}  (dein Server: stand = wie es ihm geht; update = neuste Version holen und neu starten, nur wenn Diego es will; sichern = Kopie deiner Daten. Mehr kannst du am Server nicht, keine Befehle, keine Schlüssel. Was nicht geht, gibst du mit "claude" ans Projekt.)
 Wenn du jemanden fragst, sag in "sagen" kurz, wen du fragst; die Antwort fasst du danach zusammen.`;
 function zentraleSystem() {
   const st = schleifeStand();
@@ -1323,6 +1366,7 @@ ${NOVA_NETZ()}
 Schleife jetzt: ${st.aktiv ? 'läuft' : 'steht'}, ${st.offen} offen, ${st.fertig} fertig${st.naechste ? ', als Nächstes ' + st.naechste : ''}.
 Aufträge ans DR-Lab-Projekt bei Claude: ${claudeAuftraege.filter(c => c.status !== 'fertig').slice(-6).map(c => c.status + ': ' + c.text.slice(0, 80)).join('; ') || 'keine offenen'}.
 Fertige Ergebnisse in deinem Fenster «📂 Ergebnisse» (oben rechts, Diego liest und kopiert dort): ${ergebnisse.slice(-8).reverse().map(e => (e.neu ? '[neu] ' : '') + e.titel + ' (' + e.von + ')').join('; ') || 'noch keine'}.
+Dein Server (Infomaniak in der Schweiz, hier läufst du): ${serverText()}.
 Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
 
 Was du dir über Diego gemerkt hast:
@@ -1387,6 +1431,12 @@ async function zentraleAktion(a, zug) {
     const vorher = zentrale.gedaechtnis.length;
     zentrale.gedaechtnis = zentrale.gedaechtnis.filter(g => !vergleich(g.text).includes(w));
     return { art, text: `${vorher - zentrale.gedaechtnis.length} Erinnerung(en) gelöscht.` };
+  }
+  if (art === 'server') {
+    const was = String(a.was || 'stand');
+    if (was === 'update') return { art, text: await knopfUpdate(4000) };
+    if (was === 'sichern') return { art, text: serverSichern() };
+    return { art, text: serverText() };
   }
   if (art === 'oeffne') {
     if (a.app && KIVERSE_APPS[a.app]) return { art, app: a.app, name: KIVERSE_APPS[a.app].name, link: `/apps/${a.app}/?k=${encodeURIComponent(zug.k)}` };

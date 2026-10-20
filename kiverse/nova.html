@@ -407,8 +407,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
       <button class="hoeren" type="button">🔊 Vorlesen</button>${String(e.text).length > 320 ? '<button class="mehr" type="button">Mehr lesen</button>' : ''}</div>`;
     if (e.art === 'male') return `<div class="karte"><div class="kopfzeile">${ava('tinko')}<span class="wer">Tinko malt</span></div>${e.bid ? `<a href="${esc(mitK('api/ablage/' + e.bid))}" target="_blank" rel="noopener"><img alt="${esc(e.text)}" loading="lazy" src="${esc(mitK('api/ablage/' + e.bid))}"></a>` : `<div class="text">${esc(e.text)}</div>`}</div>`;
     if (e.art === 'oeffne' && e.link) return `<div class="karte"><a class="oeffnen" href="${esc(e.link)}"><span>${esc(APP_AVA[e.app] || '🧭')} ${esc(e.name)} öffnen</span><span>›</span></a></div>`;
-    const sym = { tinko_frei: '🔒', claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
-    const vor = { tinko_frei: 'Für Tinko freigegeben: ', claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
+    const sym = { server: '🖥️', tinko_frei: '🔒', claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
+    const vor = { server: 'Server: ', tinko_frei: 'Für Tinko freigegeben: ', claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
     return `<div class="karte klein">${sym} ${esc(vor + (e.text || ''))}</div>`;
   }
   function zugHtml(z) {
@@ -493,6 +493,9 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
         ['Gib ans Claude-Projekt: Otti, Ziel: Spiele spannender. Stand: live. Was stört: zu langsam.', 'Claude arbeitet es ab. Das Ergebnis kommt in 📂 oben rechts.'],
         ['Lumo und Tinko, arbeitet heute Nacht an Körperkosmos.', 'Geht in die Schleife, sie arbeiten selbständig.'],
         ['Merk dir: Ich mag kurze Antworten.', 'Steht danach unter 🧠 Gedächtnis.'],
+        ['Wie geht es deinem Server?', 'Nova schaut nach: Speicher, Platz, Verbindungen.'],
+        ['Sichere deine Daten.', 'Kopie von Novas Daten auf dem Server.'],
+        ['Hol das neuste Update.', 'Nova lädt die neue Version und startet kurz neu.'],
         ['Für Tinko frei: unsere Farben sind Nachtblau und Gold.', 'Nur das bekommt Tinko (ChatGPT) von dir.'],
         ['Was läuft gerade?', 'Nova sagt dir den Stand von allem.']];
       h.innerHTML = `<h3>So sprichst du mit Nova</h3>
