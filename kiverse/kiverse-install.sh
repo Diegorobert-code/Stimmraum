@@ -72,6 +72,8 @@ echo "Connector-Adresse für Fia (Claude) und Tinko (ChatGPT) – NICHT in den C
 echo "  https://$DOMAIN/mcp/$(cat $CODE_DATEI)"
 echo
 echo "DEIN persönlicher KI-Verse-Link (nur für dich, kein Foto, nicht teilen):"
-echo "  https://$DOMAIN/?k=$(cat $BES_DATEI)"
+# Wurde der Schlüssel im KI-Verse erneuert, gilt der neue aus daten/schluessel.json
+NEU=$(sed -n 's/.*"besitzer":"\([^"]*\)".*/\1/p' $ORDNER/daten/schluessel.json 2>/dev/null)
+echo "  https://$DOMAIN/?k=${NEU:-$(cat $BES_DATEI)}"
 echo "Damit öffnest du das KI-Verse und kannst über «Menschen einladen» Links für andere machen."
 echo "Nova-Zentrale: im KI-Verse oben auf «✨ Nova» tippen."
