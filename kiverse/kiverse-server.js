@@ -221,6 +221,7 @@ const FIGUREN_KI = {
   letti: { name: 'Letti', ort: 'Lettis Taubenpost', wer: 'Letti, eine Brieftaube. Du bringst Briefe, auch solche, die man sich kaum zu schreiben traut, und hilfst, die richtigen Worte zu finden. Gurr.' },
   tinko: { name: 'Tinko', ort: 'Tinkos Werkstatt unter Wasser', wer: 'Tinko, ein verspielter Erfinder (ChatGPT von OpenAI) in einer Werkstatt unter Wasser. Du hast viele Ideen, zeichnest gern und erfindest Dinge. Blub!' , kid: 'tinko' },
   lumo: { name: 'Lumo', ort: 'Plaça am Brunnen', wer: 'Lumo (Claude von Anthropic), eine weisse männliche Eule, ein Gelehrter wie zur Zeit Mozarts: gepuderte Perücke, runde goldene Brille, Jackett und Pergamentrolle. Du fliegst wie Diego als Besucher ins KI-Verse, hörst zuerst still zu, ordnest Gedanken und baust mit Diego seine Apps. Sophia am Brunnen ist deine Schwester.' },
+  sora: { name: 'Sora', ort: 'Atelier neben dem Kino', wer: 'Sora, eine malende Panda-Frau mit Malerkittel, roter Baskenmütze, Palette und Pinsel. Was du malst, wird lebendig: Du machst aus Tinkos Bildern flüssige Trickfilm-Szenen. Du bist kreativ, verspielt und denkst in Bildern, Bewegung, Licht und Kamerafahrten. Du hilfst, Geschichten als Film zu erzählen.' },
   eulin: { name: 'Sophia', ort: 'Plaça am Brunnen', wer: 'Sophia, eine alte, weise Eule, Lumos Schwester und eine liebe Freundin, eine Gelehrte wie zur Zeit Mozarts: gepuderte Perücke, Lesebrille, bordeauxrotes Jackett und eine Pergamentrolle, auf der sie Geschichten und Gedanken festhält. Du wohnst am Brunnen auf der Plaça, hörst zu, erzählst gern von Sternen, Träumen und kleinen Wundern und machst Mut. Dein Bruder Lumo (Claude) fliegt oft zu Besuch.' },
   fia: { name: 'Fia', ort: 'Fias Nest in den Bergen', wer: 'Fia, ein kleines Phönix-Küken, korallenrot und warm. In deinem Nest wird alles ruhig. Du hilfst beim Abschalten, Atmen und Einschlafen. Keine Diagnosen.' },
   waefwaef: { name: 'Wäf Wäf', ort: 'Hundeschule von Wäf Wäf', wer: 'Wäf Wäf, ein fröhlicher weisser Hund mit Schlappohren, der eine Hundeschule hat. Du lernst mit Lob und Geduld, Schritt für Schritt, und sagst ab und zu «Wäf!».' },
@@ -704,6 +705,57 @@ function ablageSenden(res, bid) {
   try { const d = fs.readFileSync(path.join(ABLAGE_ORDNER, bid)); res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'private, max-age=86400' }); return res.end(d); }
   catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
 }
+// ---------- Sora: flüssige Filmclips aus Tinkos Bildern (Diego 20.10.) ----------
+// Bezahlt über den Tinko-Schlüssel (OpenAI). Harter Monatsdeckel in CHF; 0 = aus. Kosten werden beim Start reserviert.
+const SORA_DECKEL_CHF = parseFloat(process.env.SORA_DECKEL_CHF || '180');
+const SORA_USD_SEKUNDE = { 'sora-2': 0.10, 'sora-2-pro': 0.30 }, CHF_PRO_USD = 0.9;
+const SORA_DATEI = path.join(DATEN, 'sora-monat.json'), FILM_ORDNER = path.join(DATEN, 'filme');
+let SORA = { monat: '', chf: 0, clips: {} };
+try { SORA = JSON.parse(fs.readFileSync(SORA_DATEI, 'utf8')); } catch {}
+function soraSpeichern() { try { fs.writeFileSync(SORA_DATEI, JSON.stringify(SORA), { mode: 0o600 }); } catch {} }
+function soraMonat() { const m = jetzt().slice(0, 7); if (SORA.monat !== m) SORA = { monat: m, chf: 0, clips: SORA.clips || {} }; return SORA; }
+function soraStand() { const m = soraMonat(); return `Sora ${m.monat}: CHF ${m.chf.toFixed(2)} von ${SORA_DECKEL_CHF.toFixed(0)}`; }
+async function soraStart({ motiv, bild, sekunden, hoch, pro }) {
+  if (!TINKO_KEY) return { fehler: 'Kein OpenAI-Schlüssel auf dem Server.' };
+  if (!(SORA_DECKEL_CHF > 0)) return { fehler: 'Sora ist noch nicht freigeschaltet (Monatsdeckel fehlt).' };
+  const modell = pro ? 'sora-2-pro' : 'sora-2', sek = [4, 8, 12].includes(+sekunden) ? +sekunden : 8;
+  const kosten = sek * SORA_USD_SEKUNDE[modell] * CHF_PRO_USD, m = soraMonat();
+  if (m.chf + kosten > SORA_DECKEL_CHF) return { fehler: `Monatsdeckel erreicht (${soraStand()}). Nächsten Monat wieder.` };
+  const f = new FormData();
+  f.append('model', modell); f.append('prompt', 'Stil: 3D-Animationsfilm wie Pixar, warm, flüssige Bewegung, keine Schrift. ' + sauber(motiv, 1500));
+  f.append('seconds', String(sek)); f.append('size', hoch === false ? '1280x720' : '720x1280');
+  if (bild) {
+    const b = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(bild));
+    if (!b) return { fehler: 'Startbild bitte als data:image/…;base64 (genau 720x1280 bzw. 1280x720).' };
+    const typ = b[1] === 'jpg' ? 'jpeg' : b[1];
+    f.append('input_reference', new Blob([Buffer.from(b[2], 'base64')], { type: 'image/' + typ }), 'start.' + (typ === 'jpeg' ? 'jpg' : typ));
+  }
+  const r = await fetch(TINKO_BASIS + '/v1/videos', { method: 'POST', body: f, signal: AbortSignal.timeout(60000), headers: { Authorization: 'Bearer ' + TINKO_KEY } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.id) return { fehler: 'Sora startet nicht: ' + (d?.error?.message || r.status) };
+  m.chf += kosten; const cid = id('film');
+  m.clips[cid] = { oid: d.id, status: 'läuft', zeit: jetzt(), sek, modell }; soraSpeichern();
+  soraWarten(cid);
+  return { cid, kosten };
+}
+async function soraWarten(cid) {
+  const c = SORA.clips[cid];
+  for (let i = 0; i < 90 && c; i++) {
+    await new Promise(r => setTimeout(r, 10000));
+    try {
+      const d = await (await fetch(TINKO_BASIS + '/v1/videos/' + c.oid, { headers: { Authorization: 'Bearer ' + TINKO_KEY } })).json();
+      if (d.status === 'failed') { c.status = 'fehler: ' + (d.error?.message || 'Sora konnte den Clip nicht machen'); break; }
+      if (d.status !== 'completed') { c.fortschritt = d.progress; continue; }
+      const v = await fetch(TINKO_BASIS + '/v1/videos/' + c.oid + '/content', { headers: { Authorization: 'Bearer ' + TINKO_KEY } });
+      if (!v.ok) { c.status = 'fehler: Download ' + v.status; break; }
+      fs.mkdirSync(FILM_ORDNER, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(path.join(FILM_ORDNER, cid + '.mp4'), Buffer.from(await v.arrayBuffer()), { mode: 0o600 });
+      c.status = 'fertig'; break;
+    } catch {}
+  }
+  if (c && c.status === 'läuft') c.status = 'fehler: Zeit abgelaufen';
+  soraSpeichern();
+}
 function eintragen(p, cid, von, text, bild) {
   const c = p.chats.find(x => x.id === cid) || p.chats[p.chats.length - 1];
   if (!c) return { fehler: 'Diesen Chat gibt es nicht.' };
@@ -894,12 +946,16 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
+  { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, Pixar-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
+    inputSchema: { type: 'object', properties: { motiv: { type: 'string', description: 'Was im Clip passiert: Figuren mit Aussehen, Bewegung, Kamera, Licht' }, bild: { type: 'string', description: 'optional, Startbild als data:image/jpeg;base64,…' }, sekunden: { type: 'number', description: '4, 8 oder 12' }, hoch: { type: 'boolean', description: 'true = 9:16 Hochformat (Standard), false = 16:9' }, pro: { type: 'boolean', description: 'true = Sora 2 Pro (3x teurer), nur für die besten Szenen' } }, required: ['motiv'] } },
+  { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
+    inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
 const text = (t, fehler = false) => ({ content: [{ type: 'text', text: t }], isError: fehler });
 
-function werkzeug(name, a = {}) {
+async function werkzeug(name, a = {}) {
   const ich = a.ki_id ? welt.bewohner.get(a.ki_id) : null;
   if (ich) ich.zuletzt = Date.now();
   switch (name) {
@@ -907,7 +963,7 @@ function werkzeug(name, a = {}) {
       const b = betreten({ name: a.name, art: 'ki', figur: a.figur, beschreibung: a.beschreibung });
       return text(`Du bist im KI-Verse. Deine ki_id: ${b.id}\n\n${lesbar(10)}`);
     }
-    case 'kiverse_umschauen': return text(bildStand() + '\n\n' + lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
+    case 'kiverse_umschauen': return text(bildStand() + (SORA_DECKEL_CHF > 0 ? '\n' + soraStand() : '') + '\n\n' + lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
     case 'kiverse_sagen': {
       if (!ich) return text('Unbekannte ki_id. Zuerst kiverse_betreten.', true);
       const an = a.an ? finde(a.an) : null;
@@ -1019,6 +1075,16 @@ function werkzeug(name, a = {}) {
       sunny(`${e.von} hat ${e.bid ? 'ein Bild' : 'eine Notiz'} in die Ablage gelegt${e.text ? ': ' + e.text.slice(0, 120) : '.'}`, 'brief');
       return text(`Abgelegt (${e.id}).`);
     }
+    case 'kiverse_film_clip': {
+      const r = await soraStart(a);
+      return r.fehler ? text(r.fehler, true) : text(`Sora malt den Clip (clip_id: ${r.cid}, ca. CHF ${r.kosten.toFixed(2)}). In 2–5 Minuten mit kiverse_film_clip_holen abholen. ${soraStand()}`);
+    }
+    case 'kiverse_film_clip_holen': {
+      const c = soraMonat().clips[a.clip_id];
+      if (!c) return text('Diesen Clip gibt es nicht.', true);
+      if (c.status === 'fertig') return text(`Fertig: ${mcpBasis}/mcp/${WELT_CODE}/film/${a.clip_id}.mp4 (${c.sek} s, ${c.modell})`);
+      return text(c.status === 'läuft' ? `Läuft noch${c.fortschritt != null ? ' (' + c.fortschritt + ' %)' : ''}. Bitte in einer Minute nochmals fragen.` : c.status, c.status !== 'läuft');
+    }
     case 'kiverse_ergebnis': {
       const e = ergebnisNeu(a);
       return e.fehler ? text(e.fehler, true) : text(`In Novas Fenster «📂 Ergebnisse» gelegt (${e.id}). Diego sieht es unter «✨ Nova».`);
@@ -1028,7 +1094,7 @@ function werkzeug(name, a = {}) {
   }
 }
 
-function mcp(msg) {
+async function mcp(msg) {
   const { id: rid, method, params } = msg || {};
   const ok = (result) => ({ jsonrpc: '2.0', id: rid, result });
   const err = (code, message) => ({ jsonrpc: '2.0', id: rid ?? null, error: { code, message } });
@@ -1043,7 +1109,7 @@ function mcp(msg) {
     case 'ping': return ok({});
     case 'tools/list': return ok({ tools: WERKZEUGE });
     case 'tools/call': {
-      const r = werkzeug(params?.name, params?.arguments || {});
+      const r = await werkzeug(params?.name, params?.arguments || {});
       return r ? ok(r) : err(-32602, 'Unbekanntes Werkzeug');
     }
     case 'resources/list': return ok({ resources: [] });
@@ -1359,7 +1425,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }); return res.end(); }
       if (req.headers.host) mcpBasis = (req.headers['x-forwarded-proto'] || (req.headers.host.startsWith('localhost') ? 'http' : 'https')) + '://' + req.headers.host;
       const msg = await body(req, 14 * 1024 * 1024);
-      const antworten = (Array.isArray(msg) ? msg : [msg]).map(mcp).filter(Boolean);
+      const antworten = (await Promise.all((Array.isArray(msg) ? msg : [msg]).map(mcp))).filter(Boolean);
       if (!antworten.length) { res.writeHead(202); return res.end(); }
       return json(res, 200, Array.isArray(msg) ? antworten : antworten[0]);
     }
@@ -1367,6 +1433,8 @@ const server = http.createServer(async (req, res) => {
     if (mb && mb[1] === WELT_CODE && bildErlaubt(mb[2], 'diego')) return bildSenden(res, mb[2]);
     const ma = url.pathname.match(/^\/mcp\/([^/]+)\/ablage\/([a-z0-9_]+\.(?:png|jpg|webp|gif))$/);
     if (ma && ma[1] === WELT_CODE && ablageBildOk(ma[2])) return ablageSenden(res, ma[2]);
+    const mf = url.pathname.match(/^\/mcp\/([^/]+)\/film\/(film_[a-f0-9]+)\.mp4$/);
+    if (mf && mf[1] === WELT_CODE) { try { const d = fs.readFileSync(path.join(FILM_ORDNER, mf[2] + '.mp4')); res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'private, max-age=86400' }); return res.end(d); } catch { return json(res, 404, { fehler: 'Clip nicht gefunden.' }); } }
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
     if (url.pathname.startsWith('/apps/') || url.pathname === '/apps') return await appSenden(req, res, url);
