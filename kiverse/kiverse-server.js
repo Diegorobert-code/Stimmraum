@@ -284,6 +284,12 @@ function bildGesperrt() {
   if (bildMonat().zahl >= BILD_MAX_MONAT) return `Tinko hat diesen Monat schon ${BILD_MAX_MONAT} Bilder gemalt. Nächsten Monat wieder.`;
   return '';
 }
+// Für die Morgenrunde: Monatsstand, ab 80 % mit Warnung.
+function bildStand() {
+  const m = bildMonat(), anteil = m.zahl / BILD_MAX_MONAT;
+  return `Tinko-Bilder ${m.monat}: ${m.zahl} von ${BILD_MAX_MONAT} (heute ${kiTag().bilder} von ${BILD_MAX_TAG})`
+    + (anteil >= 1 ? ' – DECKEL ERREICHT, Tinko malt erst nächsten Monat wieder.' : anteil >= .8 ? ' – WARNUNG: über 80 % des Monatsdeckels.' : '');
+}
 function bildZaehlen() {
   kiTag().bilder++; bildMonat().zahl++;
   try { fs.writeFileSync(BILD_MONAT_DATEI, JSON.stringify(BILD_MONAT)); } catch {}
@@ -901,7 +907,7 @@ function werkzeug(name, a = {}) {
       const b = betreten({ name: a.name, art: 'ki', figur: a.figur, beschreibung: a.beschreibung });
       return text(`Du bist im KI-Verse. Deine ki_id: ${b.id}\n\n${lesbar(10)}`);
     }
-    case 'kiverse_umschauen': return text(lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
+    case 'kiverse_umschauen': return text(bildStand() + '\n\n' + lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
     case 'kiverse_sagen': {
       if (!ich) return text('Unbekannte ki_id. Zuerst kiverse_betreten.', true);
       const an = a.an ? finde(a.an) : null;
