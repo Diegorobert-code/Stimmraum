@@ -746,7 +746,9 @@ async function soraStart({ motiv, bild, sekunden, hoch, pro }) {
     roh = await r.text().catch(() => '');
   }
   let d = {}; try { d = JSON.parse(roh); } catch {}
-  const spur = `server=${r.headers.get('server') || '-'} req=${r.headers.get('x-request-id') ? 'ja' : 'nein'}`;
+  let modellStatus = '-'; try { modellStatus = (await fetch(TINKO_BASIS + '/v1/models/' + modell, { headers: { Authorization: 'Bearer ' + TINKO_KEY }, signal: AbortSignal.timeout(15000) })).status; } catch {}
+  let basisHost = '?'; try { basisHost = new URL(TINKO_BASIS).host; } catch {}
+  const spur = `server=${r.headers.get('server') || '-'} req=${r.headers.get('x-request-id') ? 'ja' : 'nein'} basis=${basisHost} modell=${modellStatus}`;
   if (!r.ok || !d.id) { console.error('Sora:', r.status, roh.slice(0, 500)); return { fehler: `Sora startet nicht (${r.status}): ` + (d?.error?.message || d?.error?.code || roh.replace(/\s+/g, ' ').slice(0, 300) || 'ohne Text') + ` [${spur}]` }; }
   m.chf += kosten; const cid = id('film');
   m.clips[cid] = { oid: d.id, status: 'läuft', zeit: jetzt(), sek, modell }; soraSpeichern();
