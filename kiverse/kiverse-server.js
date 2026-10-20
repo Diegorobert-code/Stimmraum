@@ -209,6 +209,16 @@ const TINKO_FREI_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'tink
 let tinkoFrei = [];
 try { tinkoFrei = JSON.parse(fs.readFileSync(TINKO_FREI_DATEI, 'utf8')); } catch {}
 const tinkoFreiSpeichern = () => { try { fs.writeFileSync(TINKO_FREI_DATEI, JSON.stringify(tinkoFrei.slice(-200)), { mode: 0o600 }); } catch (e) { console.error('Tinko-Freigabe nicht gespeichert:', e.message); } };
+// Novas eigenes DR-Lab-Wissen (Diego 20.10.: «Novas Charakter soll das gesamte Wissen vom DR Lab haben»).
+// Getrennt vom «📚 Wissen» (das bleibt für Lumo und die Figuren). Nur auf dem Server, geht nie an Tinko oder Gäste.
+const NOVA_WISSEN_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'nova-wissen.md'), NOVA_WISSEN_MAX = 24000;
+let novaWissen = '';
+try { novaWissen = fs.readFileSync(NOVA_WISSEN_DATEI, 'utf8').slice(0, NOVA_WISSEN_MAX); } catch {}
+function novaWissenSetzen(t) {
+  novaWissen = String(t || '').replace(/\r/g, '').slice(0, NOVA_WISSEN_MAX).trim();
+  try { fs.writeFileSync(NOVA_WISSEN_DATEI, novaWissen, { mode: 0o600 }); } catch (e) { console.error('Nova-Wissen nicht gespeichert:', e.message); }
+  return novaWissen.length;
+}
 const wissenFuer = (kid, n = 6000) => kid === 'tinko' ? tinkoFrei.map(f => '- ' + f.text).join('\n').slice(0, n) : wissen.slice(0, n);
 // ---------- Jede Figur ist eine eigene KI (Diego 19.10.) ----------
 // Im Spiel (Trickfilm-Städtchen) redet man mit jeder Figur. Antworten über die Sense Engine (Claude), Tinko über OpenAI.
@@ -961,6 +971,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
   { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 10 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
+  { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
   { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, 3D-Animationsfilm-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
@@ -1125,6 +1137,10 @@ async function werkzeug(name, a = {}) {
       if (e.fehler) return text(e.fehler, true);
       Object.assign(c, { status: 'fertig', ergebnis: e.id, fertigZeit: jetzt() }); claudeSpeichern();
       return text(`Erledigt, liegt in Novas Fenster «📂 Ergebnisse» (${e.id}).`);
+    }
+    case 'kiverse_nova_wissen': {
+      if (!String(a.text || '').trim()) return text('Leerer Text.', true);
+      return text(`Novas Wissen gesetzt (${novaWissenSetzen(a.text)} Zeichen). Gilt ab dem nächsten Satz von Diego.`);
     }
     case 'kiverse_ergebnis': {
       const e = ergebnisNeu(a);
@@ -1371,6 +1387,7 @@ Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', week
 
 Was du dir über Diego gemerkt hast:
 ${erinnerungen}
+${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}
 ${wissen ? '\nHintergrundwissen DR Lab (intern):\n' + wissen.slice(0, 6000) : ''}
 
 ${ZENTRALE_FORMAT}`;
