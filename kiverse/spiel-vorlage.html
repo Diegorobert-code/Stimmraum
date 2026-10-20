@@ -19,6 +19,8 @@ html.ar #arVideo { display: block; }
 .anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; z-index: 5; }
 .pille { background: rgba(11, 20, 48, .7); border: 1px solid var(--rand); border-radius: 999px; padding: 4px 12px; font-weight: 700; color: var(--gold-hell); pointer-events: auto; }
 .pille button { all: unset; cursor: pointer; }
+.pille { white-space: nowrap; }
+@media (max-width: 600px) { .anzeige { gap: 4px; left: 8px; right: 8px; } .anzeige .pille { padding: 4px 9px; font-size: 15px; } .anzeige .txt { display: none; } }
 #hoch { position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: var(--gold-hell); font: 800 28px "Baloo 2", sans-serif; display: grid; place-items: center; z-index: 4; }
 #stick { position: fixed; left: 26px; bottom: max(26px, env(safe-area-inset-bottom)); width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .4); z-index: 4; touch-action: none; }
 #stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(242, 194, 91, .75); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
@@ -97,8 +99,8 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
   <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
   <span class="pille" id="schrittAnzeige" hidden>👣 0</span>
   <span class="pille"><button type="button" id="sichtKnopf">👁 Ich-Sicht</button></span>
-  <span class="pille"><button type="button" id="handyKnopf">📱 Handy</button></span>
-  <span class="pille"><button type="button" id="zurWelt">KI-Verse</button></span>
+  <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
+  <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
 </div>
 <video id="arVideo" playsinline muted autoplay></video>
 <div id="stick" hidden><i></i></div>
@@ -466,7 +468,7 @@ function figur3d(key, a, groesse) {
   const kg = a.kopf || 1, kopf = new THREE.Group(); kopf.position.y = 2.15; kopf.scale.setScalar(kg); g.add(kopf);
   const schaedel = kugel(.55, hautM, 0, 0, 0, 1.05, 1, 1, 40); kopf.add(schaedel);
   if (!mensch) kopf.add(kugel(.42, gesichtM, 0, -.08, .2, 1.1, .92, .85, 32));
-  if (a.pandaFlecken) for (const s of [-1, 1]) { const f = kugel(.19, fellMat(a.pandaFlecken, .5), s * .21, .04, .36, .85, 1.2, .55); f.rotation.z = s * .5; kopf.add(f); }
+  if (a.pandaFlecken) for (const s of [-1, 1]) { const f = kugel(.2, fellMat(a.pandaFlecken, .5), s * .22, .05, .43, .9, 1.25, .45); f.rotation.z = s * .55; kopf.add(f); }
   // Augen (gross, glänzend, mit Lichtpunkt) in einer Gruppe, damit sie blinzeln können
   const ag = a.augenGross || 1, augen = [];
   for (const s of [-1, 1]) {
@@ -1145,7 +1147,7 @@ function atmen(n) {
 
 // ---------- Spielstand ----------
 function erlebt(t) { zustand.erlebt.push(t); try { localStorage.setItem('kiverse_spiel_erlebt', JSON.stringify(zustand.erlebt.slice(-30))); } catch {} }
-function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `Orte ${zustand.besucht.size} / ${ZIEL_ORTE.length}`; }
+function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `🏛 ${zustand.besucht.size}/${ZIEL_ORTE.length}`; }
 function funkeDazu() { zustand.funken = Math.min(12, zustand.funken + 1); anzeigen(); klang(700 + zustand.funken * 60); }
 function pruefeEnde() {
   if (zustand.ende || zustand.funken < 12 || zustand.besucht.size < ZIEL_ORTE.length || zustand.innen) return;
@@ -1264,11 +1266,11 @@ function schritt() {
     const nah = naechsterOrt();
     const zeigeRein = nah && nah.d < 6.5 && nah.o.rein && !gespr.n;
     $('#rein').hidden = !zeigeRein; if (zeigeRein) $('#rein').textContent = nah.o.id === 'hafen' ? 'Abtauchen' : 'Rein';
-    if (nah && nah.d < 14) { const s = aufBildschirm(nah.o.x ?? -2, 7.5, nah.o.z); if (s.sichtbar) { schildEl.hidden = false; schildEl.textContent = nah.o.name; schildEl.style.left = Math.max(90, Math.min(innerWidth - 90, s.x)) + 'px'; schildEl.style.top = Math.max(60, s.y) + 'px'; } }
+    if (nah && nah.d < 14) { const s = aufBildschirm(nah.o.x ?? -2, 7.5, nah.o.z); if (s.sichtbar) { schildEl.hidden = false; schildEl.textContent = nah.o.name; schildEl.style.left = Math.max(90, Math.min(innerWidth - 90, s.x)) + 'px'; schildEl.style.top = Math.max(schildEl.offsetHeight + 58, s.y) + 'px'; } }
     let sprecher = null, best = 7;
     for (const n of npc) { const d = Math.hypot(n.x - sp.pos.x, n.z - sp.pos.z); if (d < best) { best = d; sprecher = n; } }
     if (nah && nah.o.hasi && nah.d < 6) sprecher = { x: -3.6, z: nah.o.z, satz: '♥ ✦ ☾', hoehe: 3.2 };
-    if (sprecher && !gespr.n) { const s = aufBildschirm(sprecher.x, sprecher.hoehe || 3.4, sprecher.z); if (s.sichtbar) { blaseEl.hidden = false; blaseEl.textContent = sprecher.satz; blaseEl.style.left = Math.max(120, Math.min(innerWidth - 120, s.x)) + 'px'; blaseEl.style.top = Math.max(90, s.y) + 'px'; } }
+    if (sprecher && !gespr.n) { const s = aufBildschirm(sprecher.x, sprecher.hoehe || 3.4, sprecher.z); if (s.sichtbar) { blaseEl.hidden = false; blaseEl.textContent = sprecher.satz; blaseEl.style.left = Math.max(120, Math.min(innerWidth - 120, s.x)) + 'px'; blaseEl.style.top = Math.max(blaseEl.offsetHeight + 62, s.y) + 'px'; } }
   } else $('#rein').hidden = true;
   { const nf = zustand.modus === 'spiel' && !zustand.innen && !gespr.n && naechsteFigur(5.5); $('#reden').hidden = !nf; if (nf) $('#reden').textContent = `🎙 Mit ${NAMEN[figurVon(nf)]} reden`; }
 
@@ -1322,7 +1324,7 @@ const sicht = { ich: true, neigung: 0, ziehen: null };
 // Weiches Gesichtslicht wie beim Trickfilm-Dreh: kommt von der Kamera, damit die Figuren vor dir nie im Gegenlicht stehen
 { const l = new THREE.PointLight(0xffe2b8, 5, 10, 1.6); l.position.set(0, .3, .5); kamera.add(l); szene.add(kamera); }
 try { sicht.ich = localStorage.getItem('kiverse_ichsicht') !== '0'; } catch {}
-function sichtKnopf() { $('#sichtKnopf').textContent = sicht.ich ? '👁 Ich-Sicht' : '🎥 Von hinten'; }
+function sichtKnopf() { $('#sichtKnopf').innerHTML = sicht.ich ? '👁<span class="txt"> Ich-Sicht</span>' : '🎥<span class="txt"> Von hinten</span>'; }
 $('#sichtKnopf').onclick = () => { sicht.ich = !sicht.ich; sicht.neigung = 0; try { localStorage.setItem('kiverse_ichsicht', sicht.ich ? '1' : '0'); } catch {} sichtKnopf(); };
 sichtKnopf();
 addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'v') $('#sichtKnopf').click(); if ((e.key === 'r' || e.key === 't') && !$('#reden').hidden) { e.preventDefault(); $('#reden').click(); } });
@@ -1333,7 +1335,7 @@ const blickV = new THREE.Vector3();
 function ichSichtKamera(zeit) {
   const bob = sp.amBoden ? Math.abs(Math.sin(zeit * 9)) * Math.min(1, Math.abs(sp.tempo) / 6) * .07 : 0;
   kamera.position.set(sp.pos.x, sp.pos.y + 1.68 + bob, sp.pos.z);
-  blickV.set(sp.pos.x + Math.sin(sp.richtung) * 10, sp.pos.y + 1.6 + Math.tan(sicht.neigung) * 10, sp.pos.z + Math.cos(sp.richtung) * 10);
+  blickV.set(sp.pos.x + Math.sin(sp.richtung) * 10, sp.pos.y + 1.6 + Math.tan(sicht.neigung + (innerHeight > innerWidth ? .1 : 0)) * 10, sp.pos.z + Math.cos(sp.richtung) * 10);
   kamera.lookAt(blickV);
 }
 // Figuren leben: schauen dich an, blinzeln, bewegen beim Reden Mund und Arme
