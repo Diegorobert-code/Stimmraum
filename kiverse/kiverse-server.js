@@ -731,8 +731,8 @@ async function soraStart({ motiv, bild, sekunden, hoch, pro }) {
     f.append('input_reference', new Blob([Buffer.from(b[2], 'base64')], { type: 'image/' + typ }), 'start.' + (typ === 'jpeg' ? 'jpg' : typ));
   }
   const r = await fetch(TINKO_BASIS + '/v1/videos', { method: 'POST', body: f, signal: AbortSignal.timeout(60000), headers: { Authorization: 'Bearer ' + TINKO_KEY } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok || !d.id) return { fehler: 'Sora startet nicht: ' + (d?.error?.message || r.status) };
+  const roh = await r.text().catch(() => ''); let d = {}; try { d = JSON.parse(roh); } catch {}
+  if (!r.ok || !d.id) { console.error('Sora:', r.status, roh.slice(0, 500)); return { fehler: `Sora startet nicht (${r.status}): ` + (d?.error?.message || d?.error?.code || roh.replace(/\s+/g, ' ').slice(0, 300) || 'ohne Text') }; }
   m.chf += kosten; const cid = id('film');
   m.clips[cid] = { oid: d.id, status: 'läuft', zeit: jetzt(), sek, modell }; soraSpeichern();
   soraWarten(cid);
