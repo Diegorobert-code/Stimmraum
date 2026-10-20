@@ -106,8 +106,9 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   padding-bottom: var(--sicher-unten); box-shadow: 0 -20px 60px rgba(0,0,0,.5); }
 .blatt.an { transform: none; }
 .griff { width: 40px; height: 5px; border-radius: 3px; background: #3a4670; margin: 8px auto 4px; }
-.reiter { display: flex; gap: 6px; padding: 6px 16px 10px; }
-.reiter button { flex: 1; padding: 9px 6px; border-radius: 12px; border: 1px solid var(--linie); background: var(--glas); font-size: 14px; color: var(--leise); }
+.reiter { display: flex; gap: 6px; padding: 6px 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.reiter::-webkit-scrollbar { display: none; }
+.reiter button { flex: 1 0 auto; white-space: nowrap; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--linie); background: var(--glas); font-size: 14px; color: var(--leise); }
 .reiter button.an { background: rgba(243,201,105,.14); border-color: rgba(243,201,105,.5); color: var(--gold2); }
 .blattinhalt { overflow-y: auto; padding: 0 16px 20px; }
 .blattinhalt h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8794bd; margin: 16px 2px 8px; font-weight: 600; }
@@ -123,6 +124,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
 .knopf.gold { background: var(--gold); color: #2a1d00; border: 0; font-weight: 600; }
 .blattinhalt textarea, .blattinhalt input[type=text] { width: 100%; border-radius: 14px; border: 1px solid var(--linie); background: rgba(0,0,0,.25); padding: 12px; font-size: 16px; outline: none; }
 .blattinhalt textarea { min-height: 220px; line-height: 1.45; }
+.satz { display: block; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; background: var(--glas); border: 1px solid var(--linie); font-size: 15px; color: var(--text); }
+.satz small { display: block; color: var(--leise); font-size: 13px; margin-top: 2px; }
 .hinweis { font-size: 13.5px; color: var(--leise); margin: 6px 2px; }
 .toast { position: fixed; left: 50%; top: calc(var(--sicher-oben) + 12px); transform: translate(-50%, -140%); transition: transform .3s; z-index: 20;
   background: #1a2752; border: 1px solid var(--linie); padding: 10px 16px; border-radius: 14px; font-size: 14px; max-width: 90vw; }
@@ -247,8 +250,10 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
 <div class="blatt" id="blatt" role="dialog" aria-modal="true" aria-label="Nova">
   <div class="griff"></div>
   <div class="reiter" id="reiter">
+    <button type="button" data-r="hilfe">📘 So geht's</button>
     <button type="button" data-r="netz" class="an">🕸 Netz</button>
     <button type="button" data-r="gedaechtnis">🧠 Gedächtnis</button>
+    <button type="button" data-r="tinko">🔒 Tinko</button>
     <button type="button" data-r="seele">✨ Seele</button>
   </div>
   <div class="blattinhalt" id="blattinhalt"></div>
@@ -402,8 +407,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
       <button class="hoeren" type="button">🔊 Vorlesen</button>${String(e.text).length > 320 ? '<button class="mehr" type="button">Mehr lesen</button>' : ''}</div>`;
     if (e.art === 'male') return `<div class="karte"><div class="kopfzeile">${ava('tinko')}<span class="wer">Tinko malt</span></div>${e.bid ? `<a href="${esc(mitK('api/ablage/' + e.bid))}" target="_blank" rel="noopener"><img alt="${esc(e.text)}" loading="lazy" src="${esc(mitK('api/ablage/' + e.bid))}"></a>` : `<div class="text">${esc(e.text)}</div>`}</div>`;
     if (e.art === 'oeffne' && e.link) return `<div class="karte"><a class="oeffnen" href="${esc(e.link)}"><span>${esc(APP_AVA[e.app] || '🧭')} ${esc(e.name)} öffnen</span><span>›</span></a></div>`;
-    const sym = { claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
-    const vor = { claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
+    const sym = { tinko_frei: '🔒', claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
+    const vor = { tinko_frei: 'Für Tinko freigegeben: ', claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
     return `<div class="karte klein">${sym} ${esc(vor + (e.text || ''))}</div>`;
   }
   function zugHtml(z) {
@@ -461,11 +466,11 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   eingabe.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } });
   $('#form').addEventListener('submit', (e) => { e.preventDefault(); const t = eingabe.value; eingabe.value = ''; eingabe.style.height = 'auto'; $('#schicken').disabled = true; senden(t); });
 
-  const VORSCHLAEGE = ['Lumo und Tinko: was braucht ihr von mir, damit ihr mich sofort richtig versteht?', 'Was läuft gerade?', 'Was hast du dir über mich gemerkt?', 'Lumo und Tinko: arbeitet heute Nacht an Körperkosmos', 'Tinko, mal mir Nova als kleinen Leuchtturm', 'Öffne Otti', 'Frag Mama Affe, wie es ihr geht'];
+  const VORSCHLAEGE = ['📘 Wie arbeite ich mit dir?', 'Lumo und Tinko: was braucht ihr von mir, damit ihr mich sofort richtig versteht?', 'Was läuft gerade?', 'Was hast du dir über mich gemerkt?', 'Lumo und Tinko: arbeitet heute Nacht an Körperkosmos', 'Tinko, mal mir Nova als kleinen Leuchtturm', 'Öffne Otti', 'Frag Mama Affe, wie es ihr geht'];
   function vorschlaegeZeigen() {
     const v = $('#vorschlaege'); if (feed.children.length > 2) { v.innerHTML = ''; return; }
     v.innerHTML = VORSCHLAEGE.map(t => `<button type="button">${esc(t)}</button>`).join('');
-    v.querySelectorAll('button').forEach(b => b.onclick = () => senden(b.textContent));
+    v.querySelectorAll('button').forEach(b => b.onclick = () => b.textContent.startsWith('📘') ? auf('hilfe') : senden(b.textContent));
   }
 
   // ---------- Netz, Gedächtnis, Seele ----------
@@ -479,7 +484,37 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
     reiter = r || reiter;
     document.querySelectorAll('#reiter button').forEach(b => b.classList.toggle('an', b.dataset.r === reiter));
     const n = stand.netz || {}, s = n.schleife || {}, h = $('#blattinhalt');
-    if (reiter === 'netz') {
+    if (reiter === 'hilfe') {
+      const S = [
+        ['Frag Lumo, wie weit Otti ist.', 'Nova fragt Lumo (Claude) und sagt dir die Antwort.'],
+        ['Frag Mama Affe, was sie heute gelernt hat.', 'Jede Figur geht: Otti, Sparky, Fompa, Kiki …'],
+        ['Tinko, mal mir Nova als kleinen Leuchtturm.', 'Das Bild erscheint hier im Gespräch.'],
+        ['Öffne Otti.', 'Nova öffnet die App für dich.'],
+        ['Gib ans Claude-Projekt: Otti, Ziel: Spiele spannender. Stand: live. Was stört: zu langsam.', 'Claude arbeitet es ab. Das Ergebnis kommt in 📂 oben rechts.'],
+        ['Lumo und Tinko, arbeitet heute Nacht an Körperkosmos.', 'Geht in die Schleife, sie arbeiten selbständig.'],
+        ['Merk dir: Ich mag kurze Antworten.', 'Steht danach unter 🧠 Gedächtnis.'],
+        ['Für Tinko frei: unsere Farben sind Nachtblau und Gold.', 'Nur das bekommt Tinko (ChatGPT) von dir.'],
+        ['Was läuft gerade?', 'Nova sagt dir den Stand von allem.']];
+      h.innerHTML = `<h3>So sprichst du mit Nova</h3>
+        <div class="liste"><div class="eintrag"><span>1. Tipp auf Nova oder auf 🎤 und sprich ganz normal, Schweizerdeutsch geht auch.</span></div>
+        <div class="eintrag"><span>2. Nova antwortet kurz und erledigt den Rest im Hintergrund.</span></div>
+        <div class="eintrag"><span>3. ∞ unten links: Nova hört nach jeder Antwort wieder zu (freihändig).</span></div></div>
+        <h3>Sätze, die funktionieren (antippen = ausprobieren)</h3>
+        ${S.map(([t, e]) => `<button class="satz" type="button" data-satz="${esc(t)}">«${esc(t)}»<small>${esc(e)}</small></button>`).join('')}
+        <h3>Für die Apps</h3>
+        <p class="hinweis">Pro App immer drei Dinge sagen: welche App, was das Ziel ist, was stört. Beispiel: «Gib ans Claude-Projekt: Fias Nest, Ziel: Stimme ruhiger, stört: zu schnell.» Fertiges findest du unter 📂.</p>
+        <h3>Sicher</h3>
+        <p class="hinweis">Nova gibt kein Geld aus, sendet nichts an andere und veröffentlicht nichts ohne dein Ja. Schlüssel und Passwörter sagst du ihr nie.</p>`;
+      h.querySelectorAll('[data-satz]').forEach(b => b.onclick = () => { zu(); senden(b.dataset.satz); });
+    } else if (reiter === 'tinko') {
+      const l = stand.tinkoFrei || [];
+      h.innerHTML = `<p class="hinweis">Tinko (ChatGPT) bekommt nur, was hier steht. Dein internes Wissen, Novas Gedächtnis und eure Gespräche sieht er nicht. Nie hierher: Klienten, Gesundheit, Geld, Passwörter.</p>
+        <div class="liste">${l.slice().reverse().map(f => `<div class="eintrag"><span>${esc(f.text)}</span><button type="button" data-tweg="${esc(f.id)}" aria-label="Entfernen">×</button></div>`).join('') || '<p class="hinweis">Noch nichts freigegeben.</p>'}</div>
+        <h3>Freigeben</h3><input type="text" id="neuTinko" placeholder="z. B. Stil: Pixar-3D, Nachtblau und Gold, warm">
+        <div class="knopfreihe"><button class="knopf gold" id="tinkoKnopf" type="button">Für Tinko freigeben</button></div>`;
+      h.querySelectorAll('[data-tweg]').forEach(b => b.onclick = async () => { const r = await api('api/zentrale/tinko-frei', { weg: b.dataset.tweg }).catch(e => toast(e.message)); if (r) { stand.tinkoFrei = r.tinkoFrei; blattZeigen(); } });
+      $('#tinkoKnopf').onclick = async () => { const t = $('#neuTinko').value.trim(); if (!t) return; const r = await api('api/zentrale/tinko-frei', { text: t }).catch(e => toast(e.message)); if (r) { stand.tinkoFrei = r.tinkoFrei; toast('Für Tinko freigegeben.'); blattZeigen(); } };
+    } else if (reiter === 'netz') {
       h.innerHTML = `<h3>Schleife (Lumo und Tinko arbeiten selbständig)</h3>
         <div class="eintrag"><span>${s.aktiv ? 'Läuft' : 'Steht'} · ${s.offen || 0} offen · ${s.fertig || 0} fertig${s.naechste ? '<br><small style="color:var(--leise)">Als Nächstes: ' + esc(s.naechste) + '</small>' : ''}</span></div>
         <div class="knopfreihe"><button class="knopf ${s.aktiv ? '' : 'gold'}" id="schleifeAn" type="button">${s.aktiv ? '⏸ Pausieren' : '▶︎ Starten'}</button></div>

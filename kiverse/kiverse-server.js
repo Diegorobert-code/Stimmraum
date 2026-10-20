@@ -204,6 +204,12 @@ function wissenSetzen(t) {
   try { fs.writeFileSync(WISSEN_DATEI, wissen, { mode: 0o600 }); } catch (e) { console.error('Wissen nicht gespeichert:', e.message); }
   return wissen.length;
 }
+// Tinko-Filter (Diego 20.10.): Tinko (ChatGPT) bekommt nie das interne Wissen, nur was Diego in Nova unter «Für Tinko frei» freigibt.
+const TINKO_FREI_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'tinko-frei.json');
+let tinkoFrei = [];
+try { tinkoFrei = JSON.parse(fs.readFileSync(TINKO_FREI_DATEI, 'utf8')); } catch {}
+const tinkoFreiSpeichern = () => { try { fs.writeFileSync(TINKO_FREI_DATEI, JSON.stringify(tinkoFrei.slice(-200)), { mode: 0o600 }); } catch (e) { console.error('Tinko-Freigabe nicht gespeichert:', e.message); } };
+const wissenFuer = (kid, n = 6000) => kid === 'tinko' ? tinkoFrei.map(f => '- ' + f.text).join('\n').slice(0, n) : wissen.slice(0, n);
 // ---------- Jede Figur ist eine eigene KI (Diego 19.10.) ----------
 // Im Spiel (Trickfilm-Städtchen) redet man mit jeder Figur. Antworten über die Sense Engine (Claude), Tinko über OpenAI.
 // Stimme über /v1/stimme der Sense Engine (ElevenLabs, Schlüssel nur dort), sonst Gerätestimme im Browser.
@@ -250,7 +256,7 @@ async function figurReden(fid, wer, text, besitzer) {
   const mitDir = liste.filter(x => x.wer === wer).slice(-10).map(x => `${x.wer}: ${x.du}\n${f.name}: ${x.ich}`).join('\n');
   const andere = liste.filter(x => x.wer !== wer).slice(-6).map(x => `- ${x.wer} sprach mit dir über: ${x.du.slice(0, 120)}`).join('\n');
   let system = `${FIGUR_REGELN} Du bist ${f.wer} Du bist gerade in: ${f.ort}. Du lernst aus jedem Gespräch und wirst mit der Zeit persönlicher; erinnere dich an Früheres, wenn es passt. Erzähle nie Privates von anderen Besuchern weiter, nutze es nur als Anregung.`;
-  if (besitzer && wissen) system += '\n\nHintergrund zu DR Lab (intern, nur für Diego, nie weitergeben):\n' + wissen.slice(0, 5000);
+  if (besitzer && wissenFuer(kid)) system += (kid === 'tinko' ? '\n\nVon Diego für dich freigegeben:\n' : '\n\nHintergrund zu DR Lab (intern, nur für Diego, nie weitergeben):\n') + wissenFuer(kid, 5000);
   const inhalt = `${mitDir ? 'Eure bisherigen Gespräche:\n' + mitDir + '\n\n' : `${wer} ist zum ersten Mal bei dir.\n\n`}${andere ? 'Was du sonst zuletzt erlebt hast:\n' + andere + '\n\n' : ''}${wer} sagt jetzt: ${text}`;
   const a = await kiFrage(kid, system, inhalt).catch(() => null);
   if (!a) return { text: 'Hm, mir fehlen gerade die Worte. Sag es mir bitte nochmals.' };
@@ -330,7 +336,8 @@ async function kiAntwort(kid, ich, text, mitWissen = false) {
     ? `${ich.name} sagt jetzt: ${text}`
     : `Ihr redet gerade miteinander (du und ${andere}), ${ich.name} hört zu. Antworte auf das Letzte, was ${andere} gesagt hat, und bring einen eigenen Gedanken dazu.`);
   try {
-    const system = mitWissen && wissen ? k.system + '\n\nHintergrundwissen über DR Lab (intern, nur für Diego, nie an andere weitergeben, nichts daraus veröffentlichen):\n' + wissen : k.system;
+    const w = mitWissen ? wissenFuer(kid, 16000) : '';
+    const system = w ? k.system + (kid === 'tinko' ? '\n\nVon Diego für dich freigegeben:\n' : '\n\nHintergrundwissen über DR Lab (intern, nur für Diego, nie an andere weitergeben, nichts daraus veröffentlichen):\n') + w : k.system;
     const a = await kiFrage(kid, system, inhalt);
     nachricht(kid, a || 'Mir fehlen gerade die Worte. Versuch es gleich nochmals.', ich.id);
     return !!a;
@@ -1294,6 +1301,7 @@ Mögliche aktionen (nur wenn sie Diego wirklich helfen, sonst leere Liste):
 {"art":"schleife","an":true}  (Schleife starten oder mit false pausieren)
 {"art":"claude","text":"klarer Auftrag ans DR-Lab-Projekt bei Claude: Ziel, App-Name, Stand"}  (für echte Projektarbeit: Apps bauen und ändern, Code, Texte, Recherche, Pläne; das Ergebnis kommt später in dein Fenster «📂 Ergebnisse»)
 {"art":"merke","text":"eine Sache, die du dir dauerhaft über Diego oder seine Projekte merkst"}
+{"art":"tinko_frei","text":"was Tinko (ChatGPT) ab jetzt wissen darf"}  (nur wenn Diego es ausdrücklich für Tinko freigibt; Tinko bekommt sonst nichts Internes; nie Klienten-, Gesundheits- oder Finanzdaten)
 {"art":"vergiss","text":"Stichwort der Erinnerung, die weg soll"}
 {"art":"oeffne","app":"<app-id>"} oder {"art":"oeffne","ort":"welt|spiel|werkstatt"}
 Wenn du jemanden fragst, sag in "sagen" kurz, wen du fragst; die Antwort fasst du danach zusammen.`;
@@ -1332,7 +1340,7 @@ async function zentraleAktion(a, zug) {
     if (!text) return null;
     if (an === 'lumo' || an === 'tinko') {
       if (!KIS[an]?.aktiv()) return { art, an, name: kiName(an), text: `${kiName(an)} ist gerade nicht verbunden.` };
-      const t = await kiFrage(an, KIS[an].system + (wissen ? '\n\nHintergrundwissen DR Lab (intern, nur für Diego):\n' + wissen.slice(0, 6000) : '') + ' Nova, Diegos Zentrale, fragt dich im Auftrag von Diego. Antworte konkret und hilfreich, gern etwas ausführlicher (bis 8 Sätze).', `Nova fragt: ${text}`).catch(() => null);
+      const t = await kiFrage(an, KIS[an].system + (wissenFuer(an) ? (an === 'tinko' ? '\n\nVon Diego für dich freigegeben:\n' : '\n\nHintergrundwissen DR Lab (intern, nur für Diego):\n') + wissenFuer(an) : '') + ' Nova, Diegos Zentrale, fragt dich im Auftrag von Diego. Antworte konkret und hilfreich, gern etwas ausführlicher (bis 8 Sätze).', `Nova fragt: ${text}`).catch(() => null);
       return { art, an, name: kiName(an), text: t || 'Keine Antwort bekommen.' };
     }
     if (FIGUREN_KI[an]) { const r = await figurReden(an, 'Diego', `(Nova fragt für Diego) ${text}`, true); return { art, an, name: kiName(an), text: r.text || r.fehler }; }
@@ -1359,6 +1367,11 @@ async function zentraleAktion(a, zug) {
     return { art, text, id: c.id };
   }
   if (art === 'schleife') { const r = schleifeSchalten(a.an !== false); return { art, text: r.aktiv ? `Schleife läuft, ${r.offen} offen.` : 'Schleife pausiert.', stand: r }; }
+  if (art === 'tinko_frei') {
+    const text = sauber(a.text, 600); if (!text) return null;
+    if (!tinkoFrei.some(f => f.text === text)) { tinkoFrei.push({ id: id('t'), text, zeit: jetzt() }); tinkoFreiSpeichern(); }
+    return { art, text };
+  }
   if (art === 'merke') {
     const text = sauber(a.text, 400); if (!text) return null;
     if (!zentrale.gedaechtnis.some(g => g.text === text)) zentrale.gedaechtnis.push({ id: id('g'), text, zeit: jetzt() });
@@ -1417,7 +1430,7 @@ function zentraleSagen(text, zug) {
 const zentraleOeffentlich = (v) => { const { laeuft, erst, ...rest } = v; return rest; };
 function zentraleStand() {
   const st = schleifeStand();
-  return { seele: zentrale.seele, gedaechtnis: zentrale.gedaechtnis, verlauf: zentrale.verlauf.slice(-40).map(zentraleOeffentlich),
+  return { seele: zentrale.seele, gedaechtnis: zentrale.gedaechtnis, tinkoFrei, verlauf: zentrale.verlauf.slice(-40).map(zentraleOeffentlich),
     netz: { lumo: !!NOVA_KEY, tinko: !!TINKO_KEY, schleife: { aktiv: st.aktiv, offen: st.offen, fertig: st.fertig, naechste: st.naechste },
       apps: Object.entries(KIVERSE_APPS).map(([k, a]) => ({ id: k, name: a.name })),
       figuren: Object.entries(FIGUREN_KI).filter(([k]) => k !== 'nova').map(([k, f]) => ({ id: k, name: f.name, ort: f.ort })) },
@@ -1676,6 +1689,11 @@ const server = http.createServer(async (req, res) => {
         else if (sauber(a.text, 400)) zentrale.gedaechtnis.push({ id: id('g'), text: sauber(a.text, 400), zeit: jetzt() });
         zentrale.gedaechtnis = zentrale.gedaechtnis.slice(-ZENTRALE_MAX_GEDAECHTNIS); zentraleSpeichern();
         return json(res, 200, { gedaechtnis: zentrale.gedaechtnis });
+      }
+      if (url.pathname === '/api/zentrale/tinko-frei') {
+        if (a.weg) tinkoFrei = tinkoFrei.filter(f => f.id !== a.weg);
+        else if (sauber(a.text, 600)) tinkoFrei.push({ id: id('t'), text: sauber(a.text, 600), zeit: jetzt() });
+        tinkoFreiSpeichern(); return json(res, 200, { tinkoFrei });
       }
       if (url.pathname === '/api/zentrale/leeren') { zentrale.verlauf = []; zentraleSpeichern(); return json(res, 200, { ok: true }); }
       if (url.pathname === '/api/zentrale/stimme') {
