@@ -958,6 +958,12 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { motiv: { type: 'string', description: 'Was im Clip passiert: Figuren mit Aussehen, Bewegung, Kamera, Licht' }, bild: { type: 'string', description: 'optional, Startbild als data:image/jpeg;base64,…' }, sekunden: { type: 'number', description: '4, 8 oder 12' }, hoch: { type: 'boolean', description: 'true = 9:16 Hochformat (Standard), false = 16:9' }, pro: { type: 'boolean', description: 'true = Sora 2 Pro (3x teurer), nur für die besten Szenen' } }, required: ['motiv'] } },
   { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
     inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
+  { name: 'kiverse_claude_auftraege', description: 'Aufträge, die Diego über Nova ans DR-Lab-Projekt bei Claude gibt (Apps bauen, Code, Texte, Recherche). Zeigt offene Aufträge; nimm einen mit kiverse_claude_nehmen, damit ihn niemand doppelt macht.',
+    inputSchema: { type: 'object', properties: { alle: { type: 'boolean', description: 'auch erledigte zeigen' } } } },
+  { name: 'kiverse_claude_nehmen', description: 'Einen offenen Nova-Auftrag übernehmen (Status in Arbeit). Gibt den ganzen Auftrag mit Diegos Originalsatz zurück.',
+    inputSchema: { type: 'object', properties: { auftrag_id: { type: 'string' }, von: { type: 'string', description: 'wer übernimmt, z. B. Nova-Routine oder ein Thread' } }, required: ['auftrag_id'] } },
+  { name: 'kiverse_claude_erledigt', description: 'Nova-Auftrag abschliessen: das Ergebnis landet in Novas Fenster «📂 Ergebnisse» (Markdown, Codeblöcke bekommen Kopieren-Knopf), Nova sagt es Diego.',
+    inputSchema: { type: 'object', properties: { auftrag_id: { type: 'string' }, von: { type: 'string' }, titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string', description: 'optional https-Link' } }, required: ['auftrag_id', 'titel', 'text'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -1092,6 +1098,24 @@ async function werkzeug(name, a = {}) {
       if (!c) return text('Diesen Clip gibt es nicht.', true);
       if (c.status === 'fertig') return text(`Fertig: ${mcpBasis}/mcp/${WELT_CODE}/film/${a.clip_id}.mp4 (${c.sek} s, ${c.modell})`);
       return text(c.status === 'läuft' ? `Läuft noch${c.fortschritt != null ? ' (' + c.fortschritt + ' %)' : ''}. Bitte in einer Minute nochmals fragen.` : c.status, c.status !== 'läuft');
+    }
+    case 'kiverse_claude_auftraege': {
+      const l = claudeAuftraege.filter(c => a.alle || c.status !== 'fertig').slice(-30);
+      return text(l.length ? 'Nova-Aufträge (älteste zuerst):\n' + l.map(c => `- ${c.id} | ${c.status}${c.wer ? ' (' + c.wer + ')' : ''} | ${c.zeit.slice(0, 16).replace('T', ' ')} | ${c.text.slice(0, 300)}`).join('\n') : 'Keine offenen Nova-Aufträge.');
+    }
+    case 'kiverse_claude_nehmen': {
+      const c = claudeAuftraege.find(x => x.id === a.auftrag_id); if (!c) return text('Unbekannter Auftrag.', true);
+      if (c.status === 'fertig') return text('Schon erledigt.', true);
+      if (c.status === 'in_arbeit' && Date.now() - Date.parse(c.seit) < 6 * 3600e3) return text(`Schon in Arbeit bei ${c.wer || 'jemandem'}.`, true);
+      Object.assign(c, { status: 'in_arbeit', wer: sauber(a.von, 60) || 'Claude', seit: jetzt() }); claudeSpeichern();
+      return text(`Übernommen.\nAuftrag (von Nova formuliert):\n${c.text}\n\nDiegos Originalsatz:\n${c.du || '(keiner)'}\n\nWenn fertig: kiverse_claude_erledigt mit auftrag_id ${c.id}.`);
+    }
+    case 'kiverse_claude_erledigt': {
+      const c = claudeAuftraege.find(x => x.id === a.auftrag_id); if (!c) return text('Unbekannter Auftrag.', true);
+      const e = ergebnisNeu({ von: a.von || c.wer || 'Claude', titel: a.titel, text: a.text, link: a.link });
+      if (e.fehler) return text(e.fehler, true);
+      Object.assign(c, { status: 'fertig', ergebnis: e.id, fertigZeit: jetzt() }); claudeSpeichern();
+      return text(`Erledigt, liegt in Novas Fenster «📂 Ergebnisse» (${e.id}).`);
     }
     case 'kiverse_ergebnis': {
       const e = ergebnisNeu(a);
@@ -1268,6 +1292,7 @@ Mögliche aktionen (nur wenn sie Diego wirklich helfen, sonst leere Liste):
 {"art":"male","wunsch":"Bildbeschreibung für Tinko","hoch":false}  (höchstens 1; hoch=true für Filmbilder 9:16)
 {"art":"auftrag","text":"Ziel oder nummerierte Liste, die Lumo und Tinko selbständig abarbeiten"}  (für grössere Arbeit, z. B. über Nacht)
 {"art":"schleife","an":true}  (Schleife starten oder mit false pausieren)
+{"art":"claude","text":"klarer Auftrag ans DR-Lab-Projekt bei Claude: Ziel, App-Name, Stand"}  (für echte Projektarbeit: Apps bauen und ändern, Code, Texte, Recherche, Pläne; das Ergebnis kommt später in dein Fenster «📂 Ergebnisse»)
 {"art":"merke","text":"eine Sache, die du dir dauerhaft über Diego oder seine Projekte merkst"}
 {"art":"vergiss","text":"Stichwort der Erinnerung, die weg soll"}
 {"art":"oeffne","app":"<app-id>"} oder {"art":"oeffne","ort":"welt|spiel|werkstatt"}
@@ -1284,6 +1309,7 @@ Dein Netz:
 ${NOVA_NETZ()}
 
 Schleife jetzt: ${st.aktiv ? 'läuft' : 'steht'}, ${st.offen} offen, ${st.fertig} fertig${st.naechste ? ', als Nächstes ' + st.naechste : ''}.
+Aufträge ans DR-Lab-Projekt bei Claude: ${claudeAuftraege.filter(c => c.status !== 'fertig').slice(-6).map(c => c.status + ': ' + c.text.slice(0, 80)).join('; ') || 'keine offenen'}.
 Fertige Ergebnisse in deinem Fenster «📂 Ergebnisse» (oben rechts, Diego liest und kopiert dort): ${ergebnisse.slice(-8).reverse().map(e => (e.neu ? '[neu] ' : '') + e.titel + ' (' + e.von + ')').join('; ') || 'noch keine'}.
 Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
 
@@ -1326,6 +1352,11 @@ async function zentraleAktion(a, zug) {
     briefSpeichern('Nova-Auftrag ' + jetzt().slice(0, 16).replace('T', ' ') + '\n' + text);
     const r = await schleifeLaden(text, 'Nova', true);
     return r.fehler ? { art, text: r.fehler } : { art, text: `Schleife hat jetzt ${r.offen} offene Aufgaben.`, stand: r };
+  }
+  if (art === 'claude') {
+    const text = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim(); if (!text) return null;
+    const c = claudeAuftragNeu(text, zug.du || zug.text);
+    return { art, text, id: c.id };
   }
   if (art === 'schleife') { const r = schleifeSchalten(a.an !== false); return { art, text: r.aktiv ? `Schleife läuft, ${r.offen} offen.` : 'Schleife pausiert.', stand: r }; }
   if (art === 'merke') {
@@ -1371,8 +1402,8 @@ function zentraleSagen(text, zug) {
     zentraleSpeichern(); erstFertig();
     const akt = (Array.isArray(o.aktionen) ? o.aktionen : []).slice(0, 5);
     const fragen = akt.filter(a => a?.art === 'frage').slice(0, 2), male = akt.filter(a => a?.art === 'male').slice(0, 1), rest = akt.filter(a => a && !['frage', 'male'].includes(a.art));
-    for (const a of rest) { const e = await zentraleAktion(a, zug).catch(() => null); if (e) zug2.ergebnisse.push(e); }
-    const lang = await Promise.all([...fragen, ...male].map(a => zentraleAktion(a, zug).catch(() => null)));
+    for (const a of rest) { const e = await zentraleAktion(a, { ...zug, du: zug2.du }).catch(() => null); if (e) zug2.ergebnisse.push(e); }
+    const lang = await Promise.all([...fragen, ...male].map(a => zentraleAktion(a, { ...zug, du: zug2.du }).catch(() => null)));
     for (const e of lang) if (e) zug2.ergebnisse.push(e);
     const antworten = zug2.ergebnisse.filter(e => e.art === 'frage');
     if (antworten.length) {
@@ -1391,7 +1422,8 @@ function zentraleStand() {
       apps: Object.entries(KIVERSE_APPS).map(([k, a]) => ({ id: k, name: a.name })),
       figuren: Object.entries(FIGUREN_KI).filter(([k]) => k !== 'nova').map(([k, f]) => ({ id: k, name: f.name, ort: f.ort })) },
     heute: { zahl: ZENTRALE_TAG.tag === jetzt().slice(0, 10) ? ZENTRALE_TAG.zahl : 0, max: ZENTRALE_MAX_TAG },
-    ergebnisse: { zahl: ergebnisse.length, neu: ergebnisse.filter(e => e.neu).length } };
+    ergebnisse: { zahl: ergebnisse.length, neu: ergebnisse.filter(e => e.neu).length },
+    claude: { offen: claudeAuftraege.filter(c => c.status === 'offen').length, inArbeit: claudeAuftraege.filter(c => c.status === 'in_arbeit').length } };
 }
 // Ergebnisse für Diego: fertige Texte, Briefe und Kopierbares direkt in Novas Fenster, ohne fremde Links.
 const ERGEBNIS_DATEI = path.join(DATEN, 'nova-ergebnisse.json');
@@ -1407,6 +1439,15 @@ function ergebnisNeu(a) {
   const e = { id: id('e'), von: sauber(a.von, 60) || 'Claude', titel, text: textInhalt, link, zeit: jetzt(), neu: true };
   ergebnisse.push(e); ergebnisse = ergebnisse.slice(-ERGEBNIS_MAX); ergebnisseSpeichern();
   return e;
+}
+// Brücke ins DR-Lab-Projekt bei Claude: Nova legt Aufträge ab, eine Claude-Routine holt sie über den Connector und liefert ins Fenster «📂 Ergebnisse».
+const CLAUDE_DATEI = path.join(DATEN, 'nova-claude.json');
+let claudeAuftraege = [];
+try { claudeAuftraege = JSON.parse(fs.readFileSync(CLAUDE_DATEI, 'utf8')); } catch {}
+const claudeSpeichern = () => { try { fs.writeFileSync(CLAUDE_DATEI, JSON.stringify(claudeAuftraege.slice(-300)), { mode: 0o600 }); } catch (e) { console.error('Claude-Aufträge nicht gespeichert:', e.message); } };
+function claudeAuftragNeu(text, du) {
+  const c = { id: id('c'), text, du: sauber(du, 2000), zeit: jetzt(), status: 'offen' };
+  claudeAuftraege.push(c); claudeSpeichern(); return c;
 }
 const ergebnisKurz = (e) => ({ id: e.id, von: e.von, titel: e.titel, link: e.link, zeit: e.zeit, neu: !!e.neu, laenge: e.text.length, vorschau: e.text.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[#*`>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) });
 

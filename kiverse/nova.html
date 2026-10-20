@@ -402,8 +402,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
       <button class="hoeren" type="button">🔊 Vorlesen</button>${String(e.text).length > 320 ? '<button class="mehr" type="button">Mehr lesen</button>' : ''}</div>`;
     if (e.art === 'male') return `<div class="karte"><div class="kopfzeile">${ava('tinko')}<span class="wer">Tinko malt</span></div>${e.bid ? `<a href="${esc(mitK('api/ablage/' + e.bid))}" target="_blank" rel="noopener"><img alt="${esc(e.text)}" loading="lazy" src="${esc(mitK('api/ablage/' + e.bid))}"></a>` : `<div class="text">${esc(e.text)}</div>`}</div>`;
     if (e.art === 'oeffne' && e.link) return `<div class="karte"><a class="oeffnen" href="${esc(e.link)}"><span>${esc(APP_AVA[e.app] || '🧭')} ${esc(e.name)} öffnen</span><span>›</span></a></div>`;
-    const sym = { auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
-    const vor = { merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
+    const sym = { claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
+    const vor = { claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
     return `<div class="karte klein">${sym} ${esc(vor + (e.text || ''))}</div>`;
   }
   function zugHtml(z) {
