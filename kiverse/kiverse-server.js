@@ -977,6 +977,7 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
   { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, 3D-Animationsfilm-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
     inputSchema: { type: 'object', properties: { motiv: { type: 'string', description: 'Was im Clip passiert: Figuren mit Aussehen, Bewegung, Kamera, Licht' }, bild: { type: 'string', description: 'optional, Startbild als data:image/jpeg;base64,…' }, sekunden: { type: 'number', description: '4, 8 oder 12' }, hoch: { type: 'boolean', description: 'true = 9:16 Hochformat (Standard), false = 16:9' }, pro: { type: 'boolean', description: 'true = Sora 2 Pro (3x teurer), nur für die besten Szenen' } }, required: ['motiv'] } },
+  { name: 'kiverse_sora_test', description: 'Technik-Test für Sora (nur Statuscodes, keine Kosten ausser höchstens ein 4-Sekunden-Clip).', inputSchema: { type: 'object', properties: {} } },
   { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
     inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
   { name: 'kiverse_claude_auftraege', description: 'Aufträge, die Diego über Nova ans DR-Lab-Projekt bei Claude gibt (Apps bauen, Code, Texte, Recherche). Zeigt offene Aufträge; nimm einen mit kiverse_claude_nehmen, damit ihn niemand doppelt macht.',
@@ -1113,6 +1114,16 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_film_clip': {
       const r = await soraStart(a);
       return r.fehler ? text(r.fehler, true) : text(`Sora malt den Clip (clip_id: ${r.cid}, ca. CHF ${r.kosten.toFixed(2)}). In 2–5 Minuten mit kiverse_film_clip_holen abholen. ${soraStand()}`);
+    }
+    case 'kiverse_sora_test': {
+      if (!TINKO_KEY) return text('Kein OpenAI-Schlüssel.', true);
+      const h = { Authorization: 'Bearer ' + TINKO_KEY }, aus = [];
+      const probe = async (name, url, opt = {}) => { try { const r = await fetch(url, { ...opt, headers: { ...h, ...(opt.headers || {}) }, signal: AbortSignal.timeout(30000) }); const t = (await r.text()).replace(/\s+/g, ' ').slice(0, 160); aus.push(`${name}: ${r.status} ${r.headers.get('x-request-id') ? '(req)' : '(ohne req)'} ${t}`); } catch (e) { aus.push(`${name}: Fehler ${e.message}`); } };
+      await probe('GET /v1/models/sora-2', TINKO_BASIS + '/v1/models/sora-2');
+      await probe('GET /v1/videos', TINKO_BASIS + '/v1/videos?limit=1');
+      await probe('GET /v1/videos/', TINKO_BASIS + '/v1/videos/');
+      await probe('POST /v1/videos leer', TINKO_BASIS + '/v1/videos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      return text(aus.join('\n'));
     }
     case 'kiverse_film_clip_holen': {
       const c = soraMonat().clips[a.clip_id];
