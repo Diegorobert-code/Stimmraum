@@ -1570,12 +1570,15 @@ async function zentraleSeite() {
 // Claude erzeugt über den Connector einen 6-stelligen Code; Diego tippt ihn auf /koppeln und bekommt seinen Besitzer-Link.
 const NOVA_APP_HASH = process.env.NOVA_APP_HASH || '226ec9802628fc91552e27814957bee88db067676e8f7d8311ae2e90ff61597b';
 let novaAppUpdate = 0;
-let KOPPEL = null;
-function koppelNeu() { KOPPEL = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), bis: Date.now() + 15 * 60000, fehler: 0 }; return KOPPEL.code; }
+// Der Code überlebt einen Neustart (Update), sonst wird er unterwegs ungültig
+const KOPPEL_DATEI = path.join(DATEN, 'koppeln.json');
+let KOPPEL = (() => { try { return JSON.parse(fs.readFileSync(KOPPEL_DATEI, 'utf8')); } catch { return null; } })();
+function koppelSichern() { try { if (KOPPEL) fs.writeFileSync(KOPPEL_DATEI, JSON.stringify(KOPPEL), { mode: 0o600 }); else fs.rmSync(KOPPEL_DATEI, { force: true }); } catch {} }
+function koppelNeu() { KOPPEL = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), bis: Date.now() + 15 * 60000, fehler: 0 }; koppelSichern(); return KOPPEL.code; }
 function koppelPruefen(c) {
-  if (!KOPPEL || Date.now() > KOPPEL.bis) { KOPPEL = null; return { fehler: 'Kein gültiger Code. Bitte Claude um einen neuen.' }; }
-  if (String(c || '').replace(/\D/g, '') !== KOPPEL.code) { if (++KOPPEL.fehler >= 5) KOPPEL = null; return { fehler: 'Code stimmt nicht.' }; }
-  KOPPEL = null;
+  if (!KOPPEL || Date.now() > KOPPEL.bis) { KOPPEL = null; koppelSichern(); return { fehler: 'Kein gültiger Code. Bitte Claude um einen neuen.' }; }
+  if (String(c || '').replace(/\D/g, '') !== KOPPEL.code) { if (++KOPPEL.fehler >= 5) KOPPEL = null; koppelSichern(); return { fehler: 'Code stimmt nicht.' }; }
+  KOPPEL = null; koppelSichern();
   return { link: '/?k=' + encodeURIComponent(BESITZER) };
 }
 const KOPPEL_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Nova</title><meta name="apple-mobile-web-app-title" content="Nova">
