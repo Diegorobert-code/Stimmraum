@@ -1577,7 +1577,7 @@ function koppelSichern() { try { if (KOPPEL) fs.writeFileSync(KOPPEL_DATEI, JSON
 function koppelNeu() { KOPPEL = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), bis: Date.now() + 15 * 60000, fehler: 0 }; koppelSichern(); return KOPPEL.code; }
 function koppelPruefen(c) {
   if (!KOPPEL || Date.now() > KOPPEL.bis) { KOPPEL = null; koppelSichern(); return { fehler: 'Kein gültiger Code. Bitte Claude um einen neuen.' }; }
-  if (String(c || '').replace(/\D/g, '') !== KOPPEL.code) { if (++KOPPEL.fehler >= 5) KOPPEL = null; koppelSichern(); return { fehler: 'Code stimmt nicht.' }; }
+  if (String(c || '').replace(/\D/g, '') !== KOPPEL.code) { if (++KOPPEL.fehler >= 10) { KOPPEL = null; koppelSichern(); return { fehler: 'Zu viele falsche Versuche. Bitte Claude um einen neuen Code.' }; } koppelSichern(); return { fehler: 'Code stimmt nicht. Bitte den neusten Code von Claude nehmen.' }; }
   KOPPEL = null; koppelSichern();
   return { link: '/?k=' + encodeURIComponent(BESITZER) };
 }
