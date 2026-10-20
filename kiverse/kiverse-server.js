@@ -971,6 +971,10 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
   { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 10 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
+  { name: 'kiverse_handy_koppeln', description: 'Diegos Handy ohne Terminal mit seinem KI-Verse verbinden: erzeugt einen 6-stelligen Kopplungs-Code (15 Minuten gültig, einmal). Diego öffnet die Seite /koppeln, tippt den Code und landet direkt bei Nova. Nur auf Diegos Wunsch, Code nur Diego sagen.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
+  { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
@@ -1149,6 +1153,11 @@ async function werkzeug(name, a = {}) {
       Object.assign(c, { status: 'fertig', ergebnis: e.id, fertigZeit: jetzt() }); claudeSpeichern();
       return text(`Erledigt, liegt in Novas Fenster «📂 Ergebnisse» (${e.id}).`);
     }
+    case 'kiverse_handy_koppeln': {
+      const c = koppelNeu();
+      return text(`Kopplungs-Code für Diego: ${c} (15 Minuten gültig, einmal). Diego öffnet ${mcpBasis || ''}/koppeln, tippt den Code und landet bei Nova. Dann Teilen → «Zum Home-Bildschirm» → Name «Nova».`);
+    }
+    case 'kiverse_update': return text(await knopfUpdate(3000));
     case 'kiverse_nova_wissen': {
       if (!String(a.text || '').trim()) return text('Leerer Text.', true);
       return text(`Novas Wissen gesetzt (${novaWissenSetzen(a.text)} Zeichen). Gilt ab dem nächsten Satz von Diego.`);
@@ -1557,6 +1566,23 @@ async function zentraleSeite() {
   return b;
 }
 
+// ---------- Handy koppeln ohne Terminal (Diego 20.10.: «verbrauchergerechte Variante») ----------
+// Claude erzeugt über den Connector einen 6-stelligen Code; Diego tippt ihn auf /koppeln und bekommt seinen Besitzer-Link.
+let KOPPEL = null;
+function koppelNeu() { KOPPEL = { code: String(crypto.randomInt(0, 1000000)).padStart(6, '0'), bis: Date.now() + 15 * 60000, fehler: 0 }; return KOPPEL.code; }
+function koppelPruefen(c) {
+  if (!KOPPEL || Date.now() > KOPPEL.bis) { KOPPEL = null; return { fehler: 'Kein gültiger Code. Bitte Claude um einen neuen.' }; }
+  if (String(c || '').replace(/\D/g, '') !== KOPPEL.code) { if (++KOPPEL.fehler >= 5) KOPPEL = null; return { fehler: 'Code stimmt nicht.' }; }
+  KOPPEL = null;
+  return { link: '/?k=' + encodeURIComponent(BESITZER) };
+}
+const KOPPEL_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Nova</title><meta name="apple-mobile-web-app-title" content="Nova">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b1640;color:#fff;font:18px -apple-system,system-ui,sans-serif;padding:16px;box-sizing:border-box}main{width:100%;max-width:380px;text-align:center}h1{color:#f3c969;font-size:34px;margin:0 0 8px}p{color:#c9d2f0;line-height:1.4}input{width:100%;box-sizing:border-box;font-size:40px;letter-spacing:10px;text-align:center;padding:14px;border-radius:18px;border:2px solid #f3c969;background:#13225c;color:#fff;margin:18px 0}button{width:100%;font-size:22px;padding:18px;border-radius:18px;border:0;background:#f3c969;color:#0b1640;font-weight:700}#f{color:#ff9a9a;min-height:24px}</style></head>
+<body><main><h1>✨ Nova</h1><p>Code von Claude eintippen.</p><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><button id="b">Zu Nova</button><p id="f"></p>
+<p>Danach: Teilen → «Zum Home-Bildschirm» → Name «Nova».</p></main>
+<script>const c=document.getElementById('c'),f=document.getElementById('f');async function los(){f.textContent='';const r=await fetch('/koppeln',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c.value})}).then(r=>r.json()).catch(()=>({fehler:'Keine Verbindung.'}));if(r.link)location.replace(r.link);else f.textContent=r.fehler||'Fehler';}
+document.getElementById('b').onclick=los;c.oninput=()=>{if(c.value.replace(/\D/g,'').length===6)los();};</script></body></html>`;
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1581,6 +1607,10 @@ const server = http.createServer(async (req, res) => {
     if (mf && mf[1] === WELT_CODE) { try { const d = fs.readFileSync(path.join(FILM_ORDNER, mf[2] + '.mp4')); res.writeHead(200, { 'Content-Type': 'video/mp4', 'Cache-Control': 'private, max-age=86400' }); return res.end(d); } catch { return json(res, 404, { fehler: 'Clip nicht gefunden.' }); } }
     if (url.pathname.startsWith('/mcp')) return json(res, 404, { fehler: 'Falscher Einladungs-Code' });
 
+    if (url.pathname === '/koppeln') {
+      if (req.method === 'POST') { const a = await body(req, 1024); return json(res, 200, koppelPruefen(a.code)); }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(KOPPEL_SEITE);
+    }
     if (url.pathname.startsWith('/apps/') || url.pathname === '/apps') return await appSenden(req, res, url);
     if (url.pathname.startsWith('/sense/')) return await senseWeiter(req, res, url);
     // Welt für Menschen: nur mit Einladung
