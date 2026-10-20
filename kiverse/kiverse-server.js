@@ -1662,6 +1662,12 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/betreten' && req.method === 'POST') {
       const a = await body(req);
       if (a.foto && a.einwilligung !== true) return json(res, 400, { fehler: 'Foto nur mit Einwilligung.' });
+      // Diego kommt wieder: dieselbe Figur weiterverwenden statt jedes Mal einen neuen «Diego»
+      if (req.zugang.rolle === 'besitzer') {
+        const n = String(a.name || '').trim().toLowerCase();
+        const alt = [...welt.bewohner.values()].find(x => x.art === 'mensch' && String(x.name || '').trim().toLowerCase() === n);
+        if (alt) { alt.zuletzt = Date.now(); if (a.foto) alt.foto = a.foto; return json(res, 200, oeffentlich(alt)); }
+      }
       return json(res, 200, oeffentlich(betreten({ ...a, art: 'mensch' })));
     }
     if (url.pathname === '/api/sagen' && req.method === 'POST') {
