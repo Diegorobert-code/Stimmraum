@@ -498,7 +498,10 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
         ['Hol das neuste Update.', 'Nova lädt die neue Version und startet kurz neu.'],
         ['Für Tinko frei: unsere Farben sind Nachtblau und Gold.', 'Nur das bekommt Tinko (ChatGPT) von dir.'],
         ['Was läuft gerade?', 'Nova sagt dir den Stand von allem.']];
-      h.innerHTML = `<h3>So sprichst du mit Nova</h3>
+      h.innerHTML = `<h3>Nova als eigene App aufs Handy</h3>
+        <button class="knopf" id="novaLink" type="button" style="width:100%">🔗 Nova-Link kopieren</button>
+        <p class="hinweis">Dann Safari öffnen, oben einfügen und öffnen. Unten Teilen → «Zum Home-Bildschirm» → Name «Nova». Den Link niemandem schicken, er ist dein Schlüssel.</p>
+        <h3>So sprichst du mit Nova</h3>
         <div class="liste"><div class="eintrag"><span>1. Tipp auf Nova oder auf 🎤 und sprich ganz normal, Schweizerdeutsch geht auch.</span></div>
         <div class="eintrag"><span>2. Nova antwortet kurz und erledigt den Rest im Hintergrund.</span></div>
         <div class="eintrag"><span>3. ∞ unten links: Nova hört nach jeder Antwort wieder zu (freihändig).</span></div></div>
@@ -509,6 +512,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
         <h3>Sicher</h3>
         <p class="hinweis">Nova gibt kein Geld aus, sendet nichts an andere und veröffentlicht nichts ohne dein Ja. Schlüssel und Passwörter sagst du ihr nie.</p>`;
       h.querySelectorAll('[data-satz]').forEach(b => b.onclick = () => { zu(); senden(b.dataset.satz); });
+      $('#novaLink').onclick = async () => { await kopieren(location.origin + '/nova?k=' + encodeURIComponent(K)); toast('Nova-Link kopiert. Jetzt in Safari einfügen.'); };
     } else if (reiter === 'tinko') {
       const l = stand.tinkoFrei || [];
       h.innerHTML = `<p class="hinweis">Tinko (ChatGPT) bekommt nur, was hier steht. Dein internes Wissen, Novas Gedächtnis und eure Gespräche sieht er nicht. Nie hierher: Klienten, Gesundheit, Geld, Passwörter.</p>
