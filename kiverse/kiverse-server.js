@@ -1616,7 +1616,15 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/nova-app/server' && req.method === 'POST') {
       const h = crypto.createHash('sha256').update(String(req.headers['x-nova-app'] || '')).digest('hex');
       if (!req.headers['x-nova-app'] || !crypto.timingSafeEqual(Buffer.from(h), Buffer.from(NOVA_APP_HASH))) return json(res, 401, { fehler: 'Kein Zugang.' });
-      const a = await body(req, 1024), was = String(a.was || 'stand');
+      const a = await body(req, 8192), was = String(a.was || 'stand');
+      // Sprech-Nova fragt eine Figur, Lumo oder Tinko (Diego 21.10.: «mit allen verbunden»)
+      if (was === 'figur') {
+        const n = String(a.name || '').toLowerCase(), roh = n.replace(/[^a-z]/g, '');
+        const an = roh === 'lumo' || roh === 'tinko' || FIGUREN_KI[roh] ? roh : Object.keys(FIGUREN_KI).find(k => FIGUREN_KI[k].name.toLowerCase() === n.trim()) || roh;
+        if (!String(a.frage || '').trim()) return json(res, 200, { text: 'Was soll ich ' + kiName(an) + ' fragen?' });
+        const r = await zentraleAktion({ art: 'frage', an, text: a.frage });
+        return json(res, 200, { text: r ? `${r.name}: ${r.text}` : 'Keine Antwort bekommen.', figuren: [...new Set(['lumo', 'tinko', ...Object.keys(FIGUREN_KI)])] });
+      }
       if (was === 'sichern') return json(res, 200, { text: serverSichern() });
       if (was === 'auftrag') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
