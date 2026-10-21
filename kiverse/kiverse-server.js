@@ -815,6 +815,56 @@ async function soraWarten(cid) {
   if (c && c.status === 'läuft') c.status = 'fehler: Zeit abgelaufen';
   soraSpeichern();
 }
+// ---------- fal.ai: bewegte Clips mit Seedance (Diego 21.10., ersetzt Sora) ----------
+// Bezahlt über Diegos fal.ai-Guthaben. Eigener Monatsdeckel in CHF, Kosten werden beim Start reserviert.
+const FAL_DECKEL_CHF = parseFloat(process.env.FAL_DECKEL_CHF || '50');
+const FAL_BASIS = process.env.FAL_BASIS || 'https://queue.fal.run';
+const FAL_MODELL = process.env.FAL_MODELL || 'fal-ai/bytedance/seedance/v1/lite/image-to-video';
+const FAL_USD_SEKUNDE = { 'fal-ai/bytedance/seedance/v1/lite/image-to-video': 0.04, 'bytedance/seedance-2.0/mini/image-to-video': 0.16, 'bytedance/seedance-2.0/image-to-video': 0.30, 'bytedance/seedance-2.5/image-to-video': 0.48 };
+function falMonat() { const m = soraMonat(); if (m.falChf == null) m.falChf = 0; return m; }
+function falStand() { const m = falMonat(); return `fal.ai ${m.monat}: CHF ${m.falChf.toFixed(2)} von ${FAL_DECKEL_CHF.toFixed(0)}`; }
+async function falStart(a) {
+  if (!FAL_KEY) return { fehler: 'Noch kein fal.ai-Schlüssel auf dem Server (Diego: Nova ☰ → 📘 → 🔑).' };
+  const modell = /^[a-z0-9][a-z0-9./-]{3,120}$/.test(String(a.modell || '')) ? String(a.modell) : FAL_MODELL;
+  const sek = Math.min(Math.max(parseInt(a.dauer || a.sekunden) || 5, 3), 12);
+  const kosten = sek * (FAL_USD_SEKUNDE[modell] || 0.30) * CHF_PRO_USD, m = falMonat();
+  if (m.falChf + kosten > FAL_DECKEL_CHF) return { fehler: `Monatsdeckel erreicht (${falStand()}). Nächsten Monat wieder.` };
+  let bild = String(a.bild || '');
+  const ae = ablage.find(e => e.id === bild || e.bid === bild);
+  if (ae && ae.bid) { const typ = { png: 'png', jpg: 'jpeg', webp: 'webp', gif: 'gif' }[ae.bid.split('.').pop()]; bild = `data:image/${typ};base64,` + fs.readFileSync(path.join(ABLAGE_ORDNER, ae.bid)).toString('base64'); }
+  else if (/^[A-Za-z0-9+/=]{200,}$/.test(bild)) bild = 'data:image/jpeg;base64,' + bild;
+  if (!/^data:image\/(png|jpeg|jpg|webp);base64,/.test(bild) && !/^https:\/\//.test(bild)) return { fehler: 'Startbild fehlt: Ablage-Eintrag-ID, base64-JPG oder https-Adresse.' };
+  const prompt = 'High-quality 3D animated film, soft cinematic lighting, warm colors, expressive characters, smooth natural motion, no text. ' + sauber(a.prompt || a.motiv, 1500);
+  const r = await fetch(FAL_BASIS + '/' + modell, { method: 'POST', signal: AbortSignal.timeout(60000), headers: { Authorization: 'Key ' + FAL_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, image_url: bild, duration: String(sek), resolution: '720p' }) }).catch(() => null);
+  const d = r ? await r.json().catch(() => ({})) : {};
+  if (!r || !r.ok || !d.request_id) return { fehler: `fal.ai startet nicht (${r ? r.status : 'keine Verbindung'}): ` + String(d.detail ? JSON.stringify(d.detail) : d.error || '').slice(0, 300) };
+  m.falChf += kosten; const cid = id('film');
+  m.clips[cid] = { fal: true, status: 'läuft', zeit: jetzt(), sek, modell, status_url: d.status_url, response_url: d.response_url }; soraSpeichern();
+  falWarten(cid);
+  return { cid, kosten };
+}
+async function falWarten(cid) {
+  const c = SORA.clips[cid], h = { Authorization: 'Key ' + FAL_KEY };
+  for (let i = 0; i < 120 && c; i++) {
+    await new Promise(r => setTimeout(r, 10000));
+    try {
+      const st = await (await fetch(c.status_url, { headers: h, signal: AbortSignal.timeout(20000) })).json();
+      if (st.status === 'IN_QUEUE') { c.fortschritt = 'wartet'; continue; }
+      if (st.status !== 'COMPLETED') { c.fortschritt = 'läuft'; continue; }
+      const e = await fetch(c.response_url, { headers: h, signal: AbortSignal.timeout(20000) }), d = await e.json().catch(() => ({}));
+      const url = d.video?.url;
+      if (!e.ok || !url) { c.status = 'fehler: ' + String(d.detail ? JSON.stringify(d.detail) : 'kein Video').slice(0, 200); break; }
+      const v = await fetch(url, { signal: AbortSignal.timeout(120000) });
+      if (!v.ok) { c.status = 'fehler: Download ' + v.status; break; }
+      fs.mkdirSync(FILM_ORDNER, { recursive: true, mode: 0o700 });
+      fs.writeFileSync(path.join(FILM_ORDNER, cid + '.mp4'), Buffer.from(await v.arrayBuffer()), { mode: 0o600 });
+      c.status = 'fertig'; break;
+    } catch {}
+  }
+  if (c && c.status === 'läuft') c.status = 'fehler: Zeit abgelaufen';
+  soraSpeichern();
+}
 function eintragen(p, cid, von, text, bild) {
   const c = p.chats.find(x => x.id === cid) || p.chats[p.chats.length - 1];
   if (!c) return { fehler: 'Diesen Chat gibt es nicht.' };
@@ -1011,8 +1061,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
-  { name: 'kiverse_film_clip', description: 'Sora macht einen flüssigen Filmclip (4, 8 oder 12 Sekunden, 3D-Animationsfilm-Stil) aus einem Motiv, optional mit Startbild (Tinko-Bild, genau 720x1280 hoch bzw. 1280x720 quer). Kostet Geld, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; Ergebnis mit kiverse_film_clip_holen abholen (dauert einige Minuten).',
-    inputSchema: { type: 'object', properties: { motiv: { type: 'string', description: 'Was im Clip passiert: Figuren mit Aussehen, Bewegung, Kamera, Licht' }, bild: { type: 'string', description: 'optional, Startbild als data:image/jpeg;base64,…' }, sekunden: { type: 'number', description: '4, 8 oder 12' }, hoch: { type: 'boolean', description: 'true = 9:16 Hochformat (Standard), false = 16:9' }, pro: { type: 'boolean', description: 'true = Sora 2 Pro (3x teurer), nur für die besten Szenen' } }, required: ['motiv'] } },
+  { name: 'kiverse_film_clip', description: 'fal.ai Seedance bewegt ein Startbild zu einem flüssigen Filmclip (720p, Standard 5 s, 3D-Animationsfilm-Stil). Kostet Geld aus Diegos fal.ai-Guthaben, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; das MP4 mit kiverse_film_clip_holen abholen (dauert 1–5 Minuten).',
+    inputSchema: { type: 'object', properties: { bild: { type: 'string', description: 'Startbild: Ablage-Eintrag-ID (aus kiverse_ablage), base64-JPG (auch als data:image/jpeg;base64,…) oder https-Adresse' }, prompt: { type: 'string', description: 'Englisch: was im Clip passiert, Bewegung, Kamera, Licht' }, dauer: { type: 'number', description: 'Sekunden, Standard 5' }, modell: { type: 'string', description: 'optional, fal-Modell, Standard fal-ai/bytedance/seedance/v1/lite/image-to-video (günstig); teurer: bytedance/seedance-2.0/mini/image-to-video' } }, required: ['bild', 'prompt'] } },
   { name: 'kiverse_sora_test', description: 'Technik-Test für Sora (nur Statuscodes, keine Kosten ausser höchstens ein 4-Sekunden-Clip).', inputSchema: { type: 'object', properties: {} } },
   { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
     inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
@@ -1041,7 +1091,7 @@ async function werkzeug(name, a = {}) {
       const b = betreten({ name: a.name, art: 'ki', figur: a.figur, beschreibung: a.beschreibung });
       return text(`Du bist im KI-Verse. Deine ki_id: ${b.id}\n\n${lesbar(10)}`);
     }
-    case 'kiverse_umschauen': return text(bildStand() + (SORA_DECKEL_CHF > 0 ? '\n' + soraStand() : '') + '\n\n' + lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
+    case 'kiverse_umschauen': return text(bildStand() + (FAL_KEY ? '\n' + falStand() : '') + '\n\n' + lesbar(Math.min(Math.max(parseInt(a.anzahl) || 20, 1), 100)));
     case 'kiverse_sagen': {
       if (!ich) return text('Unbekannte ki_id. Zuerst kiverse_betreten.', true);
       const an = a.an ? finde(a.an) : null;
@@ -1154,8 +1204,8 @@ async function werkzeug(name, a = {}) {
       return text(`Abgelegt (${e.id}).`);
     }
     case 'kiverse_film_clip': {
-      const r = await soraStart(a);
-      return r.fehler ? text(r.fehler, true) : text(`Sora malt den Clip (clip_id: ${r.cid}, ca. CHF ${r.kosten.toFixed(2)}). In 2–5 Minuten mit kiverse_film_clip_holen abholen. ${soraStand()}`);
+      const r = await falStart(a);
+      return r.fehler ? text(r.fehler, true) : text(`Seedance bewegt den Clip (clip_id: ${r.cid}, ca. CHF ${r.kosten.toFixed(2)}). In 1–5 Minuten mit kiverse_film_clip_holen abholen. ${falStand()}`);
     }
     case 'kiverse_sora_test': {
       if (!TINKO_KEY) return text('Kein OpenAI-Schlüssel.', true);
