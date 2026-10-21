@@ -1575,6 +1575,19 @@ function zentraleStand() {
     ergebnisse: { zahl: ergebnisse.length, neu: ergebnisse.filter(e => e.neu).length },
     claude: { offen: claudeAuftraege.filter(c => c.status === 'offen').length, inArbeit: claudeAuftraege.filter(c => c.status === 'in_arbeit').length } };
 }
+// fal.ai-Schlüssel für bewegte Filme (Diego 21.10.): nur Diego trägt ihn im KI-Verse ein, liegt nur hier (Rechte 600), nie in Logs, nie an Tinko
+const FAL_DATEI = path.join(DATEN, 'fal-schluessel.json');
+let FAL_KEY = process.env.FAL_KEY || '';
+try { FAL_KEY = JSON.parse(fs.readFileSync(FAL_DATEI, 'utf8')).schluessel || FAL_KEY; } catch {}
+const falEnde = () => FAL_KEY ? FAL_KEY.slice(-4) : '';
+async function falPruefen() {
+  if (!FAL_KEY) return { ok: false, text: 'Noch kein fal.ai-Schlüssel eingetragen.' };
+  // Statusabfrage für eine Anfrage, die es nicht gibt: falscher Schlüssel = 401/403, richtiger = 404
+  const r = await fetch('https://queue.fal.run/fal-ai/fast-sdxl/requests/00000000-0000-0000-0000-000000000000/status', { signal: AbortSignal.timeout(15000), headers: { Authorization: 'Key ' + FAL_KEY } }).catch(() => null);
+  if (!r) return { ok: false, text: 'fal.ai ist gerade nicht erreichbar.' };
+  if (r.status === 401 || r.status === 403) return { ok: false, text: 'fal.ai lehnt den Schlüssel ab. Bitte neu eintragen.' };
+  return { ok: true, text: 'Schlüssel funktioniert.' };
+}
 // Nova zeichnet beim Reden (Diego 21.10.: Zeichnen = Novas Werkzeug Nummer 1). Tinko malt, das Bild liegt unter einer unratbaren Adresse.
 const NOVA_BILD_ORDNER = path.join(DATEN, 'nova-bilder'), NOVA_BILD_MAX = 300;
 // Schnelleres Modell fürs Zeichnen im Gespräch; klappt es nicht, malt das grosse Modell
@@ -1823,6 +1836,18 @@ const server = http.createServer(async (req, res) => {
     // Die neuen Werte gehen nur an Diegos Bildschirm zurück, nie in ein Protokoll.
     if (url.pathname === '/api/push/schluessel') return json(res, 200, { schluessel: VAPID_OEFFENTLICH, abos: pushAbos.length });
     if (url.pathname === '/api/push/abo' && req.method === 'POST') { if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' }); const e = pushAboNeu(await body(req, 4096)); return json(res, e.fehler ? 400 : 200, e.fehler ? e : { ok: true, text: await pushSenden('Nova', 'Push ist an. Ich melde mich, wenn etwas fertig ist.') }); }
+    if (url.pathname === '/api/fal-schluessel') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (req.method === 'POST') {
+        const k = String((await body(req, 2048)).schluessel || '').trim();
+        if (!/^[\x21-\x7e]{20,200}$/.test(k)) return json(res, 400, { fehler: 'Das sieht nicht wie ein fal.ai-Schlüssel aus.' });
+        try { fs.writeFileSync(FAL_DATEI, JSON.stringify({ schluessel: k, seit: jetzt() }), { mode: 0o600 }); fs.chmodSync(FAL_DATEI, 0o600); }
+        catch { return json(res, 500, { fehler: 'Konnte den Schlüssel nicht speichern.' }); }
+        FAL_KEY = k;
+      }
+      return json(res, 200, { gesetzt: !!FAL_KEY, ende: falEnde() });
+    }
+    if (url.pathname === '/api/fal-pruefen' && req.method === 'POST') return req.zugang.rolle === 'besitzer' ? json(res, 200, await falPruefen()) : json(res, 403, { fehler: 'Nur Diego.' });
     if (url.pathname === '/api/schluessel-neu' && req.method === 'POST') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
       const alt = BESITZER;

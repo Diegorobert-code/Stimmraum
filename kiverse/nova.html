@@ -513,6 +513,13 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
       h.innerHTML = `<h3>Nova als eigene App aufs Handy</h3>
         <button class="knopf" id="novaLink" type="button" style="width:100%">🔗 Nova-Link kopieren</button>
         <p class="hinweis">Dann Safari öffnen, oben einfügen und öffnen. Unten Teilen → «Zum Home-Bildschirm» → Name «Nova». Den Link niemandem schicken, er ist dein Schlüssel.</p>
+        <h3>Schlüssel für Filme</h3>
+        <button class="knopf" id="falKnopf" type="button" style="width:100%">🔑 fal.ai-Schlüssel eintragen</button>
+        <div id="falFeld" hidden style="margin-top:8px">
+          <input id="falEin" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel hier einfügen" style="width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #3a4a7a;background:#0d1838;color:#fff;font-size:16px">
+          <div style="display:flex;gap:8px;margin-top:8px"><button class="knopf" id="falSpeichern" type="button" style="flex:1">Speichern</button><button class="knopf" id="falPruefen" type="button" style="flex:1">Prüfen</button></div>
+        </div>
+        <p class="hinweis" id="falStand">Der Schlüssel bleibt nur auf deinem Server. Niemand sieht ihn, auch Tinko nicht.</p>
         <h3>So sprichst du mit Nova</h3>
         <div class="liste"><div class="eintrag"><span>1. Tipp auf Nova oder auf 🎤 und sprich ganz normal, Schweizerdeutsch geht auch.</span></div>
         <div class="eintrag"><span>2. Nova antwortet kurz und erledigt den Rest im Hintergrund.</span></div>
@@ -524,6 +531,15 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
         <h3>Sicher</h3>
         <p class="hinweis">Nova gibt kein Geld aus, sendet nichts an andere und veröffentlicht nichts ohne dein Ja. Schlüssel und Passwörter sagst du ihr nie.</p>`;
       h.querySelectorAll('[data-satz]').forEach(b => b.onclick = () => { zu(); senden(b.dataset.satz); });
+      const falStand = (d) => { if (d && d.gesetzt) $('#falStand').textContent = 'Gespeichert, endet auf …' + d.ende + '. Nur auf deinem Server.'; };
+      api('api/fal-schluessel').then(falStand).catch(() => {});
+      $('#falKnopf').onclick = () => { $('#falFeld').hidden = false; $('#falEin').focus(); };
+      $('#falSpeichern').onclick = async () => {
+        const k = $('#falEin').value.trim(); if (!k) return toast('Bitte zuerst den Schlüssel einfügen.');
+        try { const d = await api('api/fal-schluessel', { schluessel: k }); $('#falEin').value = ''; falStand(d); toast('Gespeichert.'); }
+        catch (e) { toast(e.message); }
+      };
+      $('#falPruefen').onclick = async () => { try { const d = await api('api/fal-pruefen', {}); toast(d.text); } catch (e) { toast(e.message); } };
       $('#novaLink').onclick = async () => { await kopieren(location.origin + '/nova?k=' + encodeURIComponent(K)); toast('Nova-Link kopiert. Jetzt in Safari einfügen.'); };
     } else if (reiter === 'tinko') {
       const l = stand.tinkoFrei || [];
