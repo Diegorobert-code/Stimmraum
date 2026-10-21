@@ -179,6 +179,24 @@ async function novaAntwort(ich, text) {
 const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
 const hoerZaehler = { tag: '', n: 0 };
+// Schnell laden (Diego 21.10.: «so flüssig wie es nur geht»): Seite gepackt (Brotli/Gzip) und mit Fingerabdruck; unverändert = sofort aus dem Handy-Speicher
+const seitenCache = new Map();
+function seiteSchnell(req, res, datei) {
+  const st = fs.statSync(datei), key = datei + ':' + st.mtimeMs + ':' + st.size;
+  let c = seitenCache.get(datei);
+  if (!c || c.key !== key) {
+    const roh = fs.readFileSync(datei), zlib = require('zlib');
+    c = { key, etag: '"' + require('crypto').createHash('sha1').update(roh).digest('hex').slice(0, 20) + '"', roh,
+      br: zlib.brotliCompressSync(roh, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 9 } }), gz: zlib.gzipSync(roh, { level: 9 }) };
+    seitenCache.set(datei, c);
+  }
+  const kopf = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-cache', ETag: c.etag, Vary: 'Accept-Encoding' };
+  if (req.headers['if-none-match'] === c.etag) { res.writeHead(304, kopf); return res.end(); }
+  const ae = String(req.headers['accept-encoding'] || '');
+  if (/\bbr\b/.test(ae)) { res.writeHead(200, { ...kopf, 'Content-Encoding': 'br' }); return res.end(c.br); }
+  if (/gzip/.test(ae)) { res.writeHead(200, { ...kopf, 'Content-Encoding': 'gzip' }); return res.end(c.gz); }
+  res.writeHead(200, kopf); return res.end(c.roh);
+}
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
 const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '250', 10), RUNDEN = 2;
@@ -2201,8 +2219,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/spiel' || url.pathname === '/spiel.html') {
       // Das Spiel (Trickfilm-Städtchen) nur mit Einladungslink
       if (!zugang(url.searchParams.get('k'))) { res.writeHead(302, { Location: '/' }); return res.end(); }
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-      return res.end(fs.readFileSync(path.join(__dirname, 'spiel.html')));
+      return seiteSchnell(req, res, path.join(__dirname, 'spiel.html'));
     }
     json(res, 404, { fehler: 'Nicht gefunden' });
   } catch (e) {

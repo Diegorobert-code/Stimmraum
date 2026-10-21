@@ -165,17 +165,24 @@ const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(11);
 // ---------- Renderer, Szene, Licht ----------
 // Flüssig statt schön-aber-ruckelig: misst die Bildrate und passt die Auflösung an (Ziel 30+ Bilder pro Sekunde auf iPhone und Laptop)
 let glattDt = 1 / 60;
-const QSTUFEN = [1.75, 1.5, 1.25, 1, .85], Q = { stufe: (devicePixelRatio || 1) > 2 ? 1 : 0, summe: 0, n: 0, ruhig: 0 };
+const QSTUFEN = [1.75, 1.5, 1.25, 1, .85], Q = { stufe: matchMedia('(pointer: coarse)').matches ? 2 : (devicePixelRatio || 1) > 2 ? 1 : 0, summe: 0, n: 0, ruhig: 0, bild: 0 };
+// Je tiefer die Stufe, desto weniger teure Effekte: Leuchten (Bloom) aus, Schatten seltener neu rechnen
+function qualitaetAnwenden() {
+  if (typeof bloomPass !== 'undefined' && bloomPass) bloomPass.enabled = Q.stufe < 3;
+  renderer.shadowMap.autoUpdate = Q.stufe < 2;
+}
+function schattenTakt() { if (!renderer.shadowMap.autoUpdate && (++Q.bild % (Q.stufe >= 3 ? 4 : 2) === 0)) renderer.shadowMap.needsUpdate = true; }
 function qualitaet(roh) {
   if (window.__filmDt) return;
   Q.summe += roh; Q.n++; if (Q.summe < 2) return;
   const ms = Q.summe / Q.n * 1000; Q.summe = 0; Q.n = 0;
   let neu = Q.stufe;
-  if (ms > 30 && Q.stufe < QSTUFEN.length - 1) { neu++; Q.ruhig = 0; }
-  else if (ms < 17) { if (++Q.ruhig >= 3 && Q.stufe > 0) { neu--; Q.ruhig = 0; } } else Q.ruhig = 0;
+  if (ms > 22 && Q.stufe < QSTUFEN.length - 1) { neu++; Q.ruhig = 0; }
+  else if (ms < 14.5) { if (++Q.ruhig >= 3 && Q.stufe > 0) { neu--; Q.ruhig = 0; } } else Q.ruhig = 0;
   if (neu !== Q.stufe) {
     Q.stufe = neu; renderer.setPixelRatio(Math.min(devicePixelRatio || 1, QSTUFEN[neu])); renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight);
     renderer.shadowMap.type = neu >= 3 ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap; renderer.shadowMap.needsUpdate = true;
+    qualitaetAnwenden();
   }
 }
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
@@ -217,6 +224,7 @@ try {
   composer.addPass(new ShaderPass(FILMLOOK));
   composer.addPass(new OutputPass());
 } catch (e) { composer = null; }
+qualitaetAnwenden();
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
 
 szene.add(new THREE.HemisphereLight(0x5a78d6, 0x6a3a18, 0.85));
@@ -565,7 +573,7 @@ const KARTON = {"ava": {"src": "data:image/webp;base64,UklGRt5WAABXRUJQVlA4WAoAA
 const kartonTex = {};
 function figurKarton(key, groesse) {
   const g = new THREE.Group();
-  const t = kartonTex[key] || (kartonTex[key] = new THREE.TextureLoader().load(KARTON[key].src)); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const t = kartonTex[key] || (kartonTex[key] = new THREE.TextureLoader().load(KARTON[key].src, tx => { try { renderer.initTexture(tx); } catch {} })); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const h = (KARTON[key].h || 2.7), w = h * KARTON[key].v;
   const bild = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, alphaTest: .08, color: 0xf4ebe0 })); bild.center.set(.5, 0); bild.scale.set(w, h, 1); bild.position.y = .02; g.add(bild);
   const glanz = glut(0xffd9a0, 3.2, .18); glanz.position.y = h * .55; g.add(glanz);
@@ -1348,6 +1356,7 @@ function schritt() {
   } else $('#rein').hidden = true;
   { const nf = zustand.modus === 'spiel' && !zustand.innen && !gespr.n && naechsteFigur(5.5); $('#reden').hidden = !nf; if (nf) $('#reden').textContent = `🎙 Mit ${NAMEN[figurVon(nf)]} reden`; }
 
+  schattenTakt();
   if (composer && !handy.ar) composer.render(); else renderer.render(szene, kamera);
   if (!window.__filmDt) requestAnimationFrame(schritt);
 }
@@ -1678,7 +1687,7 @@ async function zuhoeren() {
         analyser.getFloatTimeDomainData(puffer); let q = 0; for (const v of puffer) q += v * v; const rms = Math.sqrt(q / puffer.length);
         if (dauer < 350) { rauschen += rms; n++; return; }
         const schwelle = Math.max(.012, (rauschen / Math.max(1, n)) * 2.6);
-        if (rms > schwelle) { gesprochen = true; stillSeit = 0; } else if (gesprochen) { stillSeit = stillSeit || jetzt; if (jetzt - stillSeit > 1300) return ende(); }
+        if (rms > schwelle) { gesprochen = true; stillSeit = 0; } else if (gesprochen) { stillSeit = stillSeit || jetzt; if (jetzt - stillSeit > 1000) return ende(); }
         if (!gesprochen && dauer > 8000) return ende();
       } else if (dauer > 7000) return ende();
       if (dauer > 30000) ende();
