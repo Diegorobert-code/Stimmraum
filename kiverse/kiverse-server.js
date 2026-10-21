@@ -258,6 +258,30 @@ const FIGUR_TAG = { tag: '', person: new Map(), total: 0 };
 // Nur Diegos eigene Gespräche, keine Gäste. Widerruf: Datei leeren (kiverse_erfahrungen {leeren:true}).
 const ERFAHRUNG_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'erfahrungen.jsonl');
 function erfahrungNeu(e) { try { fs.appendFileSync(ERFAHRUNG_DATEI, JSON.stringify(e) + '\n', { mode: 0o600 }); } catch (er) { console.error('Erfahrung nicht gespeichert:', er.message); } }
+// Nova füttern (Diego 21.10. 02:46): Wissen aus Diegos Hauptchat und Stellas Wissen gehen in die Sense Engine; «🌱 Heute gewachsen» zeigt es
+const GEWACHSEN_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'gewachsen.jsonl');
+const GEHEIM = /(sk-[A-Za-z0-9_-]{10,}|[?&]k=[A-Za-z0-9_-]{8,}|Bearer\s+\S+|passwor[dt]\s*[:=]\s*\S+|\/mcp\/[A-Za-z0-9_-]{8,})/gi;
+async function senseSpeichern(app, art, text, stichwort) {
+  const t = String(text || '').replace(/\r/g, '').replace(GEHEIM, '[entfernt]').trim();
+  if (!t) return { fehler: 'Leerer Text.' };
+  if (!NOVA_KEY) return { fehler: 'Die Sense Engine ist nicht verbunden.' };
+  let teile = 0;
+  for (let i = 0; i < t.length; i += 7500) {
+    const r = await fetch(NOVA_BASIS + '/erfahrung', { method: 'POST', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
+      body: JSON.stringify({ app: sauber(app, 60) || 'Claude', art: sauber(art, 30) || 'wissen', frage: t.slice(i, i + 7500), antwort: '' }) }).catch(() => null);
+    if (!r || !r.ok) return { fehler: `Sense Engine hat Teil ${teile + 1} nicht angenommen.`, teile };
+    teile++;
+  }
+  try { fs.appendFileSync(GEWACHSEN_DATEI, JSON.stringify({ zeit: jetzt(), app: sauber(app, 60), stichwort: sauber(stichwort || t.split('\n').find(z => z.trim()) || '', 140) }) + '\n', { mode: 0o600 }); } catch {}
+  return { teile };
+}
+function heuteGewachsen() {
+  const heute = new Date(Date.now() + 2 * 3600000).toISOString().slice(0, 10); // Schweizer Tag (Sommerzeit grob)
+  const amTag = (z) => new Date(Date.parse(z) + 2 * 3600000).toISOString().slice(0, 10) === heute;
+  let w = []; try { w = fs.readFileSync(GEWACHSEN_DATEI, 'utf8').trim().split('\n').filter(Boolean).map(z => JSON.parse(z)).filter(x => amTag(x.zeit)); } catch {}
+  const e = erfahrungenLetzte(400).filter(x => amTag(x.zeit));
+  return { tag: heute, wissen: w.length, erlebnisse: e.length, stichworte: w.slice(-20).reverse().map(x => x.stichwort), figuren: [...new Set(e.map(x => x.figur))] };
+}
 function erfahrungenLetzte(n) {
   try { return fs.readFileSync(ERFAHRUNG_DATEI, 'utf8').trim().split('\n').slice(-n).map(z => JSON.parse(z)); } catch { return []; }
 }
@@ -1002,6 +1026,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' } }, required: ['text'] } },
   { name: 'kiverse_erfahrungen', description: 'Diegos Erfahrungs-Tagebuch lesen: seine Gespräche mit allen Figuren (mit seiner Einwilligung, intern, nie weitergeben). leeren:true löscht alles (nur auf Diegos Wunsch).',
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'wie viele, Standard 30, höchstens 200' }, leeren: { type: 'boolean' } } } },
+  { name: 'kiverse_sense_speichern', description: 'Wissen in die Sense Engine geben, damit Nova es kennt (Diego 21.10.: «du fütterst sie»). app z. B. «Diego Hauptchat» oder «Stella», art «wissen». Erscheint in Nova unter «🌱 Heute gewachsen». Nie Schlüssel, Codes, Klientennamen, Gesundheits- oder Finanzdaten.',
+    inputSchema: { type: 'object', properties: { app: { type: 'string' }, art: { type: 'string' }, text: { type: 'string', description: 'Markdown, lange Texte werden geteilt' }, stichwort: { type: 'string', description: 'kurz, für «Heute gewachsen»' } }, required: ['app', 'text'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -1184,6 +1210,7 @@ async function werkzeug(name, a = {}) {
       const l = erfahrungenLetzte(Math.min(200, Math.max(1, parseInt(a.anzahl || 30, 10))));
       return text(l.length ? l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.figur} | Diego: ${x.du} | ${x.figur}: ${x.ich}`).join('\n') : 'Noch keine Erfahrungen gespeichert.');
     }
+    case 'kiverse_sense_speichern': { const r = await senseSpeichern(a.app, a.art || 'wissen', a.text, a.stichwort); return r.fehler ? text(r.fehler, true) : text(`In der Sense Engine gespeichert (${r.teile} Teil${r.teile > 1 ? 'e' : ''}). Erscheint unter «🌱 Heute gewachsen».`); }
     case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : ''));
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
@@ -1913,6 +1940,7 @@ const server = http.createServer(async (req, res) => {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nova gehört Diego.' });
       const kk = url.searchParams.get('k') || req.headers['x-kiverse-k'] || '';
       if (url.pathname === '/api/zentrale' && req.method === 'GET') return json(res, 200, zentraleStand());
+      if (url.pathname === '/api/zentrale/gewachsen' && req.method === 'GET') return json(res, 200, heuteGewachsen());
       if (url.pathname === '/api/zentrale/zug' && req.method === 'GET') {
         const v = zentrale.verlauf.find(x => x.id === url.searchParams.get('id'));
         return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });

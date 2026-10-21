@@ -164,6 +164,15 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
 .doku td, .doku th { border: 1px solid var(--linie); padding: 5px 8px; }
 @media (min-width: 900px) { .buehne { height: 340px; } #nova { width: 240px; height: 270px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.wuchs { position: fixed; inset: 0; z-index: 80; background: rgba(4,8,22,.72); display: grid; place-items: center; padding: 16px; }
+.wuchs .karte { width: min(420px, 100%); max-height: 80vh; overflow-y: auto; background: #101b44; border: 1px solid rgba(243,201,105,.4); border-radius: 22px; padding: 20px; color: #eef1fb; box-sizing: border-box; }
+.wuchs h2 { margin: 0 0 6px; color: #f3c969; font-size: 1.5rem; }
+.wuchs .zahlen { display: flex; gap: 10px; margin: 12px 0; }
+.wuchs .zahlen div { flex: 1; background: rgba(255,255,255,.06); border-radius: 14px; padding: 10px; text-align: center; }
+.wuchs .zahlen b { display: block; font-size: 1.8rem; color: #f3c969; }
+.wuchs ul { margin: 6px 0 14px; padding-left: 1.1em; line-height: 1.45; }
+.wuchs button { width: 100%; font-size: 1.05rem; padding: 14px; border-radius: 14px; border: 0; background: #f3c969; color: #0b1640; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -172,6 +181,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   <header class="kopf">
     <a class="zurueck" id="zurueck" href="/">‹ KI-Verse</a>
     <h1>Nova</h1>
+    <button class="rund" id="wuchsKnopf" type="button" aria-label="Heute gewachsen">🌱</button>
     <button class="rund" id="pushKnopf" type="button" aria-label="Push-Nachrichten einschalten">🔔</button>
     <button class="rund" id="ergKnopf" type="button" aria-label="Ergebnisse">📂<span class="badge" id="ergBadge" hidden></span></button>
     <button class="rund" id="menuKnopf" type="button" aria-label="Netz, Gedächtnis und Seele">☰</button>
@@ -694,6 +704,18 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
       } catch (e) { toast('Push ging nicht: ' + e.message); }
     });
   })();
+  // 🌱 Heute gewachsen (Diego 21.10.): was Nova heute dazugelernt hat
+  $('#wuchsKnopf').addEventListener('click', async () => {
+    const d = await api('api/zentrale/gewachsen').catch(e => { toast(e.message); return null; }); if (!d) return;
+    const w = document.createElement('div'); w.className = 'wuchs';
+    const esc2 = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    w.innerHTML = `<div class="karte"><h2>🌱 Heute gewachsen</h2><p>So viel hat Nova heute dazugelernt.</p>
+      <div class="zahlen"><div><b>${d.wissen}</b>Wissen</div><div><b>${d.erlebnisse}</b>Erlebnisse</div></div>
+      ${d.stichworte.length ? '<ul>' + d.stichworte.map(s => `<li>${esc2(s)}</li>`).join('') + '</ul>' : '<p>Heute noch nichts Neues. Erzähl Claude etwas, dann wächst sie.</p>'}
+      ${d.figuren.length ? `<p>Erlebt mit: ${d.figuren.map(esc2).join(', ')}</p>` : ''}<button type="button">Schliessen</button></div>`;
+    w.addEventListener('click', (e) => { if (e.target === w || e.target.tagName === 'BUTTON') w.remove(); });
+    document.body.append(w);
+  });
 })();
 </script>
 </body>
