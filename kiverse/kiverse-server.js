@@ -1246,7 +1246,7 @@ async function werkzeug(name, a = {}) {
     }
     case 'kiverse_handy_koppeln': {
       const c = koppelNeu();
-      return text(`Kopplungs-Code für Diego: ${c} (15 Minuten gültig, einmal). Diego öffnet ${mcpBasis || ''}/koppeln, tippt den Code und landet bei Nova. Dann Teilen → «Zum Home-Bildschirm» → Name «Nova».`);
+      return text(`Kopplungs-Code für Diego: ${c} (15 Minuten gültig, einmal). Ein-Tipp-Link (Code steckt im #, geht nicht ans Server-Protokoll): ${mcpBasis || ''}/koppeln#${c} . Oder Diego öffnet ${mcpBasis || ''}/koppeln, tippt den Code und landet bei Nova. Dann Teilen → «Zum Home-Bildschirm» → Name «Nova».`);
     }
     case 'kiverse_update': return text(await knopfUpdate(3000));
     case 'kiverse_nova_wissen': {
@@ -1780,7 +1780,7 @@ const KOPPEL_SEITE = `<!doctype html><html lang="de"><head><meta charset="utf-8"
 <body><main><h1>✨ Nova</h1><p>Code von Claude eintippen.</p><input id="c" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"><button id="b">Zu Nova</button><p id="f"></p>
 <p>Danach: Teilen → «Zum Home-Bildschirm» → Name «Nova».</p></main>
 <script>const c=document.getElementById('c'),f=document.getElementById('f');async function los(){f.textContent='';const r=await fetch('/koppeln',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c.value})}).then(r=>r.json()).catch(()=>({fehler:'Keine Verbindung.'}));if(r.link)location.replace(r.link);else f.textContent=r.fehler||'Fehler';}
-document.getElementById('b').onclick=los;c.oninput=()=>{if(c.value.replace(/\D/g,'').length===6)los();};</script></body></html>`;
+document.getElementById('b').onclick=los;c.oninput=()=>{if(c.value.replace(/[^0-9]/g,'').length===6)los();};const h=location.hash.replace(/[^0-9]/g,'');if(h.length===6){c.value=h;history.replaceState(null,'',location.pathname);los();}</script></body></html>`;
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
