@@ -1302,6 +1302,7 @@ function schritt() {
   schuhe.forEach((s, i) => { s.position.y = 1.3 + Math.sin(zeit * 2 + i) * .08; });
   for (const n of npc) figurBewegen(n.f, zeit, 0);
   figurenLeben(dt, zeit);
+  figurenSpielen(dt, zeit);
   if (ortObjekte.hasi) ortObjekte.hasi.position.y = .9 + Math.abs(Math.sin(zeit * 2.5)) * .12;
   zustand.partikel = zustand.partikel.filter(p => { p.v.y -= 9 * dt; p.s.position.addScaledVector(p.v, dt); p.t -= dt * .9; p.s.material.opacity = Math.max(0, p.t); if (p.t <= 0) { szene.remove(p.s); return false; } return true; });
 
@@ -1432,6 +1433,33 @@ function ichSichtKamera(zeit) {
 }
 // Figuren leben: schauen dich an, blinzeln, bewegen beim Reden Mund und Arme
 const zuMir = new THREE.Vector3();
+// Figuren spielen miteinander (Diego 21.10.: «Figuren sollen wirklich miteinander spielen»):
+// Flitz besucht die Figur in deiner Nähe, sie winkt, hüpft vor Freude, ruft ihm etwas zu und Flitz macht einen Looping.
+const SPIEL_SAETZE = ['Hallo Flitz!', 'Fang mich doch!', 'Huiii, bist du schnell!', 'Flitz, mach einen Looping!', 'Komm, wir spielen!', 'Kitzel mich nicht, hihi!'];
+const spielBlase = document.createElement('div'); spielBlase.className = 'blase'; spielBlase.hidden = true; document.body.appendChild(spielBlase);
+const besuch = { n: null, t: 0, naechster: 4, satz: '' }; window.__besuch = besuch;
+function figurenSpielen(dt, zeit) {
+  spielBlase.hidden = true;
+  if (zustand.modus !== 'spiel' || zustand.innen || gespr.n) { besuch.n = null; return; }
+  besuch.naechster -= dt;
+  if (!besuch.n && besuch.naechster <= 0) {
+    let best = null, bd = 16;
+    for (const n of npc) { if (!n.f.userData.d3) continue; const d = Math.hypot(n.x - sp.pos.x, n.z - sp.pos.z); if (d < bd && d > 2.5) { bd = d; best = n; } }
+    besuch.naechster = 7 + Math.random() * 6;
+    if (best) { besuch.n = best; besuch.t = 4.2; besuch.satz = SPIEL_SAETZE[Math.floor(Math.random() * SPIEL_SAETZE.length)]; }
+  }
+  const n = besuch.n; if (!n) return;
+  besuch.t -= dt; if (besuch.t <= 0) { besuch.n = null; flitzLoop = 1; return; }
+  const u = n.f.userData, fp = n.f.position, h = 2.6 * n.f.scale.y;
+  // Flitz kreist um den Kopf der Figur
+  flitzZiel.set(fp.x + Math.cos(zeit * 3) * 1.3, fp.y + h + .4 + Math.sin(zeit * 5) * .3, fp.z + Math.sin(zeit * 3) * 1.3); flitzWechsel = .5;
+  // Die Figur schaut Flitz nach, winkt und hüpft
+  n.f.rotation.y = winkelLerp(n.f.rotation.y, Math.atan2(flitz.position.x - fp.x, flitz.position.z - fp.z), Math.min(1, dt * 5));
+  u.arme[1].rotation.z = -1.9 - Math.sin(zeit * 9) * .45; u.arme[1].rotation.x = 0;
+  fp.y = (n.hoch || 0) + Math.abs(Math.sin(zeit * 6)) * .22 * Math.min(1, besuch.t);
+  if (besuch.t < 3.4 && besuch.t > .8) { u.redet = .2; const b = aufBildschirm(fp.x, fp.y + h + 1, fp.z); if (b.sichtbar) { spielBlase.hidden = false; spielBlase.textContent = besuch.satz; spielBlase.style.left = Math.max(110, Math.min(innerWidth - 110, b.x)) + 'px'; spielBlase.style.top = Math.max(90, b.y) + 'px'; } }
+  if (besuch.t < .05) fp.y = n.hoch || 0;
+}
 function figurenLeben(dt, zeit) {
   for (const n of npc) {
     const u = n.f.userData; if (!u.d3) continue;
