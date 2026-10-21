@@ -43,7 +43,7 @@ MAX_STIMME_ZEICHEN = 600
 # Figur -> ElevenLabs voice_id (apps/stimmen/stimmen-uebersicht-2026-10-17.md). Hasi spricht nie.
 STIMMEN = {
     "otti": "aHb0rsWUX1Fsr1L8EX7f", "fia": "AOb3oqtwzif3fuVea8BR", "kiki": "C4RM6rl4L845nEtYYlZs",
-    "nova": "a9tumF22Oeoaac6X1EpS", "sparky": "c1ABTynwBMf7pMKNi8pp", "jackie": "jTs5ryxjzp1YN6eOBBJD",
+    "nova": "4YKI1ONIhgWEKHyAHYPC", "sparky": "c1ABTynwBMf7pMKNi8pp", "jackie": "jTs5ryxjzp1YN6eOBBJD",
     "flo": "T3WNUkXc6KZpYc72YLCw", "mama affe": "VBjJm8gq4Mnh6nDoGDBt", "granny": "J1qEbxscAwpGDpbcKexg",
     "carmencita": "IU9bzGhnCqWdEIy5L21d", "wäf wäf": "5Axpbpycg8qWQ7LexavI", "mr. ping": "owHFQyDglDZvoawSEZj8",
     "coin maker": "Lbm7qDmJUxIxpWx9qhZO", "fompa": "Cx9eG8CNCDtCPeLiemtm", "sunny": "qUshSPhEV0CeAvEdLFJq",
