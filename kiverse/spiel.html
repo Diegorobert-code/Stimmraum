@@ -433,7 +433,7 @@ const ART = {
   brix: { art: 'tier', fell: 0x6a7a92, gesicht: 0x2a3446, augen: 0x3a7ad6, ohren: 'keine', metall: true, helm: 0xf08a2a, bauch: 0xf2c25b },
   kay: { art: 'mensch', haut: 0xc79a72, koerper: 0x3b6bd6, augen: 0x2a1a10, haar: 0x1e1410, brille: 0x2a2a2a, nase: 1 },
 };
-const NAMEN = { coinmaker: 'Coin Maker', mamaaffe: 'Mama Affe', sparky: 'Sparky', otti: 'Otti', fompa: 'Fompa', kimo: 'Kiki', jackie: 'Jackie', letti: 'Letti', tinko: 'Tinko', lumo: 'Lumo', eulin: 'Sophia', fia: 'Fia', waefwaef: 'Wäf Wäf', ava: 'Ava', minky: 'Minky', brix: 'Brix', kay: 'Kay', mrping: 'Mr. Ping', nova: 'Nova', sora: 'Sora' };
+const NAMEN = { sunny: 'Sunny', coinmaker: 'Coin Maker', mamaaffe: 'Mama Affe', sparky: 'Sparky', otti: 'Otti', fompa: 'Fompa', kimo: 'Kiki', jackie: 'Jackie', letti: 'Letti', tinko: 'Tinko', lumo: 'Lumo', eulin: 'Sophia', fia: 'Fia', waefwaef: 'Wäf Wäf', ava: 'Ava', minky: 'Minky', brix: 'Brix', kay: 'Kay', mrping: 'Mr. Ping', nova: 'Nova', sora: 'Sora' };
 function fellMat(farbe, glanz = .35, metall = false) { if (metall) return new THREE.MeshStandardMaterial({ color: farbe, metalness: .75, roughness: .32 }); return new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .62, sheen: 1, sheenRoughness: .5, sheenColor: new THREE.Color(farbe).lerp(new THREE.Color(0xffffff), glanz), clearcoat: .05 }); }
 function hautMat(farbe) { return new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .5, sheen: .6, sheenColor: new THREE.Color(0xffd8c0), clearcoat: .15, clearcoatRoughness: .6 }); }
 const AUGWEISS = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .08, clearcoat: 1, clearcoatRoughness: .05 });
@@ -1512,10 +1512,20 @@ async function senden() {
   if (KEY_K) try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, text: t }) }); const d = await r.json(); antwort = d.text || d.fehler; } catch {}
   if (tok !== gespr.token) return;
   $('#gesprStatus').textContent = '';
+  // Sunny springt ein, wenn die Figur nicht weiterweiss (Diego 21.10.: «Sunny kommt, wenn ich nicht mehr weiss»)
+  const ratlos = KEY_K && gespr.fid !== 'sunny' && (!antwort || /\b(weiss|weiß) (ich )?(das )?nicht|keine ahnung|kann ich (dir )?nicht|verbindung .* fehlt|stimme müde/i.test(antwort));
   sagen(antwort || 'Ich höre dich, aber hier in der Vorschau kann ich noch nicht antworten. Im echten KI-Verse rede ich mit dir.');
+  if (ratlos) sunnyHilft(t, tok);
+}
+async function sunnyHilft(t, tok) {
+  $('#gesprStatus').textContent = 'Sunny fliegt herbei …';
+  let h = null; try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text: `${NAMEN[gespr.fid] || 'Eine Figur'} weiss nicht weiter. Diego fragt: ${t}` }) }); h = (await r.json()).text; } catch {}
+  if (tok !== gespr.token || !h) { $('#gesprStatus').textContent = ''; return; }
+  $('#gesprStatus').textContent = '';
+  const alt = gespr.fid; setTimeout(() => { if (tok !== gespr.token) return; gespr.fid = 'sunny'; sagen(h); gespr.fid = alt; }, 2500);
 }
 // Stimme: zuerst die eigene Figurenstimme vom Server (ElevenLabs über die Sense Engine), sonst die Gerätestimme
-const STIMM_TON = { coinmaker: [.75, .9], mamaaffe: [.9, .92], sparky: [1.25, 1.05], otti: [1.35, 1.05], fompa: [.8, .95], kimo: [1.3, 1], jackie: [1.15, 1], letti: [1.3, 1.05], lumo: [.95, .95], eulin: [1.2, 1], fia: [1.3, 1], waefwaef: [1.2, 1.1], ava: [1.25, 1.05], kay: [1, 1.05] };
+const STIMM_TON = { sunny: [.85, .95], coinmaker: [.75, .9], mamaaffe: [.9, .92], sparky: [1.25, 1.05], otti: [1.35, 1.05], fompa: [.8, .95], kimo: [1.3, 1], jackie: [1.15, 1], letti: [1.3, 1.05], lumo: [.95, .95], eulin: [1.2, 1], fia: [1.3, 1], waefwaef: [1.2, 1.1], ava: [1.25, 1.05], kay: [1, 1.05] };
 let audioEl = null;
 function stimmeStopp() { try { audioEl?.pause(); } catch {} audioEl = null; try { speechSynthesis.cancel(); } catch {} }
 async function sagen(text) {
@@ -1562,7 +1572,7 @@ $('#gesprVergessen').onclick = async () => {
   $('#gesprLog').innerHTML = ''; zeile(NAMEN[gespr.fid], 'Erledigt. Ich habe es vergessen. Wir fangen neu an.');
 };
 // ---------- Apps als Läden (Diego 19.10.): im Laden die echte App öffnen, sie läuft auf unserem Server ----------
-const LADEN_APPS = { sparky: [['humanspark', 'Human Sparks']], nest: [['fiasnest', 'Fias Nest']], tor: [['otti', 'Otti'], ['mondschein', 'Mondschein']], schuhmacher: [['jackie', "Jackie's Advice"]], singschule: [['kiki', 'Kiki']], schule: [['mamaaffe', 'Mama Affe']], fompa: [['fompa', 'Fompa'], ['transkript', 'Transkript']], funkenmarkt: [['foodflow', 'Food and Flow']], boerse: [['tradeping', 'TradePing']] };
+const LADEN_APPS = { labor: [['nova', 'Nova']], sparky: [['humanspark', 'Human Sparks']], nest: [['fiasnest', 'Fias Nest']], tor: [['otti', 'Otti'], ['mondschein', 'Mondschein']], schuhmacher: [['jackie', "Jackie's Advice"]], singschule: [['kiki', 'Kiki']], schule: [['mamaaffe', 'Mama Affe']], fompa: [['fompa', 'Fompa'], ['transkript', 'Transkript']], funkenmarkt: [['foodflow', 'Food and Flow']], boerse: [['tradeping', 'TradePing']] };
 LADEN_APPS.tor && ORTE.forEach(o => { if (LADEN_APPS[o.id]) o.rein = true; });
 // Im Laden laufen Tinkos Bilder dieser Figur wie ein kleiner Film (aus der Ablage, nur mit Diegos Link)
 let ablageCache = null, filmTimer = null;
@@ -1619,7 +1629,7 @@ async function ladenFilm(ort) {
   weiter();
 }
 function appOeffnen(id, name) {
-  $('#appFenster iframe').src = 'apps/' + id + '/' + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
+  $('#appFenster iframe').src = (id === 'nova' ? 'nova' : 'apps/' + id + '/') + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
   $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
 }
 $('#appZu').onclick = () => { $('#appFenster').hidden = true; $('#appFenster iframe').src = 'about:blank'; };
