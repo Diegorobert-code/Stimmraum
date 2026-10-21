@@ -180,9 +180,9 @@ const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
-const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '500', 10), RUNDEN = 2;
-// Monatsdeckel für Tinkos Bilder (einfache Qualität ca. 1 Rp. pro Bild → 15'000 Bilder ≈ CHF 165/Monat). Zähler überlebt Neustarts.
-const BILD_MAX_MONAT = parseInt(process.env.BILD_MAX_MONAT || '15000', 10);
+const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '250', 10), RUNDEN = 2;
+// Monatsdeckel für Tinkos Bilder (einfache Qualität ca. 1 Rp. pro Bild → 7'500 Bilder ≈ CHF 83/Monat, Diego 21.10.). Zähler überlebt Neustarts.
+const BILD_MAX_MONAT = parseInt(process.env.BILD_MAX_MONAT || '7500', 10);
 const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
 const KIS = {
   lumo: { name: 'Lumo', figur: 'weisse Eule, Gelehrter der Mozart-Zeit: gepuderte Perücke, goldene Brille, Jackett, Pergament', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
