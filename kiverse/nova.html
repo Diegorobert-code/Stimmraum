@@ -106,6 +106,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   background: #0c1633; border-top: 1px solid var(--linie); border-radius: 22px 22px 0 0; transform: translateY(105%); transition: transform .32s cubic-bezier(.2,.8,.2,1);
   padding-bottom: var(--sicher-unten); box-shadow: 0 -20px 60px rgba(0,0,0,.5); }
 .blatt.an { transform: none; }
+.blattkopf { position: relative; min-height: 44px; }
+.blattzu { position: absolute; right: 12px; top: 6px; min-width: 64px; height: 38px; border-radius: 19px; border: 1px solid var(--gold); background: rgba(243,201,105,.14); color: var(--gold); font-size: 16px; font-weight: 700; cursor: pointer; }
 .griff { width: 40px; height: 5px; border-radius: 3px; background: #3a4670; margin: 8px auto 4px; }
 .reiter { display: flex; gap: 6px; padding: 6px 16px 10px; overflow-x: auto; scrollbar-width: none; }
 .reiter::-webkit-scrollbar { display: none; }
@@ -260,7 +262,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
 
 <div class="decke" id="decke"></div>
 <div class="blatt" id="blatt" role="dialog" aria-modal="true" aria-label="Nova">
-  <div class="griff"></div>
+  <div class="blattkopf"><div class="griff"></div><button class="blattzu" id="blattZu" type="button" aria-label="Menü schliessen">✕ Zu</button></div>
   <div class="reiter" id="reiter">
     <button type="button" data-r="hilfe">📘 So geht's</button>
     <button type="button" data-r="netz" class="an">🕸 Netz</button>
@@ -592,6 +594,10 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   const zu = () => { $('#blatt').classList.remove('an'); $('#decke').classList.remove('an'); };
   $('#menuKnopf').onclick = () => auf();
   $('#decke').onclick = zu;
+  // Diego 21.10.: im Menü stecken geblieben. Jetzt: grosser ✕-Knopf, nach unten wischen, Esc
+  $('#blattZu').onclick = zu;
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') zu(); });
+  { let y0 = null; const bk = $('.blattkopf'); bk.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; }, { passive: true }); bk.addEventListener('touchend', (e) => { if (y0 != null && e.changedTouches[0].clientY - y0 > 40) zu(); y0 = null; }); }
   document.querySelectorAll('#reiter button').forEach(b => b.onclick = () => blattZeigen(b.dataset.r));
   $('#netz').onclick = () => auf('netz');
   let toastZeit = 0;
