@@ -47,6 +47,16 @@ button { cursor: pointer; }
 .knopf:hover { border-color: var(--gold); }
 .knopf.gold { background: var(--gold); color: var(--nacht); border-color: var(--gold); font-weight: 700; }
 
+.flitz { position: absolute; left: 60%; top: 30%; width: 46px; height: 46px; border-radius: 50%; z-index: 6; cursor: pointer; border: 0; padding: 0; background: none;
+  transition: left 2.2s cubic-bezier(.45,.05,.3,1), top 2.2s cubic-bezier(.45,.05,.3,1); filter: drop-shadow(0 4px 8px rgba(0,0,0,.45)); }
+.flitz img { width: 100%; height: 100%; border-radius: 50%; animation: flitzSchwirr .18s ease-in-out infinite alternate; }
+.flitz.links img { transform: scaleX(-1); }
+.flitz.looping img { animation: flitzLooping .9s ease-in-out; }
+.flitz .sprech { position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: #fff8e7; color: #14204a; font: 700 13px/1.2 'Baloo 2', sans-serif; padding: 6px 10px; border-radius: 12px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+.flitz .sprech.an { opacity: 1; }
+@keyframes flitzSchwirr { from { translate: 0 -1px; } to { translate: 0 2px; } }
+@keyframes flitzLooping { 0% { rotate: 0deg; scale: 1; } 50% { rotate: 200deg; scale: 1.25; } 100% { rotate: 360deg; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .flitz { transition: none; } .flitz img { animation: none; } }
 .buehne { position: relative; flex: 1 1 52%; min-height: 230px; overflow: hidden; }
 #himmel { position: absolute; inset: 0; width: 100%; height: 100%; }
 #bruecken { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -464,6 +474,7 @@ body.nur-brille .brille-rahmen .hinweis { display: none; }
       <circle cx="80" cy="22" r="4" fill="#f2c25b"/>
     </svg>
   </button>
+  <button class="flitz" id="flitz" type="button" aria-label="Flitz, der Kolibri"><img alt="" src="data:image/webp;base64,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"><span class="sprech" id="flitzSprech"></span></button>
   <img class="letti-sitzt" id="lettiSitzt" alt="Letti, die Brieftaube" src="">
   <div class="sunny" aria-label="Sunny, der Hüter">
     <img id="sunnyBild" alt="Sunny, der blaue Drache" src="">
@@ -2357,5 +2368,29 @@ Format: Hochformat 9:16.`;
     vorschauStarten();
     if (privat) { $('#modus').textContent = 'Vorschau'; setTimeout(() => nachrichtZeigen({ von: 'sunny', text: 'Dieses KI-Verse ist privat. Das hier ist nur die Vorschau. Bitte Diego um deinen persönlichen Einladungslink.' }), 400); }
   });
+})();
+</script>
+<script>
+// Flitz, der Kolibri (Diego 21.10.: «Flitz flitzt überall rum»): bringt Bilder zum Fliegen (fal.ai)
+(function () {
+  const f = document.getElementById('flitz'), b = document.getElementById('buehne'), sp = document.getElementById('flitzSprech');
+  if (!f || !b) return;
+  const ruhig = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SAETZE = ['Ich bin Flitz!', 'Ich bringe Bilder zum Fliegen.', 'Schau, ein Looping!', 'Sssst, schon weiter!', 'Tinko malt, ich bewege.'];
+  let x = 60, zeit;
+  function flieg() {
+    const nx = 6 + Math.random() * 82, ny = 8 + Math.random() * 60;
+    f.classList.toggle('links', nx < x); x = nx;
+    f.style.left = nx + '%'; f.style.top = ny + '%';
+    zeit = setTimeout(flieg, ruhig ? 12000 : 2600 + Math.random() * 2600);
+  }
+  f.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sp.textContent = SAETZE[Math.floor(Math.random() * SAETZE.length)]; sp.classList.add('an');
+    f.classList.remove('looping'); void f.offsetWidth; f.classList.add('looping');
+    clearTimeout(zeit); zeit = setTimeout(() => { sp.classList.remove('an'); flieg(); }, 2200);
+  });
+  document.addEventListener('visibilitychange', () => { clearTimeout(zeit); if (!document.hidden) zeit = setTimeout(flieg, 800); });
+  zeit = setTimeout(flieg, 1200);
 })();
 </script>
