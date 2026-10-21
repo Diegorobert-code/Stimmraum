@@ -817,7 +817,7 @@ async function soraWarten(cid) {
 }
 // ---------- fal.ai: bewegte Clips mit Seedance (Diego 21.10., ersetzt Sora) ----------
 // Bezahlt über Diegos fal.ai-Guthaben. Eigener Monatsdeckel in CHF, Kosten werden beim Start reserviert.
-const FAL_DECKEL_CHF = parseFloat(process.env.FAL_DECKEL_CHF || '30'), FAL_MAX_TAG = parseInt(process.env.FAL_MAX_TAG || '6', 10); // Diego 21.10.: KI-Verse Tag für Tag bauen, ca. CHF 1 pro Tag
+const FAL_DECKEL_CHF = parseFloat(process.env.FAL_DECKEL_CHF || '50'), FAL_MAX_TAG = parseInt(process.env.FAL_MAX_TAG || '20', 10); // Diego 21.10. 13:43: «die 50 Franken für Sunny, wenn der Deckel kommt, Push-Nachricht»
 const FAL_BASIS = process.env.FAL_BASIS || 'https://queue.fal.run';
 const FAL_MODELL = process.env.FAL_MODELL || 'fal-ai/bytedance/seedance/v1/lite/image-to-video';
 const FAL_USD_SEKUNDE = { 'fal-ai/bytedance/seedance/v1/lite/image-to-video': 0.04, 'bytedance/seedance-2.0/mini/image-to-video': 0.16, 'bytedance/seedance-2.0/image-to-video': 0.30, 'bytedance/seedance-2.5/image-to-video': 0.48 };
@@ -828,7 +828,7 @@ async function falStart(a) {
   const modell = /^[a-z0-9][a-z0-9./-]{3,120}$/.test(String(a.modell || '')) ? String(a.modell) : FAL_MODELL;
   const sek = Math.min(Math.max(parseInt(a.dauer || a.sekunden) || 5, 3), 12);
   const kosten = sek * (FAL_USD_SEKUNDE[modell] || 0.30) * CHF_PRO_USD, m = falMonat();
-  if (m.falChf + kosten > FAL_DECKEL_CHF) return { fehler: `Monatsdeckel erreicht (${falStand()}). Nächsten Monat wieder.` };
+  if (m.falChf + kosten > FAL_DECKEL_CHF) { if (!m.falPushDeckel) { m.falPushDeckel = true; soraSpeichern(); pushSenden('Sunny', `fal.ai-Deckel erreicht: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)}. Mehr nur mit deinem Go.`).catch(() => {}); } return { fehler: `Monatsdeckel erreicht (${falStand()}). Nächsten Monat wieder.` }; }
   const heute = jetzt().slice(0, 10), clipsHeute = Object.values(m.clips).filter(c => c.fal && String(c.zeit).startsWith(heute)).length;
   if (clipsHeute >= FAL_MAX_TAG) return { fehler: `Heute schon ${FAL_MAX_TAG} Clips bewegt. Morgen wieder.` };
   let bild = String(a.bild || '');
@@ -842,6 +842,7 @@ async function falStart(a) {
   const d = r ? await r.json().catch(() => ({})) : {};
   if (!r || !r.ok || !d.request_id) return { fehler: `fal.ai startet nicht (${r ? r.status : 'keine Verbindung'}): ` + String(d.detail ? JSON.stringify(d.detail) : d.error || '').slice(0, 300) };
   m.falChf += kosten; const cid = id('film');
+  if (m.falChf >= FAL_DECKEL_CHF * .8 && !m.falPush80) { m.falPush80 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)} verbraucht (80 %).`).catch(() => {}); }
   m.clips[cid] = { fal: true, status: 'läuft', zeit: jetzt(), sek, modell, status_url: d.status_url, response_url: d.response_url }; soraSpeichern();
   falWarten(cid);
   return { cid, kosten };
