@@ -67,6 +67,12 @@ body.kino .balken { height: 9vh; }
 .gespraech input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(255, 255, 255, .06); color: var(--text); font: 15px "Atkinson Hyperlegible", sans-serif; }
 #gesprMikro { all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; border: 2px solid var(--gold); background: rgba(242, 194, 91, .12); }
 #gesprMikro.an { background: #d6413b; border-color: #ff8a80; animation: puls 1s ease-in-out infinite; }
+#redeKnopf { position: fixed; left: 50%; bottom: max(22px, calc(env(safe-area-inset-bottom) + 10px)); transform: translateX(-50%); width: 104px; height: 104px; border-radius: 50%; border: 3px solid #fff3c9; background: radial-gradient(circle at 35% 30%, #ffe08a, #f2a93b 60%, #c9761f); color: #2a1606; display: grid; place-items: center; align-content: center; gap: 0; font: 800 15px "Baloo 2", sans-serif; box-shadow: 0 0 30px rgba(242, 194, 91, .75), 0 8px 22px rgba(0, 0, 0, .45); z-index: 9; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+#redeKnopf .ico { font-size: 40px; line-height: 1; }
+#redeKnopf.an { background: radial-gradient(circle at 35% 30%, #ff8a80, #d6413b 65%, #9a2420); color: #fff; border-color: #ffd0cc; animation: puls 1s ease-in-out infinite; }
+#redeKnopf.denkt { opacity: .75; }
+body.redet #redeKnopf { bottom: calc(min(46vh, 420px) + 34px); }
+body:not(.spielt) #redeKnopf { display: none; }
 @keyframes puls { 50% { box-shadow: 0 0 0 10px rgba(214, 65, 59, .25); } }
 body.redet #stick, body.redet #hoch { display: none; }
 @media (max-width: 600px) { .gespraech { right: 16px; left: 16px; width: auto; max-height: 52vh; } }
@@ -107,6 +113,7 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
 <div id="stick" hidden><i></i></div>
 <div id="hoch" hidden aria-label="springen">⤒</div>
 <button id="rein" type="button" hidden>Rein</button>
+<button id="redeKnopf" type="button" aria-label="Reden"><span class="ico">🎙</span><span class="txt">Reden</span></button>
 <button id="reden" type="button" hidden>🎙 Reden</button>
 <div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""><video muted playsinline hidden></video></div>
 <div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
@@ -129,12 +136,12 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
   <div class="innen">
     <h1>KI-Verse</h1>
     <p>Ein Trickfilm-Städtchen am Meer, in 3D. Lauf durch die Gassen, geh in die Läden, rede mit den Figuren und sammle Sunnys goldene Funken.</p>
-    <p class="leise">Wer bist du heute?</p>
-    <div class="wahl" id="wahl"></div>
+    <p class="leise">Du gehst selbst hinein, mit deinen eigenen Augen.</p>
+    <div class="wahl" id="wahl" hidden></div>
     <button class="knopf gold" type="button" id="losKamera" style="font-size:18px;padding:12px 30px">📷 Mit Kamera eintreten</button>
     <button class="knopf" type="button" id="los" style="font-size:16px;padding:10px 24px">Ohne Kamera</button>
     <p class="leise" style="margin-top:8px">Mit Kamera siehst du dich unten links im Zauberspiegel, und die Figuren hören dir zu, ohne dass du tippst. Kamera und Mikrofon bleiben auf deinem Gerät: nichts wird gespeichert oder gesendet.</p>
-    <p class="leise" style="margin-top:12px">Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten, Maus ziehen zum Umschauen, Leertaste springt, «R» redet mit der Figur vor dir. Am Handy oben «📱 Handy»: mitlaufen, dich selbst sehen, KI-Blick durch die Kamera.</p>
+    <p class="leise" style="margin-top:12px">Laufen: unten links den goldenen Knopf nach vorne ziehen. Vor einem Laden erscheint «Rein», antippen und du bist drin. Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten, Maus ziehen zum Umschauen, Leertaste springt, «R» redet mit der Figur vor dir. Am Handy oben «📱 Handy»: mitlaufen, dich selbst sehen, KI-Blick durch die Kamera.</p>
   </div>
 </div>
 <div class="spiegel" id="spiegel" hidden><video id="spiegelVideo" autoplay muted playsinline></video><button type="button" id="spiegelAus" aria-label="Kamera aus">✕</button></div>
@@ -1094,7 +1101,7 @@ function reinGehen(o) {
     const bildKey = o.id === 'hafen' ? 'werkstatt-meer' : o.id;
     if (ORT_BILDER[bildKey]) { $('#ortbild').style.backgroundImage = `url(${ORT_BILDER[bildKey]})`; $('#ortbild').style.opacity = 1; }
     innenOeffnen(o.id);
-    if (kameraModus.an) { const n = npc.find(x => x.ort === o.id); if (n && NAMEN[figurVon(n)]) setTimeout(() => gespraechOeffnen(n), 900); }
+    if (kameraModus.an || ohr.genutzt) { const n = npc.find(x => x.ort === o.id); if (n && NAMEN[figurVon(n)]) setTimeout(() => gespraechOeffnen(n), 900); }
   });
 }
 function reinKamera(id) {
@@ -1238,7 +1245,7 @@ function schritt() {
     zustand.intro += dt;
     const a = torTuer.userData.angel; a.rotation.y = lerp(a.rotation.y, -1.9, Math.min(1, dt * .9));
     $('#titel').style.opacity = zustand.intro > .6 && zustand.intro < 4 ? 1 : 0;
-    if (zustand.intro > 5.4) { zustand.modus = 'spiel'; document.body.classList.remove('kino'); $('#stick').hidden = $('#hoch').hidden = false; }
+    if (zustand.intro > 5.4) { zustand.modus = 'spiel'; document.body.classList.remove('kino'); document.body.classList.add('spielt'); $('#stick').hidden = $('#hoch').hidden = false; }
   }
   // Kamera
   if (!kamZiel.aktiv) {
@@ -1271,12 +1278,14 @@ function schritt() {
     v3.copy(kamBlick).lerp(blickV, kk); kamera.lookAt(v3); kamPos.copy(kamera.position);
     spieler.visible = true;
   }
+  flugSchritt(dt);
   mondLicht.target.position.copy(sp.pos); mondLicht.position.copy(sp.pos).addScaledVector(mondN, 80);
   lichterNachfuehren(sp.pos);
   // Sunny folgt in Wellen, beim Ende Ehrenrunde
   if (zustand.ende && zustand.endeT < 6) zielV.set(sp.pos.x + Math.cos(zeit * 1.4) * 14, 12 + Math.sin(zeit * 2) * 2, sp.pos.z - 12 + Math.sin(zeit * 1.4) * 14);
+  else if (flug.an) zielV.set(kamera.position.x + flug.dx * 1.1, kamera.position.y - 1.75, kamera.position.z + flug.dz * 1.1);
   else zielV.set(sp.pos.x + Math.sin(sp.richtung) * 6 + Math.cos(sp.richtung) * 3.5 + Math.sin(zeit * .8) * 1.5, 5.6 + Math.sin(zeit * 1.3) * .6, sp.pos.z + Math.cos(sp.richtung) * 6 - Math.sin(sp.richtung) * 3.5);
-  sunny.position.lerp(zielV, Math.min(1, dt * 1.5)); sunny.lookAt(kamera.position);
+  sunny.position.lerp(zielV, Math.min(1, dt * (flug.an ? 6 : 1.5))); sunny.lookAt(kamera.position);
   sunny.userData.fluegel.forEach((w, i) => { w.rotation.y = (i ? -1 : 1) * Math.sin(zeit * 6) * .6; });
   // Flitz: alle paar Sekunden ein neuer Punkt rund um dich, dazwischen schwirren
   flitzWechsel -= dt;
@@ -1327,7 +1336,8 @@ function schritt() {
 // ---------- Start ----------
 const WAHL = [['diego', 'Diego'], ['fia', 'Fia'], ['tinko', 'Tinko'], ['nova', 'Nova'], ['jackie', 'Jackie'], ['otti', 'Otti'], ['kay', 'Kay'], ['kimo', 'Kimo']];
 let gewaehlt = 'diego';
-try { gewaehlt = localStorage.getItem('kiverse_spiel_figur') || 'diego'; } catch {}
+// Diego 21.10.: keine Figur wählen, immer er selbst aus der Ich-Sicht
+gewaehlt = 'diego';
 for (const [k, n] of WAHL) {
   const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === gewaehlt));
   const i = document.createElement('img'); i.src = BILDER[k]; i.alt = ''; b.append(i, document.createTextNode(n));
@@ -1345,7 +1355,7 @@ function anfangen() {
   document.body.classList.add('kino'); zustand.modus = 'intro'; zustand.intro = 0;
   klang(440); setTimeout(() => klang(660), 250); setTimeout(() => klang(880), 500);
 }
-$('#los').onclick = anfangen;
+$('#los').onclick = () => { mitlaufenBeimEintreten(); anfangen(); };
 // Kamera-Modus (Diego 19.10.): mit der Kamera eintreten, sich im Zauberspiegel sehen, Figuren hören zu (freihändig).
 // Bild und Ton bleiben im Browser: kein Upload, keine Speicherung. Spracherkennung macht der Browser selbst.
 const kameraModus = { an: false, strom: null };
@@ -1398,7 +1408,11 @@ function gesichtAufFigur(dt, zeit) {
   // Mund weit auf: Flitz kommt neugierig ganz nah
   if (gesicht.jaw > .5) flitzZiel.set(sp.pos.x + Math.sin(sp.richtung) * 1.4 + .6, sp.pos.y + 2.5, sp.pos.z + Math.cos(sp.richtung) * 1.4);
 }
+// Diego 21.10.: am Handy läuft man mit der Handy-Bewegung (Mitlaufen gleich beim Eintreten, Erlaubnis im selben Tipp)
+const istHandy = matchMedia('(pointer: coarse)').matches;
+function mitlaufenBeimEintreten() { if (istHandy) mitlaufenSetzen(true).catch(() => {}); }
 $('#losKamera').onclick = async () => {
+  mitlaufenBeimEintreten();
   try {
     kameraModus.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: true });
     kameraModus.strom.getAudioTracks().forEach(t => t.stop());
@@ -1417,7 +1431,7 @@ requestAnimationFrame(schritt);
 const sicht = { ich: true, neigung: 0, ziehen: null };
 // Weiches Gesichtslicht wie beim Trickfilm-Dreh: kommt von der Kamera, damit die Figuren vor dir nie im Gegenlicht stehen
 { const l = new THREE.PointLight(0xffe2b8, 5, 10, 1.6); l.position.set(0, .3, .5); kamera.add(l); szene.add(kamera); }
-try { sicht.ich = localStorage.getItem('kiverse_ichsicht') !== '0'; } catch {}
+sicht.ich = true; // Diego 21.10.: immer aus deinen Augen starten
 function sichtKnopf() { $('#sichtKnopf').innerHTML = sicht.ich ? '👁<span class="txt"> Ich-Sicht</span>' : '🎥<span class="txt"> Von hinten</span>'; }
 $('#sichtKnopf').onclick = () => { sicht.ich = !sicht.ich; sicht.neigung = 0; try { localStorage.setItem('kiverse_ichsicht', sicht.ich ? '1' : '0'); } catch {} sichtKnopf(); };
 sichtKnopf();
@@ -1447,6 +1461,12 @@ const sunnyBlase = document.createElement('div'); sunnyBlase.className = 'blase'
 const tipp = { still: 0, zeigen: 0, nr: 0 };
 function sunnyTipps(dt) {
   sunnyBlase.hidden = true;
+  if (sunnyRede.bis > performance.now() && !gespr.n) {
+    const b = aufBildschirm(sunny.position.x, sunny.position.y + 1.6, sunny.position.z);
+    sunnyBlase.hidden = false; sunnyBlase.textContent = sunnyRede.text;
+    sunnyBlase.style.left = Math.max(120, Math.min(innerWidth - 120, b.sichtbar ? b.x : innerWidth / 2)) + 'px'; sunnyBlase.style.top = Math.max(110, Math.min(innerHeight - 200, b.sichtbar ? b.y : 140)) + 'px';
+    return;
+  }
   if (zustand.modus !== 'spiel' || zustand.innen || gespr.n) { tipp.still = 0; return; }
   tipp.still = Math.abs(sp.tempo) < .2 ? tipp.still + dt : 0;
   if (tipp.still > 20 && tipp.zeigen <= 0) { tipp.zeigen = 6; tipp.still = 0; tipp.nr++; }
@@ -1551,7 +1571,7 @@ async function sagen(text) {
   const n = gespr.n; if (!n) return; const tok = gespr.token;
   zeile(NAMEN[gespr.fid] || 'Figur', text); stimmeStopp();
   const u = n.f.userData, dauer = Math.max(1.5, text.length / 14);
-  const fertig = () => { if (u) u.redet = 0; if (kameraModus.an && gespr.n === n && tok === gespr.token && Erkennung && !gespr.hoert) setTimeout(() => { if (gespr.n === n && !gespr.hoert) horchen(); }, 350); };
+  const fertig = () => { if (u) u.redet = 0; if ((kameraModus.an || ohr.genutzt) && gespr.n === n && tok === gespr.token && !gespr.hoert && !ohr.rec) setTimeout(() => { if (gespr.n === n && !gespr.hoert && !ohr.rec) horchen(); }, 350); };
   if (KEY_K) try {
     const r = await fetch('api/stimme?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, text }) });
     if (tok !== gespr.token) return;
@@ -1568,19 +1588,151 @@ async function sagen(text) {
 }
 // Mikrofon: Spracherkennung des Browsers (Safari, Chrome), Schweizerdeutsch wird als Hochdeutsch erkannt
 const Erkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (!Erkennung) $('#gesprMikro').hidden = true;
-function horchenStopp() { try { gespr.hoert?.stop(); } catch {} gespr.hoert = null; $('#gesprMikro').classList.remove('an'); }
-function horchen() {
-  stimmeStopp(); if (gespr.n) gespr.n.f.userData.redet = 0;
-  const r = new Erkennung(); r.lang = 'de-CH'; r.interimResults = true; r.continuous = false;
-  let text = '';
-  r.onresult = e => { text = Array.from(e.results).map(x => x[0].transcript).join(' '); $('#gesprEingabe').value = text; };
-  r.onerror = e => { $('#gesprStatus').textContent = e.error === 'not-allowed' ? 'Mikrofon nicht erlaubt. Bitte im Browser erlauben oder tippen.' : ''; horchenStopp(); };
-  r.onend = () => { const war = gespr.hoert === r; horchenStopp(); if (war && text.trim()) senden(); };
-  gespr.hoert = r; $('#gesprMikro').classList.add('an'); $('#gesprStatus').textContent = 'Ich höre zu …';
-  try { r.start(); } catch { horchenStopp(); }
+// ---------- Reden (Diego 21.10.: «grosser Knopf, man kann vor allem reden», «Das Mikrofon muss richtig gut sein») ----------
+// Aufnahme auf dem Gerät, Ende automatisch nach einer Sprechpause, Text über den Server (OpenAI-Transkription); ohne Server die Browser-Erkennung.
+const ohr = { strom: null, ctx: null, rec: null, genutzt: false, stopp: null };
+if (!Erkennung && !(navigator.mediaDevices && window.MediaRecorder)) $('#gesprMikro').hidden = true;
+async function ohrStrom() {
+  if (ohr.strom && ohr.strom.getAudioTracks().some(t => t.readyState === 'live')) return ohr.strom;
+  ohr.strom = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+  return ohr.strom;
 }
-$('#gesprMikro').onclick = () => gespr.hoert ? horchenStopp() : horchen();
+function redeAnzeige(art) {
+  const k = $('#redeKnopf'); k.classList.toggle('an', art === 'hoert'); k.classList.toggle('denkt', art === 'denkt');
+  k.querySelector('.txt').textContent = art === 'hoert' ? 'Ich höre …' : art === 'denkt' ? '…' : 'Reden';
+  $('#gesprMikro').classList.toggle('an', art === 'hoert');
+}
+function horchenStopp() { try { gespr.hoert?.stop(); } catch {} gespr.hoert = null; if (ohr.rec) ohr.stopp?.(); else redeAnzeige(''); }
+function zuhoerenBrowser() {
+  return new Promise(ok => {
+    if (!Erkennung) return ok('');
+    const r = new Erkennung(); r.lang = 'de-CH'; r.interimResults = true; r.continuous = false; let text = '';
+    r.onresult = e => { text = Array.from(e.results).map(x => x[0].transcript).join(' '); if (gespr.n) $('#gesprEingabe').value = text; };
+    r.onerror = e => { if (e.error === 'not-allowed') $('#gesprStatus').textContent = 'Mikrofon nicht erlaubt. Bitte im Browser erlauben oder tippen.'; };
+    r.onend = () => { const war = gespr.hoert === r; gespr.hoert = null; redeAnzeige(''); ok(war ? text.trim() : ''); };
+    gespr.hoert = r; redeAnzeige('hoert'); try { r.start(); } catch { gespr.hoert = null; redeAnzeige(''); ok(''); }
+  });
+}
+async function zuhoeren() {
+  stimmeStopp();
+  if (!KEY_K || !window.MediaRecorder || !navigator.mediaDevices) return zuhoerenBrowser();
+  let strom; try { strom = await ohrStrom(); } catch { $('#gesprStatus').textContent = 'Mikrofon nicht erlaubt. Bitte erlauben oder tippen.'; return zuhoerenBrowser(); }
+  ohr.genutzt = true;
+  try { ohr.ctx = ohr.ctx || new (window.AudioContext || window.webkitAudioContext)(); await ohr.ctx.resume(); } catch {}
+  const typ = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'].find(t => MediaRecorder.isTypeSupported?.(t)) || '';
+  const rec = new MediaRecorder(strom, typ ? { mimeType: typ } : undefined), teile = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) teile.push(e.data); };
+  // Sprechpause erkennen: Lautstärke messen, Grundrauschen in den ersten Momenten lernen
+  let analyser = null, puffer = null, quelle = null;
+  if (ohr.ctx) try { quelle = ohr.ctx.createMediaStreamSource(strom); analyser = ohr.ctx.createAnalyser(); analyser.fftSize = 1024; quelle.connect(analyser); puffer = new Float32Array(analyser.fftSize); } catch { analyser = null; }
+  const t0 = performance.now(); let rauschen = 0, n = 0, gesprochen = false, stillSeit = 0, timer = 0;
+  return new Promise(ok => {
+    const ende = () => { clearInterval(timer); try { quelle?.disconnect(); } catch {} if (rec.state !== 'inactive') rec.stop(); };
+    ohr.stopp = ende; ohr.rec = rec; redeAnzeige('hoert'); $('#gesprStatus').textContent = 'Ich höre zu …';
+    rec.onstop = async () => {
+      ohr.rec = null; ohr.stopp = null;
+      const blob = new Blob(teile, { type: rec.mimeType || typ || 'audio/webm' });
+      if ((analyser && !gesprochen) || blob.size < 1200) { redeAnzeige(''); $('#gesprStatus').textContent = ''; return ok(''); }
+      redeAnzeige('denkt'); $('#gesprStatus').textContent = 'Ich schreibe mit …';
+      try {
+        const b64 = await new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1] || ''); f.readAsDataURL(blob); });
+        const r = await fetch('api/hoeren?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: b64, typ: blob.type }) });
+        const d = await r.json(); redeAnzeige(''); $('#gesprStatus').textContent = d.fehler || ''; ok((d.text || '').trim());
+      } catch { redeAnzeige(''); $('#gesprStatus').textContent = 'Das Mikrofon hat gerade Mühe. Versuch es nochmals.'; ok(''); }
+    };
+    rec.start(250);
+    timer = setInterval(() => {
+      const jetzt = performance.now(), dauer = jetzt - t0;
+      if (analyser) {
+        analyser.getFloatTimeDomainData(puffer); let q = 0; for (const v of puffer) q += v * v; const rms = Math.sqrt(q / puffer.length);
+        if (dauer < 350) { rauschen += rms; n++; return; }
+        const schwelle = Math.max(.012, (rauschen / Math.max(1, n)) * 2.6);
+        if (rms > schwelle) { gesprochen = true; stillSeit = 0; } else if (gesprochen) { stillSeit = stillSeit || jetzt; if (jetzt - stillSeit > 1300) return ende(); }
+        if (!gesprochen && dauer > 8000) return ende();
+      } else if (dauer > 7000) return ende();
+      if (dauer > 30000) ende();
+    }, 60);
+  });
+}
+async function horchen() {
+  const t = await zuhoeren(); if (!t) return;
+  if (gespr.n) { $('#gesprEingabe').value = t; senden(); } else sunnyBefehl(t);
+}
+$('#gesprMikro').onclick = () => (gespr.hoert || ohr.rec) ? horchenStopp() : horchen();
+$('#redeKnopf').onclick = () => {
+  if (gespr.hoert || ohr.rec) return horchenStopp();
+  if (!ohr.genutzt && !gespr.n && !zustand.innen) sunnyRede.erst = true;
+  horchen();
+};
+// ---------- Sunny führt dich (Diego 21.10.: «Hallo Sunny, ich möchte zu Hasi» – Sunny fliegt dich hin, setzt dich ab, du läufst weiter) ----------
+const sunnyRede = { text: '', bis: 0, erst: false };
+async function sunnySagt(text) {
+  sunnyRede.text = text; sunnyRede.bis = performance.now() + Math.max(3500, text.length * 75);
+  if (gespr.n) return;
+  stimmeStopp();
+  if (KEY_K) try {
+    const r = await fetch('api/stimme?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text }) });
+    if (r.status === 200) { audioEl = new Audio(URL.createObjectURL(await r.blob())); await audioEl.play(); return; }
+  } catch {}
+  if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); const vs = speechSynthesis.getVoices().filter(v => /^de/i.test(v.lang)); const v = vs.find(x => /CH/i.test(x.lang)) || vs[0]; if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'de-CH'; u.pitch = .85; u.rate = .95; speechSynthesis.speak(u); }
+}
+const ZIEL_WORTE = {
+  tor: ['otti', 'tor', 'eingang'], kiosk: ['hasi', 'kiosk'], placa: ['plaça', 'placa', 'platz', 'sophia', 'brunnen', 'eule'], schule: ['mama affe', 'mamaaffe', 'schule'],
+  schuhmacher: ['jackie', 'schuhmacher', 'schuh'], post: ['letti', 'post', 'taube', 'brief'], hafen: ['tinko', 'hafen', 'meer'], leuchtturm: ['leuchtturm', 'nova'],
+  ruinen: ['ruine', 'erinnerung'], fabrik: ['brix', 'fabrik'], funkenmarkt: ['funkenmarkt', 'markt', 'funken'], wohnung: ['wohnung', 'zuhause', 'daheim', 'werkstatt'],
+  sparky: ['sparky', 'human spark', 'praxis'], kino: ['kino', 'ava', 'film'], fompa: ['fompa', 'rechenstube', 'buchhaltung'], boerse: ['börse', 'boerse', 'coin', 'münz', 'ideen'],
+  singschule: ['kiki', 'kimo', 'sing'], labor: ['labor', 'minky'], hundeschule: ['wäf', 'waef', 'hund'], nest: ['fia', 'nest', 'berg'],
+};
+function zielFinden(t) {
+  const s = ' ' + t.toLowerCase() + ' '; let best = null;
+  for (const [id, worte] of Object.entries(ZIEL_WORTE)) for (const w of worte) { const i = s.indexOf(w); if (i >= 0 && (!best || w.length > best.w.length)) best = { id, w }; }
+  return best && ORTE.find(o => o.id === best.id);
+}
+async function sunnyBefehl(t) {
+  erlebt(`sagte zu Sunny: «${t.slice(0, 60)}»`);
+  const o = zielFinden(t);
+  if (o) { sunnySagt(`Komm, steig auf meinen Rücken! Ich fliege dich zu ${o.name}.`); setTimeout(() => sunnyFlug(o), 1200); return; }
+  if (zustand.innen && /\b(raus|hinaus|zurück|gasse|strasse)\b/i.test(t)) { rausGehen(); sunnySagt('Wir sind wieder draussen. Wohin möchtest du?'); return; }
+  if (/flieg|rundflug|rumführen|herumführen|zeig mir|tour/i.test(t)) {
+    const weiter = ORTE.filter(x => x.rein && x.z < sp.pos.z - 10).sort((a, b) => b.z - a.z)[0] || ORTE.find(x => x.id === 'kiosk');
+    sunnySagt(`Halt dich gut fest! Ich zeige dir ${weiter.name}.`); setTimeout(() => sunnyFlug(weiter), 1200); return;
+  }
+  let antwort = '';
+  if (KEY_K) try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text: t + ' (Diego läuft gerade durchs KI-Verse. Wenn er irgendwohin will, sag ihm, er soll einfach den Ort oder die Figur nennen, dann fliegst du ihn hin.)' }) }); antwort = (await r.json()).text || ''; } catch {}
+  sunnySagt(antwort || 'Sag mir einfach, wohin du möchtest, zum Beispiel «zu Hasi» oder «zu Otti». Dann fliege ich dich hin!');
+}
+const flug = { an: false, t: 0, dauer: 6, von: new THREE.Vector3(), nach: new THREE.Vector3(), o: null, dx: 0, dz: -1, p: new THREE.Vector3() };
+function sunnyFlug(o) {
+  if (flug.an) return;
+  if (gespr.n) gespraechSchliessen();
+  const los = () => {
+    flug.o = o; flug.t = 0; flug.von.copy(sp.pos); flug.nach.set(Math.max(-1.5, Math.min(1.5, (o.x ?? 0) * .3)), 0, o.z + 4.5);
+    flug.dauer = Math.min(13, Math.max(4.5, flug.von.distanceTo(flug.nach) / 16)); flug.an = true;
+    kamZiel.aktiv = true; $('#rein').hidden = true; erlebt(`flog mit Sunny zu ${o.name}`);
+  };
+  if (zustand.innen) { rausGehen(); setTimeout(los, 900); } else los();
+}
+function flugSchritt(dt) {
+  if (!flug.an) return;
+  flug.t += dt; const k = Math.min(1, flug.t / flug.dauer), e = k * k * (3 - 2 * k);
+  const hoch = Math.sin(k * Math.PI) * Math.min(24, 7 + flug.dauer * 1.6);
+  flug.p.copy(flug.von).lerp(flug.nach, e);
+  const dz = flug.nach.z - flug.von.z, dx = flug.nach.x - flug.von.x, l = Math.hypot(dx, dz) || 1; flug.dx = dx / l; flug.dz = dz / l;
+  kamera.position.set(flug.p.x, 1.7 + hoch + Math.sin(flug.t * 2.2) * .25, flug.p.z);
+  kamera.lookAt(flug.p.x + flug.dx * 12, 1.7 + hoch * .55, flug.p.z + flug.dz * 12);
+  kamPos.copy(kamera.position); kamZiel.pos.copy(kamera.position); kamZiel.blick.set(flug.p.x + flug.dx * 12, 1.7 + hoch * .55, flug.p.z + flug.dz * 12); kamBlick.copy(kamZiel.blick);
+  sp.pos.x = flug.p.x; sp.pos.z = flug.p.z; sp.tempo = 0; sp.richtung = Math.atan2(flug.dx, flug.dz);
+  if (k >= 1) {
+    flug.an = false; sp.richtung = Math.PI; kamZiel.aktiv = false; const o = flug.o;
+    funkenRegen(sp.pos.x, 2.4, sp.pos.z - 2, 18);
+    sunnySagt(`Da sind wir: ${o.name}!` + (o.rein ? ' Komm, wir gehen rein.' : ' Schau dich um.'));
+    setTimeout(() => {
+      if (flug.an || zustand.innen || gespr.n) return;
+      if (o.rein) reinGehen(o); else { const n = npc.find(x => x.ort === o.id); if (n && NAMEN[figurVon(n)]) gespraechOeffnen(n); }
+    }, 2200);
+  }
+}
+window.__flug = flug; window.__sunnyBefehl = sunnyBefehl;
 $('#gesprSenden').onclick = senden;
 $('#gesprEingabe').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); senden(); } if (e.key === 'Escape') gespraechSchliessen(); });
 $('#gesprZu').onclick = gespraechSchliessen;

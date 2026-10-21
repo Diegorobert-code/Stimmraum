@@ -178,6 +178,7 @@ async function novaAntwort(ich, text) {
 // «Tinko, zeichne …» = Tinko malt ein Bild und legt es in die Ablage. Tagesgrenzen halten die Kosten klein.
 const TINKO_KEY = process.env.TINKO_KEY || '';
 const TINKO_BASIS = process.env.TINKO_BASIS || 'https://api.openai.com';
+const hoerZaehler = { tag: '', n: 0 };
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
 const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
 const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '250', 10), RUNDEN = 2;
@@ -2053,6 +2054,22 @@ const server = http.createServer(async (req, res) => {
       if (a.vergessen) return json(res, 200, { geloescht: figurVergessen(String(a.figur || ''), wer) });
       const t = sauber(a.text, 600); if (!t) return json(res, 400, { fehler: 'Was möchtest du sagen?' });
       return json(res, 200, await figurReden(String(a.figur || ''), wer, t, req.zugang.rolle === 'besitzer'));
+    }
+    // Mikrofon (Diego 21.10.: «Das Mikrofon muss richtig gut sein»): Aufnahme vom Handy, Text über OpenAI-Transkription, Tageslimit
+    if (url.pathname === '/api/hoeren' && req.method === 'POST') {
+      const a = await body(req, 3 * 1024 * 1024);
+      if (!TINKO_KEY) return json(res, 400, { fehler: 'Kein Schlüssel für das Mikrofon.' });
+      const heute = new Date().toISOString().slice(0, 10); if (hoerZaehler.tag !== heute) { hoerZaehler.tag = heute; hoerZaehler.n = 0; }
+      if (++hoerZaehler.n > 600) return json(res, 429, { fehler: 'Für heute genug zugehört.' });
+      const roh = Buffer.from(String(a.audio || ''), 'base64'); if (roh.length < 800) return json(res, 400, { fehler: 'Nichts gehört.' });
+      const typ = /^audio\/[a-z0-9.+-]+/.test(a.typ || '') ? a.typ.split(';')[0] : 'audio/webm', end = typ.includes('mp4') ? 'mp4' : typ.includes('ogg') ? 'ogg' : typ.includes('wav') ? 'wav' : 'webm';
+      const f = new FormData(); f.append('file', new Blob([roh], { type: typ }), 'sprache.' + end); f.append('model', 'gpt-4o-mini-transcribe'); f.append('language', 'de');
+      f.append('prompt', 'Schweizer Hochdeutsch. Namen: Diego, Nova, Lumo, Tinko, Sunny, Flitz, Fia, Otti, Sophia, Jackie, Kimo, Fompa, Sparky, Zahnböcklein, Letti, Brix, Ava, Minky, KI-Verse.');
+      try {
+        const r = await fetch(TINKO_BASIS + '/v1/audio/transcriptions', { method: 'POST', body: f, signal: AbortSignal.timeout(30000), headers: { Authorization: 'Bearer ' + TINKO_KEY } });
+        const d = await r.json(); if (!r.ok) return json(res, 502, { fehler: 'Das Mikrofon hat gerade Mühe.' });
+        return json(res, 200, { text: sauber(d.text, 600) });
+      } catch { return json(res, 502, { fehler: 'Das Mikrofon hat gerade Mühe.' }); }
     }
     if (url.pathname === '/api/stimme' && req.method === 'POST') {
       const a = await body(req), s = FIGUREN_KI[a.figur] && await figurStimme(String(a.figur), String(a.text || ''));
