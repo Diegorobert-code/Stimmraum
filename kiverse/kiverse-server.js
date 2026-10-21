@@ -356,11 +356,11 @@ async function kiFrage(kid, system, inhalt) {
   if (!r.ok) console.error(`${kid} antwortet nicht:`, r.status, d?.error?.message || '');
   return d?.choices?.[0]?.message?.content || null;
 }
-async function tinkoBild(wunsch, hoch = false) {
+async function tinkoBild(wunsch, hoch = false, stil = 'Stil: 3D-Animationsfilm, warm, Nachtblau und Gold, Mittelmeer-Städtchen, keine Handys, keine echten Personen, keine Schrift.') {
   const r = await fetch(TINKO_BASIS + '/v1/images/generations', { method: 'POST', signal: AbortSignal.timeout(120000),
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
     body: JSON.stringify({ model: TINKO_BILD_MODELL, n: 1, size: hoch ? '1024x1536' : '1024x1024', quality: 'low', output_format: 'jpeg',
-      prompt: 'Stil: 3D-Animationsfilm, warm, Nachtblau und Gold, Mittelmeer-Städtchen, keine Handys, keine echten Personen, keine Schrift. Motiv: ' + wunsch }) });
+      prompt: stil + ' Motiv: ' + wunsch }) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) console.error('Tinko malt nicht:', r.status, d?.error?.message || '');
   const b64 = d?.data?.[0]?.b64_json;
@@ -1575,6 +1575,24 @@ function zentraleStand() {
     ergebnisse: { zahl: ergebnisse.length, neu: ergebnisse.filter(e => e.neu).length },
     claude: { offen: claudeAuftraege.filter(c => c.status === 'offen').length, inArbeit: claudeAuftraege.filter(c => c.status === 'in_arbeit').length } };
 }
+// Nova zeichnet beim Reden (Diego 21.10.: Zeichnen = Novas Werkzeug Nummer 1). Tinko malt, das Bild liegt unter einer unratbaren Adresse.
+const NOVA_BILD_ORDNER = path.join(DATEN, 'nova-bilder'), NOVA_BILD_MAX = 300;
+const NOVA_STIL = 'Stil: KI-Pixel, 3D-Animationsfilm, weiches Kinolicht, warme Farben, freundliche runde Figuren, Entwurf oder Storyboard-Bild, keine echten Personen, keine Markennamen, keine Schrift.';
+const novaBilder = new Map();
+const basisVon = (req) => (req.headers['x-forwarded-proto'] || (String(req.headers.host || '').startsWith('localhost') ? 'http' : 'https')) + '://' + req.headers.host;
+async function novaMalen(tok, wunsch, url) {
+  novaBilder.set(tok, 'malt');
+  const bild = await tinkoBild(wunsch, false, NOVA_STIL).catch(() => null);
+  if (!bild) { novaBilder.set(tok, 'fehler'); return false; }
+  fs.mkdirSync(NOVA_BILD_ORDNER, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(path.join(NOVA_BILD_ORDNER, tok + '.jpg'), Buffer.from(bild.split(',')[1], 'base64'), { mode: 0o600 });
+  try { const alle = fs.readdirSync(NOVA_BILD_ORDNER).map(f => ({ f, t: fs.statSync(path.join(NOVA_BILD_ORDNER, f)).mtimeMs })).sort((x, y) => x.t - y.t);
+    alle.slice(0, Math.max(0, alle.length - NOVA_BILD_MAX)).forEach(x => fs.rm(path.join(NOVA_BILD_ORDNER, x.f), () => {})); } catch {}
+  ablageNeu('Tinko', 'Für Nova gemalt: ' + wunsch, bild);
+  ergebnisNeu({ von: 'Nova', titel: 'Bild: ' + sauber(wunsch, 80), text: 'Gemalt für Diego: ' + wunsch, link: url });
+  novaBilder.set(tok, 'fertig');
+  return true;
+}
 // Ergebnisse für Diego: fertige Texte, Briefe und Kopierbares direkt in Novas Fenster, ohne fremde Links.
 const ERGEBNIS_DATEI = path.join(DATEN, 'nova-ergebnisse.json');
 const ERGEBNIS_MAX = 200, ERGEBNIS_MAX_TEXT = 300000;
@@ -1750,6 +1768,26 @@ const server = http.createServer(async (req, res) => {
         const r = await zentraleAktion({ art: 'frage', an, text: a.frage });
         return json(res, 200, { text: r ? `${r.name}: ${r.text}` : 'Keine Antwort bekommen.', figuren: [...new Set(['lumo', 'tinko', ...Object.keys(FIGUREN_KI)])] });
       }
+      // Nova zeichnet: Tinko malt, Antwort mit Bild-Adresse; dauert es länger als 20 s, kommt die Adresse sofort und was=bild sagt, wann es fertig ist
+      if (was === 'male') {
+        const wunsch = sauber(a.text, 1000).replace(/\b(pixar|disney|dreamworks|ghibli)\b/gi, '').replace(/\s+/g, ' ').trim();
+        if (!wunsch) return json(res, 200, { antwort: 'Was soll ich malen?' });
+        if (!TINKO_KEY) return json(res, 200, { antwort: 'Tinko ist gerade nicht verbunden.' });
+        const gesperrt = bildGesperrt(); if (gesperrt) return json(res, 200, { antwort: gesperrt });
+        bildZaehlen();
+        const tok = crypto.randomBytes(16).toString('hex'), bildUrl = basisVon(req) + '/nova-bild/' + tok + '.jpg';
+        const r = await Promise.race([novaMalen(tok, wunsch, bildUrl).catch(() => false), new Promise(ok => setTimeout(() => ok('malt'), 20000))]);
+        if (r === true) return json(res, 200, { antwort: 'Bild ist fertig.', bild: bildUrl, id: tok, fertig: true });
+        if (r === false) return json(res, 200, { antwort: 'Tinko konnte das Bild gerade nicht malen.' });
+        return json(res, 200, { antwort: 'Ich male, kommt gleich.', bild: bildUrl, id: tok, fertig: false });
+      }
+      if (was === 'bild') {
+        const tok = String(a.id || '').toLowerCase();
+        const st = /^[a-f0-9]{32}$/.test(tok) ? novaBilder.get(tok) || (fs.existsSync(path.join(NOVA_BILD_ORDNER, tok + '.jpg')) ? 'fertig' : '') : '';
+        if (st === 'fertig') return json(res, 200, { antwort: 'Bild ist fertig.', bild: basisVon(req) + '/nova-bild/' + tok + '.jpg', id: tok, fertig: true });
+        if (st === 'malt') return json(res, 200, { antwort: 'Ich male noch.', id: tok, fertig: false });
+        return json(res, 200, { antwort: st === 'fehler' ? 'Tinko konnte das Bild nicht malen.' : 'Dieses Bild kenne ich nicht.', id: tok, fertig: false, fehler: true });
+      }
       if (was === 'sichern') return json(res, 200, { text: serverSichern() });
       if (was === 'auftrag') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
@@ -1764,6 +1802,8 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { text: serverText() });
     }
+    const mnb = url.pathname.match(/^\/nova-bild\/([a-f0-9]{32})\.jpg$/);
+    if (mnb) { try { const d = fs.readFileSync(path.join(NOVA_BILD_ORDNER, mnb[1] + '.jpg')); res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' }); return res.end(d); } catch { return json(res, 404, { fehler: 'Bild noch nicht da.' }); } }
     if (url.pathname === '/nova-sw.js') { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(NOVA_SW); }
     if (url.pathname === '/nova.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Nova', short_name: 'Nova', display: 'standalone', background_color: '#070e24', theme_color: '#070e24' })); }
     if (url.pathname === '/koppeln') {
