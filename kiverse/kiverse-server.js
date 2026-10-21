@@ -1362,8 +1362,11 @@ async function appSenden(req, res, url) {
 // Sense Engine für Apps im KI-Verse: nur mit gültiger Einladung, nur /v1/… und /erfahrung, Schlüssel setzt der Server
 async function senseWeiter(req, res, url) {
   const m = url.pathname.match(/^\/sense\/([^/]+)(\/(?:v1\/[a-z0-9_\-/]+|erfahrung))$/);
-  if (!m || !zugang(decodeURIComponent(m[1]))) return json(res, 401, { fehler: 'Keine Einladung.' });
+  const zu = m && zugang(decodeURIComponent(m[1]));
+  if (!zu) return json(res, 401, { fehler: 'Keine Einladung.' });
   if (!NOVA_KEY) return json(res, 503, { fehler: 'Sense Engine ist nicht verbunden.' });
+  // Gespeicherte Erfahrungen (auch Diegos Messungen aus Human Sparks) liest nur Diego; Gäste dürfen nur schreiben
+  if (m[2] === '/erfahrung' && req.method !== 'POST' && zu.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
   const daten = req.method === 'POST' ? await body(req, 8 * 1024 * 1024) : null;
   const r = await fetch(NOVA_BASIS + m[2] + url.search, { method: req.method === 'POST' ? 'POST' : 'GET', signal: AbortSignal.timeout(90000),
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY, 'X-Nova-App': String(req.headers['x-nova-app'] || 'KI-Verse App').slice(0, 60) },
