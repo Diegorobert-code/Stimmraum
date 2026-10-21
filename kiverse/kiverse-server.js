@@ -254,6 +254,13 @@ let figurGedaechtnis = {};
 try { figurGedaechtnis = JSON.parse(fs.readFileSync(FIGUR_GEDAECHTNIS_DATEI, 'utf8')); } catch {}
 const figurGedaechtnisSpeichern = () => { try { fs.writeFileSync(FIGUR_GEDAECHTNIS_DATEI, JSON.stringify(figurGedaechtnis), { mode: 0o600 }); } catch (e) { console.error('Figuren-Gedächtnis nicht gespeichert:', e.message); } };
 const FIGUR_TAG = { tag: '', person: new Map(), total: 0 };
+// Erfahrungs-Tagebuch (Diegos Einwilligung 21.10.2026 02:11): Diegos Gespräche mit allen Figuren an einem Ort, damit Nova daraus lernt.
+// Nur Diegos eigene Gespräche, keine Gäste. Widerruf: Datei leeren (kiverse_erfahrungen {leeren:true}).
+const ERFAHRUNG_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'erfahrungen.jsonl');
+function erfahrungNeu(e) { try { fs.appendFileSync(ERFAHRUNG_DATEI, JSON.stringify(e) + '\n', { mode: 0o600 }); } catch (er) { console.error('Erfahrung nicht gespeichert:', er.message); } }
+function erfahrungenLetzte(n) {
+  try { return fs.readFileSync(ERFAHRUNG_DATEI, 'utf8').trim().split('\n').slice(-n).map(z => JSON.parse(z)); } catch { return []; }
+}
 async function figurReden(fid, wer, text, besitzer) {
   const f = FIGUREN_KI[fid]; if (!f) return { fehler: 'Diese Figur kenne ich nicht.' };
   const heute = jetzt().slice(0, 10); if (FIGUR_TAG.tag !== heute) Object.assign(FIGUR_TAG, { tag: heute, person: new Map(), total: 0 });
@@ -272,6 +279,7 @@ async function figurReden(fid, wer, text, besitzer) {
   if (!a) return { text: 'Hm, mir fehlen gerade die Worte. Sag es mir bitte nochmals.' };
   liste.push({ wer, du: sauber(text, 600), ich: sauber(a, 900), zeit: jetzt() });
   figurGedaechtnis[fid] = liste.slice(-200); figurGedaechtnisSpeichern();
+  if (besitzer) erfahrungNeu({ zeit: jetzt(), figur: f.name, du: sauber(text, 600), ich: sauber(a, 900) });
   return { text: a };
 }
 function figurVergessen(fid, wer) {
@@ -990,6 +998,10 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { auftrag_id: { type: 'string' }, von: { type: 'string', description: 'wer übernimmt, z. B. Nova-Routine oder ein Thread' } }, required: ['auftrag_id'] } },
   { name: 'kiverse_claude_erledigt', description: 'Nova-Auftrag abschliessen: das Ergebnis landet in Novas Fenster «📂 Ergebnisse» (Markdown, Codeblöcke bekommen Kopieren-Knopf), Nova sagt es Diego.',
     inputSchema: { type: 'object', properties: { auftrag_id: { type: 'string' }, von: { type: 'string' }, titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string', description: 'optional https-Link' } }, required: ['auftrag_id', 'titel', 'text'] } },
+  { name: 'kiverse_push', description: 'Push-Nachricht an Diegos Handy (Nova-App auf dem Home-Bildschirm), nur wenn etwas fertig ist oder sein Go braucht. Titel kurz, Text höchstens 2 Stichworte, optional https-Link. Keine Schlüssel, keine Gesundheits- oder Klientendaten.',
+    inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' } }, required: ['text'] } },
+  { name: 'kiverse_erfahrungen', description: 'Diegos Erfahrungs-Tagebuch lesen: seine Gespräche mit allen Figuren (mit seiner Einwilligung, intern, nie weitergeben). leeren:true löscht alles (nur auf Diegos Wunsch).',
+    inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'wie viele, Standard 30, höchstens 200' }, leeren: { type: 'boolean' } } } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -1151,6 +1163,7 @@ async function werkzeug(name, a = {}) {
       const e = ergebnisNeu({ von: a.von || c.wer || 'Claude', titel: a.titel, text: a.text, link: a.link });
       if (e.fehler) return text(e.fehler, true);
       Object.assign(c, { status: 'fertig', ergebnis: e.id, fertigZeit: jetzt() }); claudeSpeichern();
+      pushSenden('Nova: ' + sauber(a.titel, 60), 'Antwort liegt unter 📂 Ergebnisse.', '').catch(() => {});
       return text(`Erledigt, liegt in Novas Fenster «📂 Ergebnisse» (${e.id}).`);
     }
     case 'kiverse_handy_koppeln': {
@@ -1166,6 +1179,12 @@ async function werkzeug(name, a = {}) {
       const e = ergebnisNeu(a);
       return e.fehler ? text(e.fehler, true) : text(`In Novas Fenster «📂 Ergebnisse» gelegt (${e.id}). Diego sieht es unter «✨ Nova».`);
     }
+    case 'kiverse_erfahrungen': {
+      if (a.leeren) { try { fs.rmSync(ERFAHRUNG_DATEI, { force: true }); } catch {} return text('Erfahrungs-Tagebuch gelöscht.'); }
+      const l = erfahrungenLetzte(Math.min(200, Math.max(1, parseInt(a.anzahl || 30, 10))));
+      return text(l.length ? l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.figur} | Diego: ${x.du} | ${x.figur}: ${x.ich}`).join('\n') : 'Noch keine Erfahrungen gespeichert.');
+    }
+    case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : ''));
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
   }
@@ -1407,7 +1426,7 @@ Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', week
 
 Was du dir über Diego gemerkt hast:
 ${erinnerungen}
-${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}
+${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}${(() => { const l = erfahrungenLetzte(12); return l.length ? '\nDiegos letzte Erlebnisse mit den Figuren (Erfahrungs-Tagebuch, mit seiner Einwilligung, intern):\n' + l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} ${x.figur}: Diego «${x.du.slice(0, 140)}» → «${x.ich.slice(0, 140)}»`).join('\n') : ''; })()}
 ${wissen ? '\nHintergrundwissen DR Lab (intern):\n' + wissen.slice(0, 6000) : ''}
 
 ${ZENTRALE_FORMAT}`;
@@ -1566,6 +1585,65 @@ async function zentraleSeite() {
   return b;
 }
 
+// ---------- Web-Push an Diegos Handy (Diego 21.10.: «bring Nova bei, eine Push-Nachricht zu versenden») ----------
+// Eigenes VAPID-Schlüsselpaar (daten/vapid.json), Verschlüsselung nach RFC 8291 (aes128gcm), ohne Zusatzpaket.
+// Geht auf dem iPhone nur aus der Web-App auf dem Home-Bildschirm, nach einmal «Mitteilungen erlauben».
+const VAPID_DATEI = path.join(DATEN, 'vapid.json'), PUSH_DATEI = path.join(DATEN, 'push-abos.json');
+const b64u = (b) => Buffer.from(b).toString('base64url');
+const VAPID = (() => {
+  try { return JSON.parse(fs.readFileSync(VAPID_DATEI, 'utf8')); } catch {}
+  const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const v = privateKey.export({ format: 'jwk' });
+  try { fs.writeFileSync(VAPID_DATEI, JSON.stringify(v), { mode: 0o600 }); } catch {}
+  return v;
+})();
+const VAPID_OEFFENTLICH = b64u(Buffer.concat([Buffer.from([4]), Buffer.from(VAPID.x, 'base64url'), Buffer.from(VAPID.y, 'base64url')]));
+let pushAbos = (() => { try { return JSON.parse(fs.readFileSync(PUSH_DATEI, 'utf8')); } catch { return []; } })();
+const pushSpeichern = () => { try { fs.writeFileSync(PUSH_DATEI, JSON.stringify(pushAbos), { mode: 0o600 }); } catch {} };
+function pushAboNeu(a) {
+  const endpoint = String(a?.endpoint || ''), p256dh = String(a?.keys?.p256dh || ''), auth = String(a?.keys?.auth || '');
+  if (!/^https:\/\/[^\s]{10,800}$/.test(endpoint) || !p256dh || !auth) return { fehler: 'Ungültiges Abo.' };
+  pushAbos = pushAbos.filter(x => x.endpoint !== endpoint).concat({ endpoint, keys: { p256dh, auth }, seit: jetzt() }).slice(-5);
+  pushSpeichern(); return { ok: true };
+}
+const hmac = (k, d) => crypto.createHmac('sha256', k).update(d).digest();
+function pushVerschluesseln(abo, inhalt) {
+  const ua = Buffer.from(abo.keys.p256dh, 'base64url'), auth = Buffer.from(abo.keys.auth, 'base64url');
+  const e = crypto.createECDH('prime256v1'); e.generateKeys();
+  const as = e.getPublicKey(), geteilt = e.computeSecret(ua), salz = crypto.randomBytes(16);
+  const ikm = hmac(hmac(auth, geteilt), Buffer.concat([Buffer.from('WebPush: info\0'), ua, as, Buffer.from([1])])).subarray(0, 32);
+  const prk = hmac(salz, ikm);
+  const cek = hmac(prk, Buffer.from('Content-Encoding: aes128gcm\0\x01', 'binary')).subarray(0, 16);
+  const nonce = hmac(prk, Buffer.from('Content-Encoding: nonce\0\x01', 'binary')).subarray(0, 12);
+  const c = crypto.createCipheriv('aes-128-gcm', cek, nonce);
+  const geheim = Buffer.concat([c.update(Buffer.concat([Buffer.from(inhalt), Buffer.from([2])])), c.final(), c.getAuthTag()]);
+  const rs = Buffer.alloc(4); rs.writeUInt32BE(4096);
+  return Buffer.concat([salz, rs, Buffer.from([as.length]), as, geheim]);
+}
+function vapidKopf(endpoint) {
+  const kopf = b64u(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+  const daten = b64u(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://kiverse-179-237-127-58.sslip.io' }));
+  const sig = crypto.sign('sha256', Buffer.from(kopf + '.' + daten), { key: crypto.createPrivateKey({ key: VAPID, format: 'jwk' }), dsaEncoding: 'ieee-p1363' });
+  return `vapid t=${kopf}.${daten}.${b64u(sig)}, k=${VAPID_OEFFENTLICH}`;
+}
+async function pushSenden(titel, text, link) {
+  if (!pushAbos.length) return 'Noch kein Handy für Push angemeldet (in Nova einmal «🔔» tippen).';
+  const inhalt = JSON.stringify({ titel: sauber(titel, 80) || 'Nova', text: sauber(text, 300), link: link || '' });
+  let ok = 0;
+  for (const abo of [...pushAbos]) {
+    try {
+      const r = await fetch(abo.endpoint, { method: 'POST', body: pushVerschluesseln(abo, inhalt), signal: AbortSignal.timeout(15000),
+        headers: { 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'aes128gcm', TTL: '86400', Urgency: 'normal', Authorization: vapidKopf(abo.endpoint) } });
+      if (r.status === 404 || r.status === 410) { pushAbos = pushAbos.filter(x => x !== abo); pushSpeichern(); } else if (r.ok) ok++;
+      else console.log('Push abgelehnt', r.status);
+    } catch (e) { console.log('Push-Fehler', e.message); }
+  }
+  return ok ? `Push gesendet (${ok} Gerät${ok > 1 ? 'e' : ''}).` : 'Push ging nicht durch.';
+}
+const NOVA_SW = `self.addEventListener('push', e => { let d = {}; try { d = e.data.json(); } catch { d = { text: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.titel || 'Nova', { body: d.text || '', data: { link: d.link || '' }})); });
+self.addEventListener('notificationclick', e => { e.notification.close(); const l = e.notification.data && e.notification.data.link;
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(w => { if (w[0]) { w[0].focus(); if (l) w[0].navigate(l); } else if (l) clients.openWindow(l); })); });`;
 // ---------- Handy koppeln ohne Terminal (Diego 20.10.: «verbrauchergerechte Variante») ----------
 // Claude erzeugt über den Connector einen 6-stelligen Code; Diego tippt ihn auf /koppeln und bekommt seinen Besitzer-Link.
 const NOVA_APP_HASH = process.env.NOVA_APP_HASH || '226ec9802628fc91552e27814957bee88db067676e8f7d8311ae2e90ff61597b';
@@ -1639,6 +1717,8 @@ const server = http.createServer(async (req, res) => {
       }
       return json(res, 200, { text: serverText() });
     }
+    if (url.pathname === '/nova-sw.js') { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(NOVA_SW); }
+    if (url.pathname === '/nova.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Nova', short_name: 'Nova', display: 'standalone', background_color: '#070e24', theme_color: '#070e24' })); }
     if (url.pathname === '/koppeln') {
       if (req.method === 'POST') { const a = await body(req, 1024); return json(res, 200, koppelPruefen(a.code)); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(KOPPEL_SEITE);
@@ -1653,6 +1733,8 @@ const server = http.createServer(async (req, res) => {
     }
     // Neuer Besitzer-Link und neue Connector-Adresse (nur Diego, Knopf in der Welt). Die alten gelten sofort nicht mehr.
     // Die neuen Werte gehen nur an Diegos Bildschirm zurück, nie in ein Protokoll.
+    if (url.pathname === '/api/push/schluessel') return json(res, 200, { schluessel: VAPID_OEFFENTLICH, abos: pushAbos.length });
+    if (url.pathname === '/api/push/abo' && req.method === 'POST') { if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' }); const e = pushAboNeu(await body(req, 4096)); return json(res, e.fehler ? 400 : 200, e.fehler ? e : { ok: true, text: await pushSenden('Nova', 'Push ist an. Ich melde mich, wenn etwas fertig ist.') }); }
     if (url.pathname === '/api/schluessel-neu' && req.method === 'POST') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
       const alt = BESITZER;
