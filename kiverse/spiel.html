@@ -1262,7 +1262,7 @@ function schritt() {
   else if (spieler && sicht.ich && kamZiel.aktiv) spieler.visible = false;
   if (handy.selfie) selfieMalen();
   // Zauberspiegel (Diego 21.10.: Laptop-Kamera): stehst du still, dreht die Kamera vor deine Figur, und sie macht dein Gesicht nach
-  spiegelSicht.an = !!(spieler && kameraModus.an && gesicht.da && zustand.modus === 'spiel' && !kamZiel.aktiv && !handy.ar && !gespr.n && Math.abs(sp.tempo) < .3);
+  spiegelSicht.an = !!(spieler && !sicht.ich && kameraModus.an && gesicht.da && zustand.modus === 'spiel' && !kamZiel.aktiv && !handy.ar && !gespr.n && Math.abs(sp.tempo) < .3);
   spiegelSicht.t = spiegelSicht.an ? spiegelSicht.t + dt : 0;
   if (spiegelSicht.t > 1.2) {
     const k = Math.min(1, (spiegelSicht.t - 1.2) / 1.5), kk = k * k * (3 - 2 * k);
@@ -1303,6 +1303,7 @@ function schritt() {
   for (const n of npc) figurBewegen(n.f, zeit, 0);
   figurenLeben(dt, zeit);
   figurenSpielen(dt, zeit);
+  sunnyTipps(dt);
   if (ortObjekte.hasi) ortObjekte.hasi.position.y = .9 + Math.abs(Math.sin(zeit * 2.5)) * .12;
   zustand.partikel = zustand.partikel.filter(p => { p.v.y -= 9 * dt; p.s.position.addScaledVector(p.v, dt); p.t -= dt * .9; p.s.material.opacity = Math.max(0, p.t); if (p.t <= 0) { szene.remove(p.s); return false; } return true; });
 
@@ -1428,7 +1429,9 @@ const blickV = new THREE.Vector3();
 function ichSichtKamera(zeit) {
   const bob = sp.amBoden ? Math.abs(Math.sin(zeit * 9)) * Math.min(1, Math.abs(sp.tempo) / 6) * .07 : 0;
   kamera.position.set(sp.pos.x, sp.pos.y + 1.68 + bob, sp.pos.z);
-  blickV.set(sp.pos.x + Math.sin(sp.richtung) * 10, sp.pos.y + 1.6 + Math.tan(sicht.neigung + (innerHeight > innerWidth ? .1 : 0)) * 10, sp.pos.z + Math.cos(sp.richtung) * 10);
+  // Ich-Perspektive mit Kamera (Diego 21.10.: «ich beobachte aus der Ich-Perspektive, durch Handy- und Computer-Kamera»): Kopf drehen = umschauen
+  const kg = gesicht.da && kameraModus.an, r = sp.richtung - (kg ? gesicht.yaw * .7 : 0), ng = sicht.neigung - (kg ? gesicht.pitch * .5 : 0);
+  blickV.set(sp.pos.x + Math.sin(r) * 10, sp.pos.y + 1.6 + Math.tan(ng + (innerHeight > innerWidth ? .1 : 0)) * 10, sp.pos.z + Math.cos(r) * 10);
   kamera.lookAt(blickV);
 }
 // Figuren leben: schauen dich an, blinzeln, bewegen beim Reden Mund und Arme
@@ -1438,6 +1441,22 @@ const zuMir = new THREE.Vector3();
 const SPIEL_SAETZE = ['Hallo Flitz!', 'Fang mich doch!', 'Huiii, bist du schnell!', 'Flitz, mach einen Looping!', 'Komm, wir spielen!', 'Kitzel mich nicht, hihi!'];
 const spielBlase = document.createElement('div'); spielBlase.className = 'blase'; spielBlase.hidden = true; document.body.appendChild(spielBlase);
 const besuch = { n: null, t: 0, naechster: 4, satz: '' }; window.__besuch = besuch;
+// Sunny kommt, wenn du nicht weiterweisst (Diego 21.10.): stehst du lange still, gibt er dir einen Tipp
+const SUNNY_TIPPS = ['Ich bin Sunny! Geh zu einem Laden und tippe «Rein». Jeder Laden ist eine App.', 'Drinnen kannst du mit der Figur reden: tippe 🎙 und sprich einfach.', 'Sammle die goldenen Funken, dann wartet am Ende eine Überraschung.', 'Mit der Kamera dreht sich dein Blick mit deinem Kopf. Lächle mal!', 'Sag «Hilfe», wenn du nicht weiterweisst, dann komme ich.'];
+const sunnyBlase = document.createElement('div'); sunnyBlase.className = 'blase'; sunnyBlase.hidden = true; document.body.appendChild(sunnyBlase);
+const tipp = { still: 0, zeigen: 0, nr: 0 };
+function sunnyTipps(dt) {
+  sunnyBlase.hidden = true;
+  if (zustand.modus !== 'spiel' || zustand.innen || gespr.n) { tipp.still = 0; return; }
+  tipp.still = Math.abs(sp.tempo) < .2 ? tipp.still + dt : 0;
+  if (tipp.still > 20 && tipp.zeigen <= 0) { tipp.zeigen = 6; tipp.still = 0; tipp.nr++; }
+  if (tipp.zeigen > 0) {
+    tipp.zeigen -= dt;
+    const b = aufBildschirm(sunny.position.x, sunny.position.y + 1.6, sunny.position.z);
+    sunnyBlase.hidden = false; sunnyBlase.textContent = SUNNY_TIPPS[(tipp.nr - 1) % SUNNY_TIPPS.length];
+    sunnyBlase.style.left = Math.max(120, Math.min(innerWidth - 120, b.sichtbar ? b.x : innerWidth / 2)) + 'px'; sunnyBlase.style.top = Math.max(110, b.sichtbar ? b.y : 140) + 'px';
+  }
+}
 function figurenSpielen(dt, zeit) {
   spielBlase.hidden = true;
   if (zustand.modus !== 'spiel' || zustand.innen || gespr.n) { besuch.n = null; return; }
@@ -1513,7 +1532,7 @@ async function senden() {
   if (tok !== gespr.token) return;
   $('#gesprStatus').textContent = '';
   // Sunny springt ein, wenn die Figur nicht weiterweiss (Diego 21.10.: «Sunny kommt, wenn ich nicht mehr weiss»)
-  const ratlos = KEY_K && gespr.fid !== 'sunny' && (!antwort || /\b(weiss|weiß) (ich )?(das )?nicht|keine ahnung|kann ich (dir )?nicht|verbindung .* fehlt|stimme müde/i.test(antwort));
+  const ratlos = KEY_K && gespr.fid !== 'sunny' && (/^(sunny|hilfe)\b|ich (weiss|weiß) (nicht|nöd) (mehr|weiter)/i.test(t) || !antwort || /\b(weiss|weiß) (ich )?(das )?nicht|keine ahnung|kann ich (dir )?nicht|verbindung .* fehlt|stimme müde/i.test(antwort));
   sagen(antwort || 'Ich höre dich, aber hier in der Vorschau kann ich noch nicht antworten. Im echten KI-Verse rede ich mit dir.');
   if (ratlos) sunnyHilft(t, tok);
 }
