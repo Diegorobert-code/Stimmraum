@@ -817,7 +817,7 @@ async function soraWarten(cid) {
 }
 // ---------- fal.ai: bewegte Clips mit Seedance (Diego 21.10., ersetzt Sora) ----------
 // Bezahlt über Diegos fal.ai-Guthaben. Eigener Monatsdeckel in CHF, Kosten werden beim Start reserviert.
-const FAL_DECKEL_CHF = parseFloat(process.env.FAL_DECKEL_CHF || '50'), FAL_MAX_TAG = parseInt(process.env.FAL_MAX_TAG || '20', 10); // Diego 21.10. 13:43: «die 50 Franken für Sunny, wenn der Deckel kommt, Push-Nachricht»
+const FAL_DECKEL_CHF = parseFloat(process.env.FAL_DECKEL_CHF || '100'), FAL_MAX_TAG = parseInt(process.env.FAL_MAX_TAG || '20', 10), FAL_HINWEIS_CHF = 50; // Diego 21.10.: «die 50 Franken für Sunny, wenn der Deckel kommt, Push», «wenn es jetzt 100 Franken sind auf den Monat, ist es auch kein Problem»
 const FAL_BASIS = process.env.FAL_BASIS || 'https://queue.fal.run';
 const FAL_MODELL = process.env.FAL_MODELL || 'fal-ai/bytedance/seedance/v1/lite/image-to-video';
 const FAL_USD_SEKUNDE = { 'fal-ai/bytedance/seedance/v1/lite/image-to-video': 0.04, 'bytedance/seedance-2.0/mini/image-to-video': 0.16, 'bytedance/seedance-2.0/image-to-video': 0.30, 'bytedance/seedance-2.5/image-to-video': 0.48 };
@@ -842,7 +842,8 @@ async function falStart(a) {
   const d = r ? await r.json().catch(() => ({})) : {};
   if (!r || !r.ok || !d.request_id) return { fehler: `fal.ai startet nicht (${r ? r.status : 'keine Verbindung'}): ` + String(d.detail ? JSON.stringify(d.detail) : d.error || '').slice(0, 300) };
   m.falChf += kosten; const cid = id('film');
-  if (m.falChf >= FAL_DECKEL_CHF * .8 && !m.falPush80) { m.falPush80 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)} verbraucht (80 %).`).catch(() => {}); }
+  if (m.falChf >= FAL_HINWEIS_CHF && !m.falPush50) { m.falPush50 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} verbraucht, die 50 sind erreicht. Ich baue weiter bis höchstens ${FAL_DECKEL_CHF.toFixed(0)}.`).catch(() => {}); }
+  if (m.falChf >= FAL_DECKEL_CHF * .9 && !m.falPush90) { m.falPush90 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)}, fast am Deckel.`).catch(() => {}); }
   m.clips[cid] = { fal: true, status: 'läuft', zeit: jetzt(), sek, modell, status_url: d.status_url, response_url: d.response_url }; soraSpeichern();
   falWarten(cid);
   return { cid, kosten };

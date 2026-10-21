@@ -1212,7 +1212,7 @@ function schritt() {
   const dB = Math.hypot(sp.pos.x, sp.pos.z + 42); if (dB < 3.6) { const f = 3.6 / Math.max(.01, dB); sp.pos.x *= f; sp.pos.z = -42 + (sp.pos.z + 42) * f; }
   sp.vy -= 22 * dt; sp.pos.y += sp.vy * dt;
   if (sp.pos.y <= 0) { sp.pos.y = 0; sp.vy = 0; sp.amBoden = true; sp.sprung = 0; } else sp.amBoden = false;
-  if (spieler) { spieler.position.copy(sp.pos); spieler.rotation.y = sp.richtung; figurBewegen(spieler, zeit, sp.amBoden ? Math.abs(sp.tempo) / 4 : 0); }
+  if (spieler) { spieler.position.copy(sp.pos); spieler.rotation.y = sp.richtung; figurBewegen(spieler, zeit, sp.amBoden ? Math.abs(sp.tempo) / 4 : 0); gesichtLesen(); gesichtAufFigur(dt, zeit); }
   if (sp.fliegend && spieler && zufall() < .25) funkenRegen(sp.pos.x, .2, sp.pos.z, 1, 0xff9ac8);
   // Intro: Tor geht auf, Kamera fährt hindurch
   if (zustand.modus === 'intro') {
@@ -1242,6 +1242,16 @@ function schritt() {
   if (sicht.ich && !kamZiel.aktiv && zustand.modus === 'spiel' && !handy.ar) { ichSichtKamera(zeit); kamPos.copy(kamera.position); kamBlick.copy(blickV); if (spieler) spieler.visible = false; }
   else if (spieler && sicht.ich && kamZiel.aktiv) spieler.visible = false;
   if (handy.selfie) selfieMalen();
+  // Zauberspiegel (Diego 21.10.: Laptop-Kamera): stehst du still, dreht die Kamera vor deine Figur, und sie macht dein Gesicht nach
+  spiegelSicht.an = !!(spieler && kameraModus.an && gesicht.da && zustand.modus === 'spiel' && !kamZiel.aktiv && !handy.ar && !gespr.n && Math.abs(sp.tempo) < .3);
+  spiegelSicht.t = spiegelSicht.an ? spiegelSicht.t + dt : 0;
+  if (spiegelSicht.t > 1.2) {
+    const k = Math.min(1, (spiegelSicht.t - 1.2) / 1.5), kk = k * k * (3 - 2 * k);
+    zielV.set(sp.pos.x + Math.sin(sp.richtung) * 4.6, sp.pos.y + 2.6, sp.pos.z + Math.cos(sp.richtung) * 4.6);
+    kamera.position.lerp(zielV, kk); blickV.set(sp.pos.x, sp.pos.y + 2.05, sp.pos.z);
+    v3.copy(kamBlick).lerp(blickV, kk); kamera.lookAt(v3); kamPos.copy(kamera.position);
+    spieler.visible = true;
+  }
   mondLicht.target.position.copy(sp.pos); mondLicht.position.copy(sp.pos).addScaledVector(mondN, 80);
   lichterNachfuehren(sp.pos);
   // Sunny folgt in Wellen, beim Ende Ehrenrunde
@@ -1320,11 +1330,59 @@ $('#los').onclick = anfangen;
 const kameraModus = { an: false, strom: null };
 function spiegelAusSchalten() { kameraModus.an = false; try { kameraModus.strom?.getTracks().forEach(t => t.stop()); } catch {} kameraModus.strom = null; $('#spiegel').hidden = true; horchenStopp(); }
 $('#spiegelAus').onclick = spiegelAusSchalten;
+// ---------- Zauberspiegel-Gesicht (Diego 21.10.: «mit der Kamera meines Laptops») ----------
+// Kopf drehen, nicken, Mund auf, lächeln, blinzeln: deine Figur macht es nach. Das Kamerabild bleibt im Browser.
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+const MP_MODELL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const gesicht = { lm: null, da: false, daBis: 0, zeit: -1, yaw: 0, pitch: 0, roll: 0, jaw: 0, smile: 0, blink: [0, 0], p0: null, n0: 0, lacht: 0, funkenNach: 0 };
+const spiegelSicht = { an: false, t: 0 }; window.__gesicht = gesicht; window.__zustand = zustand; window.__spiegel = spiegelSicht;
+async function gesichtLaden() {
+  try {
+    const { FaceLandmarker, FilesetResolver } = await import(MP + '/vision_bundle.mjs');
+    const fsr = await FilesetResolver.forVisionTasks(MP + '/wasm');
+    const opt = (delegate) => ({ baseOptions: { modelAssetPath: MP_MODELL, delegate }, runningMode: 'VIDEO', numFaces: 1, outputFaceBlendshapes: true });
+    try { return await FaceLandmarker.createFromOptions(fsr, opt('GPU')); } catch { return await FaceLandmarker.createFromOptions(fsr, opt('CPU')); }
+  } catch (e) { console.warn('Gesichtserkennung nicht verfügbar:', e); return null; }
+}
+function gesichtLesen() {
+  const v = $('#spiegelVideo');
+  if (!gesicht.lm || !kameraModus.an || v.readyState < 2) { gesicht.da = false; return; }
+  const t = performance.now(); gesicht.da = t < gesicht.daBis; if (t - gesicht.zeit < 45) return; gesicht.zeit = t;
+  let r; try { r = gesicht.lm.detectForVideo(v, t); } catch { return; }
+  const L = r.faceLandmarks?.[0]; if (!L) return;
+  gesicht.da = true; gesicht.daBis = t + 1500;
+  const bs = {}; for (const c of r.faceBlendshapes?.[0]?.categories || []) bs[c.categoryName] = c.score;
+  const [li, re] = L[33].x < L[263].x ? [L[33], L[263]] : [L[263], L[33]];
+  const ex = (li.x + re.x) / 2, ed = Math.hypot(re.x - li.x, re.y - li.y) || .1, nase = L[1];
+  const p = (nase.y - (L[10].y + L[152].y) / 2) / Math.max(.05, L[152].y - L[10].y);
+  if (gesicht.n0 < 15) { gesicht.p0 = gesicht.n0 ? gesicht.p0 + (p - gesicht.p0) / (gesicht.n0 + 1) : p; gesicht.n0++; }
+  const g = .4;
+  gesicht.yaw += (-(nase.x - ex) / ed * 2.2 - gesicht.yaw) * g;
+  gesicht.pitch += ((p - (gesicht.p0 || 0)) * 3.2 - gesicht.pitch) * g;
+  gesicht.roll += (Math.atan2(re.y - li.y, re.x - li.x) - gesicht.roll) * g;
+  gesicht.jaw += ((bs.jawOpen || 0) - gesicht.jaw) * .6;
+  gesicht.smile += (((bs.mouthSmileLeft || 0) + (bs.mouthSmileRight || 0)) / 2 - gesicht.smile) * .5;
+  gesicht.blink = [bs.eyeBlinkRight || 0, bs.eyeBlinkLeft || 0];
+}
+function gesichtAufFigur(dt, zeit) {
+  if (!spieler || !gesicht.da) return;
+  const u = spieler.userData, b = (v, m) => Math.max(-m, Math.min(m, v));
+  if (!u.d3) { u.kopf.material.rotation = b(gesicht.roll, .6); return; }
+  u.kopf.rotation.y = b(gesicht.yaw, .9); u.kopf.rotation.x = b(gesicht.pitch, .5); u.kopf.rotation.z = b(gesicht.roll, .5);
+  u.mund.scale.y = .05 + Math.min(1, gesicht.jaw * 1.4) * .95; u.laecheln.visible = gesicht.jaw < .2; u.laecheln.scale.setScalar(1 + gesicht.smile * .9);
+  u.augen.forEach((a, i) => { const z = gesicht.blink[i] || 0; a.userData.lid.scale.y = Math.max(.01, z * 1.16); a.userData.lid.visible = z > .35; });
+  // Breites Lachen: Funkenregen und Flitz macht einen Looping
+  gesicht.lacht = gesicht.smile > .55 ? gesicht.lacht + dt : 0;
+  if (gesicht.lacht > .5 && zeit > gesicht.funkenNach) { funkenRegen(sp.pos.x, sp.pos.y + 2.6, sp.pos.z, 16, 0xffd06a); flitzLoop = 1; gesicht.funkenNach = zeit + 4; klang(880); }
+  // Mund weit auf: Flitz kommt neugierig ganz nah
+  if (gesicht.jaw > .5) flitzZiel.set(sp.pos.x + Math.sin(sp.richtung) * 1.4 + .6, sp.pos.y + 2.5, sp.pos.z + Math.cos(sp.richtung) * 1.4);
+}
 $('#losKamera').onclick = async () => {
   try {
     kameraModus.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: true });
     kameraModus.strom.getAudioTracks().forEach(t => t.stop());
     $('#spiegelVideo').srcObject = new MediaStream(kameraModus.strom.getVideoTracks()); $('#spiegel').hidden = false; kameraModus.an = true;
+    gesichtLaden().then(lm => { gesicht.lm = lm; gesicht.n0 = 0; });
   } catch { alert('Die Kamera wurde nicht erlaubt. Du kannst trotzdem eintreten und tippen.'); }
   anfangen();
 };
