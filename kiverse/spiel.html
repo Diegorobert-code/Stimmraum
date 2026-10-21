@@ -73,6 +73,7 @@ body.redet #stick, body.redet #hoch { display: none; }
 .ladenfilm { position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 46px)); right: 16px; width: min(300px, 42vw); z-index: 7; background: var(--karte); border: 1px solid var(--rand); border-radius: 16px; padding: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
 .ladenfilm b { display: block; font: 800 14px "Baloo 2", sans-serif; color: var(--gold); margin: 0 0 6px; }
 .ladenfilm img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; transition: opacity .4s ease; }
+.ladenfilm video { position: absolute; left: 8px; bottom: 8px; width: calc(100% - 16px); aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #000; }
 .appfenster { position: fixed; inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); z-index: 12; display: flex; flex-direction: column; background: #0b1430; border: 2px solid var(--gold); border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(242, 194, 91, .35); }
 .appfenster .leiste { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(242, 194, 91, .12); }
 .appfenster .leiste b { flex: 1; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
@@ -107,7 +108,7 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
 <div id="hoch" hidden aria-label="springen">⤒</div>
 <button id="rein" type="button" hidden>Rein</button>
 <button id="reden" type="button" hidden>🎙 Reden</button>
-<div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""></div>
+<div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""><video muted playsinline hidden></video></div>
 <div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
 <div class="gespraech" id="gespraech" hidden>
   <div class="kopfzeile"><h2 id="gesprTitel"></h2><button type="button" class="klein" id="gesprVergessen" title="Gedächtnis dieser Figur für dich löschen">Vergessen</button><button type="button" class="klein" id="gesprZu" aria-label="Gespräch beenden">✕</button></div>
@@ -1100,7 +1101,7 @@ function rausGehen() {
   blitz(() => {
     if (zustand.innen === 'hafen') { szene.fog.color.copy(NEBEL_NACHT); szene.fog.density = .0065; const n = npc.find(x => x.ort === 'hafen'); if (n) n.f.position.set(n.x, 0, n.z); }
     if (zustand.innen === 'nest') { const n = npc.find(x => x.ort === 'nest'); if (n) n.f.position.set(n.x, 0, n.z); }
-    clearInterval(filmTimer); $('#ladenFilm').hidden = true; raumSchliessen();
+    clearTimeout(filmTimer); filmVideoStopp(); $('#ladenFilm').hidden = true; raumSchliessen();
     zustand.innen = null; kamZiel.aktiv = false; document.body.classList.remove('kino'); $('#ortbild').style.opacity = 0;
     $('#stick').hidden = $('#hoch').hidden = false; pruefeEnde();
   });
@@ -1519,17 +1520,57 @@ const LADEN_APPS = { sparky: [['humanspark', 'Human Sparks']], nest: [['fiasnest
 LADEN_APPS.tor && ORTE.forEach(o => { if (LADEN_APPS[o.id]) o.rein = true; });
 // Im Laden laufen Tinkos Bilder dieser Figur wie ein kleiner Film (aus der Ablage, nur mit Diegos Link)
 let ablageCache = null, filmTimer = null;
+// Standbilder und bewegte Clips gemischt (Diego 21.10.: «gut gemischt zwischen Standbildern und bewegten Bildern»):
+// zwei Bilder von Tinko, dann ein Seedance-Clip der Figur. Im Raum läuft der Clip im Bilderrahmen.
+let filmeCache = null, filmVideo = null;
+function filmVideoStopp() {
+  if (filmVideo) { filmVideo.pause(); filmVideo.removeAttribute('src'); filmVideo.load(); filmVideo = null; }
+  if (raum.bild && raum.bildTex && raum.bild.material.map !== raum.bildTex) { raum.bild.material.map = raum.bildTex; raum.bild.material.needsUpdate = true; }
+  const pv = $('#ladenFilm video'); if (pv) { pv.pause(); pv.hidden = true; }
+}
+function raumVideo(url, fertig) {
+  filmVideoStopp();
+  const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.crossOrigin = 'anonymous'; v.src = url;
+  let einmal = false; const f = (fehler) => { if (!einmal) { einmal = true; fertig(fehler === true); } };
+  v.onended = () => f(false); v.onerror = () => f(true); filmVideo = v;
+  const t = new THREE.VideoTexture(v); t.colorSpace = THREE.SRGBColorSpace;
+  v.play().then(() => { if (filmVideo !== v) return; raum.bild.material.map = t; raum.bild.material.needsUpdate = true; raum.bild.visible = true; }).catch(() => f(true));
+}
 async function ladenFilm(ort) {
-  clearInterval(filmTimer); const el = $('#ladenFilm'); el.hidden = true;
+  clearTimeout(filmTimer); filmVideoStopp(); const el = $('#ladenFilm'); el.hidden = true;
   const n = npc.find(x => x.ort === ort), name = n && NAMEN[figurVon(n)]; if (!name || !KEY_K) return;
-  try { ablageCache = ablageCache || await fetch('api/ablage?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { return; }
-  const bilder = ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(name.toLowerCase())).slice(-12);
-  if (!bilder.length || zustand.innen !== ort) return;
-  let i = 0; const img = el.querySelector('img');
-  const url = (j) => 'api/ablage/' + bilder[j % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K);
-  if (raum.figur === n) { const zeigenR = () => { raumBild(url(i), null); i++; }; zeigenR(); filmTimer = setInterval(zeigenR, 4500); return; }
-  const zeigen = () => { img.style.opacity = 0; setTimeout(() => { img.src = url(i); img.style.opacity = 1; i++; }, 400); };
-  el.querySelector('b').textContent = `🎬 ${name} in Tinkos Bildern`; el.hidden = false; zeigen(); filmTimer = setInterval(zeigen, 4500);
+  try { ablageCache = ablageCache || await fetch('api/ablage?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { ablageCache = []; }
+  try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
+  const nm = name.toLowerCase();
+  const bilder = ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(nm)).slice(-12);
+  const clips = filmeCache.filter(c => (c.figur || '').toLowerCase() === nm || (c.titel || '').toLowerCase().includes(nm)).slice(-8);
+  if ((!bilder.length && !clips.length) || zustand.innen !== ort) return;
+  const urlB = (j) => 'api/ablage/' + bilder[j % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K);
+  const urlC = (j) => 'api/film/' + clips[j % clips.length].cid + '.mp4?k=' + encodeURIComponent(KEY_K);
+  // Ein Clip, der nicht abspielt, fliegt aus der Liste (sonst lädt er endlos neu)
+  const weg = (j) => { clips.splice(j % clips.length, 1); };
+  let schritt = 0, bi = 0, ci = 0;
+  const img = el.querySelector('img'), vid = el.querySelector('video');
+  const weiter = () => {
+    if (zustand.innen !== ort) return;
+    if (!bilder.length && !clips.length) return;
+    const clip = clips.length && (!bilder.length || schritt % 3 === 2); schritt++;
+    const nachher = (ms) => { clearTimeout(filmTimer); filmTimer = setTimeout(weiter, ms); };
+    if (raum.figur === n) {
+      if (clip) { const j = ci++; raumVideo(urlC(j), (fehler) => { if (fehler) weg(j); nachher(300); }); }
+      else { filmVideoStopp(); raumBild(urlB(bi++), null); nachher(4500); }
+      return;
+    }
+    if (clip) {
+      const j = ci++; img.style.opacity = 0; vid.hidden = false; vid.src = urlC(j);
+      vid.onended = () => nachher(200); vid.onerror = () => { weg(j); nachher(200); }; vid.play().catch(() => { weg(j); nachher(200); });
+    } else {
+      vid.pause(); vid.hidden = true; img.style.opacity = 0;
+      const u = urlB(bi++); setTimeout(() => { img.src = u; img.style.opacity = 1; }, 400); nachher(4500);
+    }
+  };
+  if (raum.figur !== n) { el.querySelector('b').textContent = clips.length ? `🎬 ${name}: Bilder und bewegte Szenen` : `🎬 ${name} in Tinkos Bildern`; el.hidden = false; }
+  weiter();
 }
 function appOeffnen(id, name) {
   $('#appFenster iframe').src = 'apps/' + id + '/' + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');

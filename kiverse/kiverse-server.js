@@ -844,7 +844,7 @@ async function falStart(a) {
   m.falChf += kosten; const cid = id('film');
   if (m.falChf >= FAL_HINWEIS_CHF && !m.falPush50) { m.falPush50 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} verbraucht, die 50 sind erreicht. Ich baue weiter bis höchstens ${FAL_DECKEL_CHF.toFixed(0)}.`).catch(() => {}); }
   if (m.falChf >= FAL_DECKEL_CHF * .9 && !m.falPush90) { m.falPush90 = true; pushSenden('Sunny', `fal.ai: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)}, fast am Deckel.`).catch(() => {}); }
-  m.clips[cid] = { fal: true, status: 'läuft', zeit: jetzt(), sek, modell, status_url: d.status_url, response_url: d.response_url }; soraSpeichern();
+  m.clips[cid] = { fal: true, status: 'läuft', zeit: jetzt(), sek, modell, figur: sauber(a.figur, 40), titel: sauber(a.titel || a.prompt || a.motiv, 160), status_url: d.status_url, response_url: d.response_url }; soraSpeichern();
   falWarten(cid);
   return { cid, kosten };
 }
@@ -1066,7 +1066,7 @@ const WERKZEUGE = [
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
   { name: 'kiverse_film_clip', description: 'fal.ai Seedance bewegt ein Startbild zu einem flüssigen Filmclip (720p, Standard 5 s, 3D-Animationsfilm-Stil). Kostet Geld aus Diegos fal.ai-Guthaben, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; das MP4 mit kiverse_film_clip_holen abholen (dauert 1–5 Minuten).',
-    inputSchema: { type: 'object', properties: { bild: { type: 'string', description: 'Startbild: Ablage-Eintrag-ID (aus kiverse_ablage), base64-JPG (auch als data:image/jpeg;base64,…) oder https-Adresse' }, prompt: { type: 'string', description: 'Englisch: was im Clip passiert, Bewegung, Kamera, Licht' }, dauer: { type: 'number', description: 'Sekunden, Standard 5' }, modell: { type: 'string', description: 'optional, fal-Modell, Standard fal-ai/bytedance/seedance/v1/lite/image-to-video (günstig); teurer: bytedance/seedance-2.0/mini/image-to-video' } }, required: ['bild', 'prompt'] } },
+    inputSchema: { type: 'object', properties: { figur: { type: 'string', description: 'Figurname (z. B. Flitz, Jackie, Otti): der Clip läuft im 3D-Städtchen bei dieser Figur' }, titel: { type: 'string', description: 'kurzer Titel' }, bild: { type: 'string', description: 'Startbild: Ablage-Eintrag-ID (aus kiverse_ablage), base64-JPG (auch als data:image/jpeg;base64,…) oder https-Adresse' }, prompt: { type: 'string', description: 'Englisch: was im Clip passiert, Bewegung, Kamera, Licht' }, dauer: { type: 'number', description: 'Sekunden, Standard 5' }, modell: { type: 'string', description: 'optional, fal-Modell, Standard fal-ai/bytedance/seedance/v1/lite/image-to-video (günstig); teurer: bytedance/seedance-2.0/mini/image-to-video' } }, required: ['bild', 'prompt'] } },
   { name: 'kiverse_sora_test', description: 'Technik-Test für Sora (nur Statuscodes, keine Kosten ausser höchstens ein 4-Sekunden-Clip).', inputSchema: { type: 'object', properties: {} } },
   { name: 'kiverse_film_clip_holen', description: 'Stand eines Sora-Clips: läuft (mit Fortschritt), fertig (mit Download-Adresse des MP4) oder Fehler.',
     inputSchema: { type: 'object', properties: { clip_id: { type: 'string' } }, required: ['clip_id'] } },
@@ -2125,6 +2125,28 @@ const server = http.createServer(async (req, res) => {
       if (a.text && a.nurSpeichern) { briefSpeichern(a.text); return json(res, 200, schleifeStand()); }
       if (a.text) { briefSpeichern(a.text); const r = await schleifeLaden(a.text, 'Diego'); return json(res, r.fehler ? 400 : 200, r); }
       return json(res, 200, schleifeSchalten(a.aktiv));
+    }
+    // Bewegte Clips fürs 3D-Städtchen (Diego 21.10.: «gut gemischt zwischen Standbildern und bewegten Bildern»)
+    if (url.pathname === '/api/filme') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      const liste = Object.entries(SORA.clips || {}).filter(([cid, c]) => c.fal && c.status === 'fertig' && fs.existsSync(path.join(FILM_ORDNER, cid + '.mp4'))).map(([cid, c]) => ({ cid, figur: c.figur || '', titel: c.titel || '', zeit: c.zeit, sek: c.sek }));
+      return json(res, 200, liste);
+    }
+    const mfa = url.pathname.match(/^\/api\/film\/(film_[a-f0-9]+)\.mp4$/);
+    if (mfa) {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      let st; const datei = path.join(FILM_ORDNER, mfa[1] + '.mp4');
+      try { st = fs.statSync(datei); } catch { return json(res, 404, { fehler: 'Clip nicht gefunden.' }); }
+      const rg = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+      if (rg) {
+        let a0 = rg[1] ? parseInt(rg[1], 10) : st.size - parseInt(rg[2] || '0', 10), b0 = rg[1] && rg[2] ? parseInt(rg[2], 10) : st.size - 1;
+        if (isNaN(a0) || a0 < 0 || a0 >= st.size || b0 < a0) { res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }); return res.end(); }
+        b0 = Math.min(b0, st.size - 1);
+        res.writeHead(206, { 'Content-Type': 'video/mp4', 'Content-Range': `bytes ${a0}-${b0}/${st.size}`, 'Accept-Ranges': 'bytes', 'Content-Length': b0 - a0 + 1, 'Cache-Control': 'private, max-age=86400' });
+        return fs.createReadStream(datei, { start: a0, end: b0 }).pipe(res);
+      }
+      res.writeHead(200, { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': st.size, 'Cache-Control': 'private, max-age=86400' });
+      return fs.createReadStream(datei).pipe(res);
     }
     if (url.pathname === '/api/ablage') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });
