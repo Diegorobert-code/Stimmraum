@@ -356,10 +356,10 @@ async function kiFrage(kid, system, inhalt) {
   if (!r.ok) console.error(`${kid} antwortet nicht:`, r.status, d?.error?.message || '');
   return d?.choices?.[0]?.message?.content || null;
 }
-async function tinkoBild(wunsch, hoch = false, stil = 'Stil: 3D-Animationsfilm, warm, Nachtblau und Gold, Mittelmeer-Städtchen, keine Handys, keine echten Personen, keine Schrift.') {
+async function tinkoBild(wunsch, hoch = false, stil = 'Stil: 3D-Animationsfilm, warm, Nachtblau und Gold, Mittelmeer-Städtchen, keine Handys, keine echten Personen, keine Schrift.', modell = TINKO_BILD_MODELL) {
   const r = await fetch(TINKO_BASIS + '/v1/images/generations', { method: 'POST', signal: AbortSignal.timeout(120000),
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TINKO_KEY },
-    body: JSON.stringify({ model: TINKO_BILD_MODELL, n: 1, size: hoch ? '1024x1536' : '1024x1024', quality: 'low', output_format: 'jpeg',
+    body: JSON.stringify({ model: modell, n: 1, size: hoch ? '1024x1536' : '1024x1024', quality: 'low', output_format: 'jpeg',
       prompt: stil + ' Motiv: ' + wunsch }) });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) console.error('Tinko malt nicht:', r.status, d?.error?.message || '');
@@ -1577,12 +1577,15 @@ function zentraleStand() {
 }
 // Nova zeichnet beim Reden (Diego 21.10.: Zeichnen = Novas Werkzeug Nummer 1). Tinko malt, das Bild liegt unter einer unratbaren Adresse.
 const NOVA_BILD_ORDNER = path.join(DATEN, 'nova-bilder'), NOVA_BILD_MAX = 300;
+// Schnelleres Modell fürs Zeichnen im Gespräch; klappt es nicht, malt das grosse Modell
+const NOVA_BILD_MODELL = process.env.NOVA_BILD_MODELL || 'gpt-image-1-mini';
 const NOVA_STIL = 'Stil: KI-Pixel, 3D-Animationsfilm, weiches Kinolicht, warme Farben, freundliche runde Figuren, Entwurf oder Storyboard-Bild, keine echten Personen, keine Markennamen, keine Schrift.';
 const novaBilder = new Map();
 const basisVon = (req) => (req.headers['x-forwarded-proto'] || (String(req.headers.host || '').startsWith('localhost') ? 'http' : 'https')) + '://' + req.headers.host;
 async function novaMalen(tok, wunsch, url) {
   novaBilder.set(tok, 'malt');
-  const bild = await tinkoBild(wunsch, false, NOVA_STIL).catch(() => null);
+  const bild = await tinkoBild(wunsch, false, NOVA_STIL, NOVA_BILD_MODELL).catch(() => null)
+    || (NOVA_BILD_MODELL !== TINKO_BILD_MODELL ? await tinkoBild(wunsch, false, NOVA_STIL).catch(() => null) : null);
   if (!bild) { novaBilder.set(tok, 'fehler'); return false; }
   fs.mkdirSync(NOVA_BILD_ORDNER, { recursive: true, mode: 0o700 });
   fs.writeFileSync(path.join(NOVA_BILD_ORDNER, tok + '.jpg'), Buffer.from(bild.split(',')[1], 'base64'), { mode: 0o600 });
@@ -1768,7 +1771,7 @@ const server = http.createServer(async (req, res) => {
         const r = await zentraleAktion({ art: 'frage', an, text: a.frage });
         return json(res, 200, { text: r ? `${r.name}: ${r.text}` : 'Keine Antwort bekommen.', figuren: [...new Set(['lumo', 'tinko', ...Object.keys(FIGUREN_KI)])] });
       }
-      // Nova zeichnet: Tinko malt, Antwort mit Bild-Adresse; dauert es länger als 20 s, kommt die Adresse sofort und was=bild sagt, wann es fertig ist
+      // Nova zeichnet: Antwort sofort mit Bild-Adresse, Tinko malt im Hintergrund weiter; was=bild sagt, wann es fertig ist
       if (was === 'male') {
         const wunsch = sauber(a.text, 1000).replace(/\b(pixar|disney|dreamworks|ghibli)\b/gi, '').replace(/\s+/g, ' ').trim();
         if (!wunsch) return json(res, 200, { antwort: 'Was soll ich malen?' });
@@ -1776,9 +1779,7 @@ const server = http.createServer(async (req, res) => {
         const gesperrt = bildGesperrt(); if (gesperrt) return json(res, 200, { antwort: gesperrt });
         bildZaehlen();
         const tok = crypto.randomBytes(16).toString('hex'), bildUrl = basisVon(req) + '/nova-bild/' + tok + '.jpg';
-        const r = await Promise.race([novaMalen(tok, wunsch, bildUrl).catch(() => false), new Promise(ok => setTimeout(() => ok('malt'), 20000))]);
-        if (r === true) return json(res, 200, { antwort: 'Bild ist fertig.', bild: bildUrl, id: tok, fertig: true });
-        if (r === false) return json(res, 200, { antwort: 'Tinko konnte das Bild gerade nicht malen.' });
+        novaMalen(tok, wunsch, bildUrl).catch(() => novaBilder.set(tok, 'fehler'));
         return json(res, 200, { antwort: 'Ich male, kommt gleich.', bild: bildUrl, id: tok, fertig: false });
       }
       if (was === 'bild') {
