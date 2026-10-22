@@ -95,6 +95,7 @@ body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
 /* Gangschaltung (Diego 22.10.: «die ganze Zeit … bewegst du dich langsam», Knopf mit drei Stufen: stehen, langsam, schnell) */
 #gang { position: fixed; right: 18px; bottom: max(104px, calc(env(safe-area-inset-bottom) + 100px)); display: flex; flex-direction: column; gap: 8px; z-index: 4; }
 #gang button { width: 58px; height: 58px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: #fff6dc; font: 800 24px "Baloo 2", sans-serif; display: grid; place-items: center; cursor: pointer; padding: 0; }
+#rundKnopf.an { color: #fff; text-shadow: 0 0 10px #f2c25b; }
 #gang button.an { background: var(--gold); border-color: #fff3c9; box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
 body:not(.spielt) #gang, body.redet #gang, body.kino #gang { display: none; }
 body.laptop #gang { bottom: 24px; } body.beamer #gang button { width: 70px; height: 70px; font-size: 30px; }
@@ -125,6 +126,7 @@ body.eingebettet #redeKnopf { display: none !important; }
   <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
   <span class="pille" id="schrittAnzeige" hidden>👣 0</span>
   <span class="pille"><button type="button" id="sichtKnopf">👁 Ich-Sicht</button></span>
+  <span class="pille"><button type="button" id="rundKnopf" title="Rundum schauen (Taste Q)">🔄<span class="txt"> 360°</span></button></span>
   <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
   <span class="pille"><button type="button" id="tonKnopf" aria-label="Ton">🔊</button></span>
   <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
@@ -162,7 +164,7 @@ body.eingebettet #redeKnopf { display: none !important; }
     <button class="knopf gold" type="button" id="losKamera" style="font-size:18px;padding:12px 30px">📷 Mit Kamera eintreten</button>
     <button class="knopf" type="button" id="los" style="font-size:16px;padding:10px 24px">Ohne Kamera</button>
     <p class="leise" style="margin-top:8px">Mit Kamera siehst du dich unten links im Zauberspiegel, und die Figuren hören dir zu, ohne dass du tippst. Kamera und Mikrofon bleiben auf deinem Gerät: nichts wird gespeichert oder gesendet.</p>
-    <p class="leise" style="margin-top:12px">Du läufst von selbst langsam los. Rechts wählst du das Tempo: 🏃 schnell, 🚶 langsam, ✋ stehen. Links mit dem goldenen Knopf lenken, ⤒ springt. Vor einem Laden erscheint «Rein». Am Computer: Pfeiltasten lenken, 1 stehen, 2 langsam, 3 schnell, Leertaste springt, M redet.</p>
+    <p class="leise" style="margin-top:12px">Du läufst von selbst langsam los. Rechts wählst du das Tempo: 🏃 schnell, 🚶 langsam, ✋ stehen. Oben 🔄 dreht den Blick einmal rundherum. Links mit dem goldenen Knopf lenken, ⤒ springt. Vor einem Laden erscheint «Rein». Am Computer: Pfeiltasten lenken, 1 stehen, 2 langsam, 3 schnell, Leertaste springt, M redet.</p>
   </div>
 </div>
 <div class="spiegel" id="spiegel" hidden><video id="spiegelVideo" autoplay muted playsinline></video><button type="button" id="spiegelAus" aria-label="Kamera aus">✕</button></div>
@@ -1452,7 +1454,7 @@ function schritt() {
 
   if (zustand.modus === 'spiel' && !zustand.innen && !gespr.n && $('#karte').hidden) {
     const zurueck = tasten.ArrowDown || tasten.s;
-    let vor = (zurueck ? 0 : GANG_TEMPO[gang]) + eingabe.y + (tasten.ArrowUp || tasten.w ? .6 : 0) - (zurueck ? 1 : 0);
+    let vor = (zurueck || sicht.rund > 0 ? 0 : GANG_TEMPO[gang]) + eingabe.y + (tasten.ArrowUp || tasten.w ? .6 : 0) - (zurueck ? 1 : 0);
     const dreh = eingabe.x + (tasten.ArrowRight || tasten.d ? 1 : 0) - (tasten.ArrowLeft || tasten.a ? 1 : 0);
     sp.richtung -= Math.max(-1, Math.min(1, dreh)) * dt * 2.4;
     // Von selbst laufen ohne Lenken: an der Hauswand sanft zurück in die Gasse, am Ende der Gasse langsam umdrehen
@@ -1487,13 +1489,14 @@ function schritt() {
     $('#titel').style.opacity = zustand.intro > .6 && zustand.intro < 4 ? 1 : 0;
     if (zustand.intro > 5.4) { zustand.modus = 'spiel'; document.body.classList.remove('kino'); document.body.classList.add('spielt'); $('#stick').hidden = $('#hoch').hidden = false; }
   }
+  rundumSchritt(dt);
   // Kamera
   if (!kamZiel.aktiv) {
     if (zustand.modus === 'intro') hv.set(0, 2.2 + zustand.intro * .25, 8 - Math.min(zustand.intro, 4) * .5);
-    else hv.set(-Math.sin(sp.richtung) * 6.6 + Math.sin(zeit * .4) * .25, 3 + Math.sin(zeit * .55) * .12, -Math.cos(sp.richtung) * 6.6);
-    zielV.copy(sp.pos).add(hv); zielV.x = Math.max(-6, zielV.x);
+    else { const r = sp.richtung + sicht.dreh; hv.set(-Math.sin(r) * 6.6 + Math.sin(zeit * .4) * .25, 3 + Math.sin(zeit * .55) * .12, -Math.cos(r) * 6.6); }
+    zielV.copy(sp.pos).add(hv); if (!sicht.dreh) zielV.x = Math.max(-6, zielV.x);
     kamPos.lerp(zielV, Math.min(1, dt * (zustand.modus === 'intro' ? 1.5 : 2.2)));
-    zielV.set(sp.pos.x + Math.sin(sp.richtung) * 4, sp.pos.y + 1.8, sp.pos.z + Math.cos(sp.richtung) * 4);
+    zielV.set(sp.pos.x + Math.sin(sp.richtung + sicht.dreh) * 4 * (sicht.dreh ? .2 : 1), sp.pos.y + 1.8, sp.pos.z + Math.cos(sp.richtung + sicht.dreh) * 4 * (sicht.dreh ? .2 : 1));
     kamBlick.lerp(zielV, Math.min(1, dt * 4));
   }
   if (zustand.ende && zustand.endeT < 6) zustand.endeT += dt;
@@ -1673,7 +1676,7 @@ requestAnimationFrame(schritt);
 // Ich-Sicht: man sieht das Städtchen mit eigenen Augen (Maus ziehen oder Pfeiltasten zum Umschauen).
 // Jede Figur ist eine eigene KI: «🎙 Reden» öffnet das Gespräch, Mikrofon oder Tippen, die Figur antwortet mit Stimme.
 // Das Mikrofon läuft über die Spracherkennung des Browsers; nichts wird hier gespeichert. Die Figur merkt sich das Gespräch auf dem Server.
-const sicht = { ich: true, neigung: 0, ziehen: null };
+const sicht = { ich: true, neigung: 0, ziehen: null, dreh: 0, rund: 0 }; window.__sicht = sicht;
 // Weiches Gesichtslicht wie beim Trickfilm-Dreh: kommt von der Kamera, damit die Figuren vor dir nie im Gegenlicht stehen
 { const l = new THREE.PointLight(0xffe2b8, 5, 10, 1.6); l.position.set(0, .3, .5); kamera.add(l); szene.add(kamera); }
 sicht.ich = true; // Diego 21.10.: immer aus deinen Augen starten
@@ -1681,15 +1684,24 @@ function sichtKnopf() { $('#sichtKnopf').innerHTML = sicht.ich ? '👁<span clas
 $('#sichtKnopf').onclick = () => { sicht.ich = !sicht.ich; sicht.neigung = 0; try { localStorage.setItem('kiverse_ichsicht', sicht.ich ? '1' : '0'); } catch {} sichtKnopf(); };
 sichtKnopf();
 addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'v') $('#sichtKnopf').click(); if ((e.key === 'r' || e.key === 't') && !$('#reden').hidden) { e.preventDefault(); $('#reden').click(); } });
+// Diego 22.10.: «Blickwinkel Kamera drehen 360 Grad»: 🔄 dreht den Blick einmal ganz herum (Ich-Sicht: Kopf drehen, von hinten: Kamera kreist um dich).
+// Ziehen von hinten kreist die Kamera frei um die Figur; in der Ich-Sicht dreht Ziehen dich selbst.
+function rundum() { sicht.rund = sicht.rund > 0 ? 0 : Math.PI * 2; if (!sicht.rund) sicht.dreh = 0; $('#rundKnopf').classList.toggle('an', sicht.rund > 0); }
+$('#rundKnopf').onclick = rundum;
+addEventListener('keydown', e => { if (e.target.tagName !== 'INPUT' && (e.key === 'q' || e.key === 'Q')) rundum(); });
+function rundumSchritt(dt) {
+  if (sicht.rund > 0) { const w = Math.min(sicht.rund, dt * Math.PI * 2 / 10); sicht.dreh += w; sicht.rund -= w; if (sicht.rund <= 0) { sicht.rund = 0; sicht.dreh = 0; $('#rundKnopf').classList.remove('an'); } }
+  else if (!sicht.ziehen && Math.abs(sp.tempo) > .8) sicht.dreh = lerp(sicht.dreh, 0, Math.min(1, dt * 1.2));
+}
 renderer.domElement.addEventListener('pointerdown', e => { if (zustand.modus !== 'spiel' || zustand.innen) return; sicht.ziehen = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
-addEventListener('pointermove', e => { const z = sicht.ziehen; if (!z || z.id !== e.pointerId) return; sp.richtung -= (e.clientX - z.x) * .006; sicht.neigung = Math.max(-.5, Math.min(.6, sicht.neigung - (e.clientY - z.y) * .004)); z.x = e.clientX; z.y = e.clientY; });
+addEventListener('pointermove', e => { const z = sicht.ziehen; if (!z || z.id !== e.pointerId) return; if (sicht.ich) sp.richtung -= (e.clientX - z.x) * .006; else { sicht.rund = 0; sicht.dreh -= (e.clientX - z.x) * .008; } sicht.neigung = Math.max(-.5, Math.min(.6, sicht.neigung - (e.clientY - z.y) * .004)); z.x = e.clientX; z.y = e.clientY; });
 addEventListener('pointerup', e => { if (sicht.ziehen?.id === e.pointerId) sicht.ziehen = null; });
 const blickV = new THREE.Vector3();
 function ichSichtKamera(zeit) {
   const bob = sp.amBoden ? Math.abs(Math.sin(zeit * 9)) * Math.min(1, Math.abs(sp.tempo) / 6) * .07 : 0;
   kamera.position.set(sp.pos.x, sp.pos.y + 1.68 + bob, sp.pos.z);
   // Ich-Perspektive mit Kamera (Diego 21.10.: «ich beobachte aus der Ich-Perspektive, durch Handy- und Computer-Kamera»): Kopf drehen = umschauen
-  const kg = gesicht.da && kameraModus.an, r = sp.richtung - (kg ? gesicht.yaw * .7 : 0), ng = sicht.neigung - (kg ? gesicht.pitch * .5 : 0);
+  const kg = gesicht.da && kameraModus.an, r = sp.richtung + sicht.dreh - (kg ? gesicht.yaw * .7 : 0), ng = sicht.neigung - (kg ? gesicht.pitch * .5 : 0);
   blickV.set(sp.pos.x + Math.sin(r) * 10, sp.pos.y + 1.6 + Math.tan(ng + (innerHeight > innerWidth ? .1 : 0)) * 10, sp.pos.z + Math.cos(r) * 10);
   kamera.lookAt(blickV);
 }
@@ -2200,7 +2212,7 @@ if (!istHandy) {
   beamerAn(); addEventListener('resize', beamerAn); document.addEventListener('fullscreenchange', beamerAn);
   const vollbild = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {}); };
   const hilfe = document.createElement('div'); hilfe.id = 'tastenHilfe'; hilfe.style.opacity = 0;
-  hilfe.innerHTML = '<kbd>←</kbd><kbd>→</kbd> lenken · <kbd>1</kbd> stehen <kbd>2</kbd> langsam <kbd>3</kbd> schnell · Maus ziehen: schauen · <kbd>M</kbd> reden · <kbd>N</kbd> Nova anrufen · <kbd>Enter</kbd> rein · <kbd>X</kbd> raus · <kbd>F</kbd> Vollbild';
+  hilfe.innerHTML = '<kbd>←</kbd><kbd>→</kbd> lenken · <kbd>1</kbd> stehen <kbd>2</kbd> langsam <kbd>3</kbd> schnell · Maus ziehen: schauen · <kbd>Q</kbd> 360° · <kbd>M</kbd> reden · <kbd>N</kbd> Nova anrufen · <kbd>Enter</kbd> rein · <kbd>X</kbd> raus · <kbd>F</kbd> Vollbild';
   document.body.appendChild(hilfe);
   let hilfeT = null; const hilfeZeigen = (ms) => { hilfe.style.opacity = 1; clearTimeout(hilfeT); hilfeT = setTimeout(() => { hilfe.style.opacity = 0; }, ms); };
   // Beim Eintreten gleich Vollbild, damit am Beamer keine Browserleiste stört
