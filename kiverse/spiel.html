@@ -1166,7 +1166,8 @@ const eingabe = { x: 0, y: 0 }, tasten = {};
 }
 $('#hoch').addEventListener('pointerdown', e => { e.preventDefault(); springen(); });
 // Gang: 0 stehen, 1 langsam (Start), 2 schnell. Der Joystick bzw. die Pfeiltasten lenken und geben zusätzlich Gas oder bremsen.
-const GANG_TEMPO = [0, .38, 1.15]; let gang = 1;
+// Diego 22.10. abends: «man tätscht immer so schnell» → ruhiger gehen
+const GANG_TEMPO = [0, .24, .8]; let gang = 1;
 function gangSetzen(g) { gang = g; document.querySelectorAll('#gang button').forEach(b => b.classList.toggle('an', +b.dataset.g === g)); }
 document.querySelectorAll('#gang button').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); gangSetzen(+b.dataset.g); }));
 addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return; if (e.key === '1' || e.key === '2' || e.key === '3') gangSetzen(+e.key - 1); else if (e.key.toLowerCase() === 'g') gangSetzen((gang + 1) % 3); });
