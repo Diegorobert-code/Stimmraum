@@ -1138,8 +1138,12 @@ for (const o of ORTE) {
   npc.push({ f, o, x, z, satz: o.satz, ort: o.id });
 }
 for (const n of NEBEN) { const f = figur(n.figur, n.farbe, n.gross || .95); f.position.set(n.x, n.hoch || 0, n.z); f.rotation.y = Math.PI / 2; szene.add(f); npc.push({ f, x: n.x, z: n.z, hoch: n.hoch, satz: n.satz, key: n.figur }); }
+// Spaziergänger (Idee 2, 22.10.): Kay und Mr. Ping schlendern die Promenade auf und ab, Lumo fliegt Runden um den Brunnen.
+// Kommt man näher, bleiben sie stehen, schauen her und grüssen.
+for (const [key, w] of [['kay', { von: -104, bis: -150, x: 2.8 }], ['mrping', { von: -226, bis: -264, x: 2.8 }], ['lumo', { kreis: true, cx: 0, cz: -42, r: 5.6, t: .2 }]]) {
+  const n = npc.find(m => m.key === key); if (!n) continue; n.weg = { dir: -1, ...w }; if (!w.kreis) n.f.position.x = n.x = w.x; }
 // Goldene Lichtsäule über Nova: von weit her sichtbar, leuchtet nach dem Anruf stärker
-const novaN = npc.find(n => n.ort === 'novaplatz');
+window.__npc = npc; const novaN = npc.find(n => n.ort === 'novaplatz');
 const novaSaeule = new THREE.Mesh(new THREE.CylinderGeometry(.55, .9, 40, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
 novaSaeule.position.set(novaN.x, 24.5, novaN.z); szene.add(novaSaeule);
 const novaGlut = glut(0xffd27a, 2.4, .45); novaGlut.position.set(novaN.x, 4.6, novaN.z); szene.add(novaGlut);
@@ -1734,7 +1738,7 @@ function schritt() {
   for (const b of blasen) { const k = (zeit * .25 + b.userData.p) % 1; b.position.set(b.userData.x + Math.sin(k * 12) * .3, -8 + k * 7, b.userData.z); }
   steine.forEach((s, i) => { s.material.opacity = .5 + Math.sin(zeit * 2 + i) * .4; });
   schuhe.forEach((s, i) => { s.position.y = 1.3 + Math.sin(zeit * 2 + i) * .08; });
-  for (const n of npc) figurBewegen(n.f, zeit, 0);
+  for (const n of npc) figurBewegen(n.f, zeit, n.geht && !n.weg.kreis ? 1 : 0);
   figurenLeben(dt, zeit);
   figurenSpielen(dt, zeit);
   sunnyTipps(dt);
@@ -1940,6 +1944,10 @@ function figurenSpielen(dt, zeit) {
 function figurenLeben(dt, zeit) {
   for (const n of npc) {
     const u = n.f.userData;
+    if (n.weg) { const w = n.weg, dd = Math.hypot(sp.pos.x - n.f.position.x, sp.pos.z - n.f.position.z); n.geht = dd > 5.5 && !gespr.n && !zustand.innen;
+      if (n.geht && w.kreis) { w.t += dt * .12; n.f.position.set(w.cx + Math.cos(w.t) * w.r, (n.hoch || 0) + Math.sin(zeit * 1.6) * .25, w.cz + Math.sin(w.t) * w.r); }
+      else if (n.geht) { let z = n.f.position.z + w.dir * .9 * dt; if (z < w.bis) { z = w.bis; w.dir = 1; } else if (z > w.von) { z = w.von; w.dir = -1; } n.f.position.z = z; u.grund = w.dir < 0 ? Math.PI : 0; }
+      n.x = n.f.position.x; n.z = n.f.position.z; }
     if (u.karton) {
       // Aufsteller leben: atmen, beim Reden wippen und federn, beim Näherkommen kleiner Freudenhüpfer
       const redet = u.redet > 0; if (redet) u.redet -= dt;
@@ -1948,7 +1956,8 @@ function figurenLeben(dt, zeit) {
       u.bild.scale.set(u.w * (1 - atem * .6 + wipp * .3), u.h * (1 + atem + wipp * .5), 1);
       u.bild.material.rotation = redet ? Math.sin(zeit * 4.5) * .04 : Math.sin(zeit * .9 + u.phase) * .012;
       u.nah = d < 7; if (u.nah && !u.warNah) u.hupf = 1; u.warNah = u.nah;
-      if (u.hupf > 0) { u.hupf = Math.max(0, u.hupf - dt * 1.8); u.bild.position.y = .02 + Math.sin((1 - u.hupf) * Math.PI) * .35; } else u.bild.position.y = .02;
+      if (u.hupf > 0) { u.hupf = Math.max(0, u.hupf - dt * 1.8); u.bild.position.y = .02 + Math.sin((1 - u.hupf) * Math.PI) * .35; } else u.bild.position.y = .02 + (n.geht && !n.weg.kreis ? Math.abs(Math.sin(zeit * 6.5 + u.phase)) * .13 : 0);
+      if (n.geht && !n.weg.kreis) u.bild.material.rotation = Math.sin(zeit * 6.5 + u.phase) * .05;
       continue;
     }
     if (!u.d3) continue;
