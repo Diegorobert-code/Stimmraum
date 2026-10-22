@@ -243,7 +243,7 @@ let bloomPass = null;
 try {
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(szene, kamera));
-  composer.addPass(bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .85, .55, .72));
+  composer.addPass(bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .62, .5, .82));
   composer.addPass(new ShaderPass(FILMLOOK));
   composer.addPass(new OutputPass());
 } catch (e) { composer = null; }
@@ -477,23 +477,51 @@ function pinie(x, z, s = 1) {
   const g = new THREE.Group();
   const st = new THREE.Mesh(new THREE.CylinderGeometry(.18 * s, .28 * s, 6 * s, 6), MAT.stamm); st.position.y = 3 * s; st.rotation.z = (zufall() - .5) * .25; g.add(st);
   for (let i = 0; i < 3; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(2.4 * s, 7, 5), MAT.pinie); k.scale.set(1.3, .45, 1.1); k.position.set((zufall() - .5) * 2 * s, 6.2 * s + i * .5 * s, (zufall() - .5) * 2 * s); k.castShadow = true; g.add(k); }
-  g.position.set(x, 0, z); szene.add(g); return g;
+  g.position.set(x, hangY(x, z) - .2, z); szene.add(g); return g;
 }
-function zypresse(x, z, s = 1) { const k = new THREE.Mesh(new THREE.ConeGeometry(.9 * s, 7 * s, 7), MAT.blatt); k.position.set(x, 3.5 * s, z); k.castShadow = true; szene.add(k); }
+function zypresse(x, z, s = 1) { const k = new THREE.Mesh(new THREE.ConeGeometry(.9 * s, 7 * s, 7), MAT.blatt); k.position.set(x, 3.5 * s + hangY(x, z) - .2, z); k.castShadow = true; szene.add(k); }
+// Palmwedel wie im Trickfilm: gemalte Fiederblätter, die sich nach aussen biegen (statt spitzer Kegel)
+const PALM_BILD = canvasTextur(256, 64, (g, b, h) => {
+  g.clearRect(0, 0, b, h);
+  for (let x = 6; x < b - 4; x += 5) {
+    const t = x / b, l = (1 - Math.pow(t, 1.6)) * 26 + 4;
+    for (const s of [-1, 1]) { g.strokeStyle = `hsl(${118 + t * 12}, ${52 - t * 10}%, ${30 + (s > 0 ? 10 : 0) + t * 6}%)`; g.lineWidth = 3.4 - t * 1.2; g.beginPath(); g.moveTo(x, 32); g.quadraticCurveTo(x + 6, 32 + s * l * .5, x + 12, 32 + s * l); g.stroke(); }
+  }
+  g.strokeStyle = '#6b7a32'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 32); g.lineTo(b, 32); g.stroke();
+});
+PALM_BILD.wrapS = PALM_BILD.wrapT = THREE.ClampToEdgeWrapping; PALM_BILD.repeat.set(1, 1);
+MAT.palmblatt = new THREE.MeshStandardMaterial({ map: PALM_BILD, alphaTest: .4, side: THREE.DoubleSide, roughness: .7 });
+const STAMM_BILD = canvasTextur(128, 32, (g, b, h) => { g.fillStyle = '#7a5532'; g.fillRect(0, 0, b, h); for (let x = 0; x < b; x += 9) { g.fillStyle = 'rgba(40,22,10,.55)'; g.fillRect(x, 0, 2, h); g.fillStyle = 'rgba(255,220,170,.18)'; g.fillRect(x + 3, 0, 3, h); } }, [1, 1]);
+MAT.palmstamm = new THREE.MeshStandardMaterial({ map: STAMM_BILD, roughness: .9 });
+const WEDEL = (() => {
+  const geo = new THREE.PlaneGeometry(4.2, 1.3, 12, 2), p = geo.attributes.position;
+  for (let k = 0; k < p.count; k++) { const x = p.getX(k) + 2.1, y = p.getY(k), t = x / 4.2; p.setXYZ(k, x, -t * t * 2.1 - Math.abs(y) * .35, y * (1 - t * .35)); }
+  geo.computeVertexNormals(); return geo;
+})();
 function palme(x, z) {
   const g = new THREE.Group();
   const kurve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(.6, 3, 0), new THREE.Vector3(.4, 6.5, 0)]);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(kurve, 10, .22, 6), MAT.stamm));
-  const wedel = new THREE.ConeGeometry(.5, 4, 4, 1); wedel.translate(0, 2, 0);
-  for (let i = 0; i < 8; i++) { const halter = new THREE.Group(); halter.position.set(.4, 6.5, 0); halter.rotation.y = i * Math.PI / 4; const w = new THREE.Mesh(wedel, MAT.blatt); w.rotation.z = -1.1; w.scale.set(1, 1, .25); w.castShadow = true; halter.add(w); g.add(halter); }
+  const st = new THREE.Mesh(new THREE.TubeGeometry(kurve, 12, .22, 8), MAT.palmstamm); st.castShadow = true; g.add(st);
+  for (let i = 0; i < 10; i++) { const w = new THREE.Mesh(WEDEL, MAT.palmblatt); w.position.set(.4, 6.45, 0); w.rotation.set(0, i * Math.PI / 5 + zufall() * .3, (zufall() - .3) * .35, 'YZX'); w.castShadow = true; g.add(w); }
+  for (let i = 0; i < 4; i++) { const n = new THREE.Mesh(new THREE.SphereGeometry(.16, 8, 6), MAT.holz); n.position.set(.4 + Math.cos(i * 1.6) * .22, 6.2, Math.sin(i * 1.6) * .22); g.add(n); }
+  zusammenfassen(g);
   g.position.set(x, 0, z); szene.add(g); return g;
 }
+// Laterne wie an einer Mittelmeer-Promenade: Sockel, schlanker Mast, Kragen, sechseckiges Glas mit warmem Licht, Dach mit Spitze
+const LAT = {
+  sockel: new THREE.CylinderGeometry(.15, .22, .45, 8), mast: new THREE.CylinderGeometry(.055, .085, 3.1, 8), kragen: new THREE.TorusGeometry(.1, .03, 6, 12),
+  boden: new THREE.CylinderGeometry(.2, .13, .08, 6), glas: new THREE.CylinderGeometry(.21, .15, .5, 6, 1, true), steg: new THREE.BoxGeometry(.025, .52, .025),
+  dach: new THREE.ConeGeometry(.32, .26, 6), spitze: new THREE.SphereGeometry(.05, 8, 6),
+  glasMat: new THREE.MeshStandardMaterial({ color: 0xffe6b0, emissive: 0xffa848, emissiveIntensity: 1.25, roughness: .3, side: THREE.DoubleSide }),
+};
 function laterne(x, z) {
-  const g = new THREE.Group();
-  const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, 3.6, 6), MAT.metall); p.position.y = 1.8; g.add(p);
-  const k = new THREE.Mesh(new THREE.BoxGeometry(.45, .55, .45), MAT.metall); k.position.y = 3.8; g.add(k);
-  const b = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff0c8 })); b.position.y = 3.75; g.add(b);
-  const s = glut(0xffb85a, 3.2, .55); s.position.y = 3.75; g.add(s);
+  const g = new THREE.Group(), teil = (geo, mat, y, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.y = y; m.rotation.x = rx; m.castShadow = true; g.add(m); return m; };
+  teil(LAT.sockel, MAT.metall, .22); teil(LAT.mast, MAT.metall, 1.95); teil(LAT.kragen, MAT.metall, 3.45, Math.PI / 2); teil(LAT.boden, MAT.metall, 3.52);
+  teil(LAT.glas, LAT.glasMat, 3.81).castShadow = false;
+  for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6, s = new THREE.Mesh(LAT.steg, MAT.metall); s.position.set(Math.cos(a) * .18, 3.81, Math.sin(a) * .18); g.add(s); }
+  teil(LAT.dach, MAT.metall, 4.19); teil(LAT.spitze, MAT.metall, 4.36);
+  zusammenfassen(g);
+  const s = glut(0xffb85a, 2.4, .42); s.position.y = 3.8; g.add(s);
   g.position.set(x, 0, z); szene.add(g); LATERNEN.push(new THREE.Vector3(x, 3.6, z));
 }
 // Nur die nächsten Laternen werfen echtes Licht (schont das Handy)
@@ -781,8 +809,19 @@ for (let z = 2; z > -LAENGE + 10;) {
   haus(z - b / 2, b, h, { flach: zufall() > .55, markise: zufall() > .6 ? [0x2f6fb0, 0xc4623d, 0xf2c25b][Math.floor(zufall() * 3)] : null });
   z -= b + .2;
 }
+// Hügel hinter dem Städtchen: die zweite Häuserreihe und die Bäume stehen darauf, statt in der Luft zu schweben
+// bei Brix' Fabrik (z um -192) bleibt eine flache Senke, damit die Fabrik frei steht
+const hangY = (x, z = 0) => Math.min(16, Math.max(0, (-x - 10.5) * .7)) * Math.min(1, Math.max(0, (Math.abs(z + 191) - 13) / 8));
+{
+  const geo = new THREE.PlaneGeometry(90, LAENGE + 90, 60, 40); geo.rotateX(-Math.PI / 2); geo.translate(-10.5 - 45, 0, -LAENGE / 2 + 10);
+  const p = geo.attributes.position;
+  for (let k = 0; k < p.count; k++) { const x = p.getX(k), z = p.getZ(k); p.setY(k, hangY(x, z) + (x < -12 && Math.abs(z + 191) > 20 ? (Math.sin(z * .09) + Math.sin(z * .23 + x * .1)) * .9 : 0) - .05); }
+  geo.computeVertexNormals();
+  const GRAS = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#6f7d45'; g.fillRect(0, 0, b, h); for (let i = 0; i < 2200; i++) { g.fillStyle = `hsla(${70 + deko() * 30}, ${30 + deko() * 25}%, ${26 + deko() * 22}%, .55)`; g.fillRect(deko() * b, deko() * h, 2 + deko() * 5, 2 + deko() * 5); } }, [18, 60]);
+  const huegel = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: GRAS, roughness: 1 })); huegel.receiveShadow = true; szene.add(huegel);
+}
 // zweite Reihe am Hang (höher, weiter weg)
-for (let z = 0; z > -LAENGE; z -= 9 + zufall() * 5) { const g = haus(z, 7 + zufall() * 3, 8 + zufall() * 8, { flach: zufall() > .5, blumen: false, hang: true }); g.position.x -= 9 + zufall() * 4; g.position.y = 3 + zufall() * 4; }
+for (let z = 0; z > -LAENGE; z -= 9 + zufall() * 5) { const g = haus(z, 7 + zufall() * 3, 8 + zufall() * 8, { flach: zufall() > .5, blumen: false, hang: true }); g.position.x -= 9 + zufall() * 4; g.position.y = hangY(g.position.x + 3.5, z) - .3 + zufall() * 0; }
 for (let i = 0; i < 26; i++) pinie(-30 - zufall() * 40, 10 - i * 8 - zufall() * 5, 1 + zufall() * .6);
 for (let i = 0; i < 14; i++) zypresse(-24 - zufall() * 10, -i * 14 - zufall() * 6, 1 + zufall() * .5);
 for (let z = 4; z > -LAENGE; z -= 11) laterne(7.4, z);
@@ -916,8 +955,8 @@ const steine = [];
 }
 blumen.count = blumenZahl; blumen.castShadow = true; if (blumen.instanceColor) blumen.instanceColor.needsUpdate = true; szene.add(blumen);
 {
-  const blatt = new THREE.InstancedMesh(new THREE.CircleGeometry(.09, 5), new THREE.MeshStandardMaterial({ color: 0xe0287a, roughness: .7, side: THREE.DoubleSide }), 1400);
-  for (let i = 0; i < 1400; i++) { hilf.position.set(-6.8 + Math.pow(zufall(), 2) * 6, .015, 12 - zufall() * (LAENGE + 8)); hilf.rotation.set(-Math.PI / 2, 0, zufall() * 6); hilf.scale.setScalar(.7 + zufall()); hilf.updateMatrix(); blatt.setMatrixAt(i, hilf.matrix); }
+  const blatt = new THREE.InstancedMesh(new THREE.PlaneGeometry(.2, .2), new THREE.MeshStandardMaterial({ map: BLUETEN_BILD, alphaTest: .45, color: 0xffc4d8, roughness: .8, side: THREE.DoubleSide }), 900);
+  for (let i = 0; i < 900; i++) { hilf.position.set(-6.8 + Math.pow(zufall(), 2.5) * 5, .012, 12 - zufall() * (LAENGE + 8)); hilf.rotation.set(-Math.PI / 2, 0, zufall() * 6); hilf.scale.setScalar(.6 + zufall() * .7); hilf.updateMatrix(); blatt.setMatrixAt(i, hilf.matrix); }
   szene.add(blatt);
 }
 
@@ -1270,7 +1309,7 @@ function raumBild(url, key) {
 function raumSchliessen() {
   const n = raum.figur; if (n && raum.alt) { n.f.position.copy(raum.alt.pos); n.f.rotation.y = raum.alt.rot; n.imRaum = false; }
   raum.figur = null; raum.alt = null; raum.licht.intensity = 0; raum.licht2.intensity = 0;
-  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = .85;
+  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = .62;
 }
 const RAUM_ORTE = new Set(['schule', 'schuhmacher', 'post', 'ruinen', 'funkenmarkt', 'sparky', 'kino', 'fompa', 'boerse', 'singschule', 'labor', 'hundeschule', 'tor']);
 function reinGehen(o) {
