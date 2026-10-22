@@ -255,6 +255,18 @@ function threadsSetzen(liste) {
   try { fs.writeFileSync(THREADS_DATEI, JSON.stringify(threadStand), { mode: 0o600 }); } catch (e) { console.error('Threads nicht gespeichert:', e.message); }
   return { anzahl: threads.length };
 }
+// Designvorschläge des Tages für Novas «Designvorschläge»-Ansicht (Nova-Thread 22.10.), gleicher Lese-Schlüssel wie die Thread-Liste
+const DESIGNS_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'nova-designs.json');
+let designStand = { stand: null, designs: [] };
+try { designStand = JSON.parse(fs.readFileSync(DESIGNS_DATEI, 'utf8')); } catch {}
+function designsSetzen(liste) {
+  if (!Array.isArray(liste)) return { fehler: 'designs muss eine Liste sein.' };
+  const sauber = (t, n) => String(t || '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
+  const designs = liste.slice(0, 5).map(d => { let bild = sauber(d.bild, 600); if (!/^https:\/\//.test(bild) || /[?&]k=/.test(bild)) bild = ''; return { titel: sauber(d.titel, 80), app: sauber(d.app, 40), bild }; }).filter(d => d.titel && d.bild);
+  designStand = { stand: new Date().toISOString(), designs };
+  try { fs.writeFileSync(DESIGNS_DATEI, JSON.stringify(designStand), { mode: 0o600 }); } catch (e) { console.error('Designs nicht gespeichert:', e.message); }
+  return { anzahl: designs.length };
+}
 const threadsKurz = () => threadStand.threads.length ? threadStand.threads.filter(t => t.status !== 'fertig').map(t => `- ${t.titel}: ${t.status}${t.wichtig ? ' (wichtig)' : ' (hat noch Zeit)'}${t.was ? ', ' + t.was : ''}`).join('\n') : '';
 function novaWissenSetzen(t) {
   novaWissen = String(t || '').replace(/\r/g, '').slice(0, NOVA_WISSEN_MAX).trim();
@@ -1198,6 +1210,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_threads_setzen', description: 'Threads-Übersicht für Diegos Nova-Schaltzentrale setzen (ersetzt die ganze Liste, höchstens 40). Pro Thread: titel, status («läuft», «wartet auf Diego», «fertig»), wichtig (true = wichtig, false = hat noch Zeit), was (ein kurzer Satz), link (optional https, nie mit ?k=). Keine Gesundheits-, Klienten- oder Finanzdetails.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
+  { name: 'kiverse_designs_setzen', description: 'Die 5 Designvorschläge des Tages für Novas Ansicht «Designvorschläge» setzen (ersetzt alle). Pro Design: titel, app, bild (https-Bild-URL, nie mit ?k=).',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' }, designs: { type: 'array', maxItems: 5, items: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string' }, bild: { type: 'string' } }, required: ['titel', 'bild'] } } }, required: ['von', 'designs'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
@@ -1419,6 +1433,10 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_threads_setzen': {
       const r = threadsSetzen(a.threads);
       return r.fehler ? text(r.fehler, true) : text(`Threads-Übersicht gesetzt (${r.anzahl} Threads). Diego sieht sie in der Nova-App, Nova kennt sie ab dem nächsten Satz.`);
+    }
+    case 'kiverse_designs_setzen': {
+      const r = designsSetzen(a.designs);
+      return r.fehler ? text(r.fehler, true) : text(`Designvorschläge gesetzt (${r.anzahl}). Diego sieht sie in Novas Ansicht «Designvorschläge».`);
     }
     case 'kiverse_nova_wissen': {
       if (!String(a.text || '').trim()) return text('Leerer Text.', true);
@@ -1965,6 +1983,11 @@ const server = http.createServer(async (req, res) => {
     const l = String(url.searchParams.get('l') || '');
     if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
     return json(res, 200, threadStand);
+  }
+  if (url.pathname === '/api/designs-lesen' && req.method === 'GET') {
+    const l = String(url.searchParams.get('l') || '');
+    if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
+    return json(res, 200, designStand);
   }
   try {
     // KI-Verbindungsstelle
