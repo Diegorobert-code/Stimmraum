@@ -331,7 +331,18 @@ const GLAS_AUS = canvasTextur(64, 96, (g, b, h) => { const v = g.createLinearGra
 
 // ---------- Meer mit Wellen und Mondspur ----------
 const meerGeo = new THREE.PlaneGeometry(900, 900, 90, 90); meerGeo.rotateX(-Math.PI / 2);
-const meer = new THREE.Mesh(meerGeo, new THREE.MeshStandardMaterial({ color: 0x0f2c66, roughness: .18, metalness: .55 }));
+// kleine Wellen als Normalenkarte: das Meer glitzert im Laternen- und Mondlicht statt flach grau zu wirken
+const WELLEN = (() => {
+  const n = 256, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), bild = g.createImageData(n, n), hoch = new Float32Array(n * n);
+  const wellen = Array.from({ length: 9 }, (_, i) => ({ kx: Math.round(Math.cos(i * 2.4) * (2 + i)), ky: Math.round(Math.sin(i * 2.4) * (2 + i)), a: 1 / (1 + i * .5), p: deko() * 6.3 }));
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { let s = 0; for (const w of wellen) s += Math.sin((w.kx * x + w.ky * y) / n * Math.PI * 2 + w.p) * w.a; hoch[y * n + x] = s; }
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const dx = hoch[y * n + (x + 1) % n] - hoch[y * n + (x + n - 1) % n], dy = hoch[((y + 1) % n) * n + x] - hoch[((y + n - 1) % n) * n + x];
+    const l = Math.hypot(dx, dy, 1.2), k = (y * n + x) * 4; bild.data[k] = (-dx / l * .5 + .5) * 255; bild.data[k + 1] = (-dy / l * .5 + .5) * 255; bild.data[k + 2] = (1.2 / l * .5 + .5) * 255; bild.data[k + 3] = 255;
+  }
+  g.putImageData(bild, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(70, 70); return t;
+})();
+const meer = new THREE.Mesh(meerGeo, new THREE.MeshStandardMaterial({ color: 0x0c3a72, roughness: .22, metalness: .35, normalMap: WELLEN, normalScale: new THREE.Vector2(.55, .55), envMapIntensity: 1.3 }));
 meer.position.set(458, -1.3, -100); szene.add(meer); AR_WEG.push(meer);
 const meerBasis = Float32Array.from(meerGeo.attributes.position.array);
 const spurMat = new THREE.MeshBasicMaterial({ map: canvasTextur(64, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, 'rgba(255,220,140,0)'); v.addColorStop(.6, 'rgba(255,220,140,.5)'); v.addColorStop(1, 'rgba(255,220,140,.05)'); g.fillStyle = v; g.fillRect(0, 0, b, h); for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,240,200,.5)'; g.fillRect(zufall() * b, zufall() * h, 6 + zufall() * 20, 2); } }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
@@ -1422,6 +1433,7 @@ function schritt() {
   glattDt += (Math.min(.05, roh) - glattDt) * .25;
   const dt = window.__filmDt || glattDt; const zeit = (zustand.zeit += dt);
   const pa = meerGeo.attributes.position;
+  WELLEN.offset.set(zeit * .012, zeit * .007);
   for (let i = 0; i < pa.count; i++) { const x = meerBasis[i * 3], z = meerBasis[i * 3 + 2]; pa.array[i * 3 + 1] = Math.sin(x * .08 + zeit * 1.2) * .25 + Math.cos(z * .06 + zeit * .9) * .2; }
   pa.needsUpdate = true; meerGeo.computeVertexNormals(); teppichMischen();
   // Werkstatt-Städtchen: Kinolampen, Noten, Mini-Pings, Kurs-Tafel, Fackel
