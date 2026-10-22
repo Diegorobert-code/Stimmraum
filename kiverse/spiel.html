@@ -282,15 +282,32 @@ function glut(farbe, groesse, staerke = 1) {
   s.scale.set(groesse, groesse, 1); return s;
 }
 function rundRechteck(g, x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
-const PFLASTER = canvasTextur(512, 512, (g, b, h) => {
-  g.fillStyle = '#5a4436'; g.fillRect(0, 0, b, h);
-  for (let y = 0; y < 8; y++) for (let x = -1; x < 8; x++) {
-    const ox = (y % 2) * 32, l = 52 + zufall() * 18;
-    g.fillStyle = `hsl(${30 + zufall() * 10}, ${30 + zufall() * 14}%, ${l}%)`;
-    rundRechteck(g, x * 64 + ox + 3, y * 64 + 3, 58, 58, 14); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.08)'; rundRechteck(g, x * 64 + ox + 8, y * 64 + 6, 40, 14, 7); g.fill();
+// Pflaster wie im Trickfilm: runde, leicht gewölbte Steine mit weichem Glanz; dazu eine Wölbungskarte, damit Laternenlicht auf jedem Stein spielt
+const PFL = (() => {
+  const n = 512, rnd = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(4242);
+  const farbe = document.createElement('canvas'), hoehe = document.createElement('canvas'); farbe.width = farbe.height = hoehe.width = hoehe.height = n;
+  const f = farbe.getContext('2d'), hh = hoehe.getContext('2d');
+  f.fillStyle = '#4a372c'; f.fillRect(0, 0, n, n); hh.fillStyle = '#000'; hh.fillRect(0, 0, n, n);
+  for (let y = 0; y < 8; y++) for (let x = -1; x < 9; x++) {
+    const ox = (y % 2) * 32, l = 50 + rnd() * 18, hue = 24 + rnd() * 14, sx = x * 64 + ox + 3 + (rnd() - .5) * 3, sy = y * 64 + 3 + (rnd() - .5) * 3, w = 56 + rnd() * 4, hg = 56 + rnd() * 4;
+    for (const dx of [0, -n]) {
+      f.fillStyle = `hsl(${hue}, ${32 + rnd() * 14}%, ${l}%)`; rundRechteck(f, sx + dx, sy, w, hg, 16); f.fill();
+      const v = f.createRadialGradient(sx + dx + w * .35, sy + hg * .3, 2, sx + dx + w / 2, sy + hg / 2, w * .7); v.addColorStop(0, 'rgba(255,240,220,.22)'); v.addColorStop(1, 'rgba(60,30,20,.18)');
+      f.fillStyle = v; rundRechteck(f, sx + dx, sy, w, hg, 16); f.fill();
+      const hv = hh.createRadialGradient(sx + dx + w / 2, sy + hg / 2, 4, sx + dx + w / 2, sy + hg / 2, w * .62); hv.addColorStop(0, '#fff'); hv.addColorStop(.7, '#bbb'); hv.addColorStop(1, '#222');
+      hh.fillStyle = hv; rundRechteck(hh, sx + dx, sy, w, hg, 16); hh.fill();
+    }
   }
-}, [8, 66]);
+  const d = hh.getImageData(0, 0, n, n).data, nc = document.createElement('canvas'); nc.width = nc.height = n; const nctx = nc.getContext('2d'), bild = nctx.createImageData(n, n);
+  const H = (x, y) => d[(((y + n) % n) * n + (x + n) % n) * 4] / 255;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const dx = (H(x + 1, y) - H(x - 1, y)) * 2.2, dy = (H(x, y + 1) - H(x, y - 1)) * 2.2, l = Math.hypot(dx, dy, 1), k = (y * n + x) * 4;
+    bild.data[k] = (-dx / l * .5 + .5) * 255; bild.data[k + 1] = (dy / l * .5 + .5) * 255; bild.data[k + 2] = (1 / l * .5 + .5) * 255; bild.data[k + 3] = 255; }
+  nctx.putImageData(bild, 0, 0);
+  const t1 = new THREE.CanvasTexture(farbe), t2 = new THREE.CanvasTexture(nc); t1.colorSpace = THREE.SRGBColorSpace;
+  for (const t of [t1, t2]) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 66); t.anisotropy = 4; }
+  return { farbe: t1, woelbung: t2 };
+})();
+const PFLASTER = PFL.farbe;
 const PUTZ = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#f3ebdd'; g.fillRect(0, 0, b, h); for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${150 + zufall() * 60},${130 + zufall() * 50},${100 + zufall() * 40},${zufall() * .12})`; g.fillRect(zufall() * b, zufall() * h, 2 + zufall() * 6, 2 + zufall() * 6); } }, [1, 1]);
 const STEIN = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#c8b694'; g.fillRect(0, 0, b, h); for (let y = 0; y < 8; y++) for (let x = -1; x < 4; x++) { g.fillStyle = `hsl(38, 25%, ${58 + zufall() * 14}%)`; g.fillRect(x * 64 + (y % 2) * 32 + 2, y * 32 + 2, 60, 28); } }, [1, 1]);
 // Diego 22.10.: «sieht grafisch noch nicht gut aus»: Ziegel, Holz, Fensterläden und Fensterglas wie im Trickfilm
@@ -362,7 +379,7 @@ spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.
 // ---------- Boden, Ufermauer, Berg ----------
 const LAENGE = 330;
 {
-  const boden = new THREE.Mesh(new THREE.PlaneGeometry(30, LAENGE + 60), new THREE.MeshStandardMaterial({ map: PFLASTER, roughness: .42, metalness: .12, color: 0xffd9a8 }));
+  const boden = new THREE.Mesh(new THREE.PlaneGeometry(30, LAENGE + 60), new THREE.MeshStandardMaterial({ map: PFLASTER, normalMap: PFL.woelbung, normalScale: new THREE.Vector2(.8, .8), roughness: .38, metalness: .1, color: 0xffd9a8 }));
   boden.rotation.x = -Math.PI / 2; boden.position.set(-7, 0, -LAENGE / 2 + 10); boden.receiveShadow = true; szene.add(boden); AR_WEG.push(boden);
   const mauer = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, LAENGE + 40), new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }));
   mauer.position.set(8.6, -.75, -LAENGE / 2 + 10); mauer.receiveShadow = true; szene.add(mauer);
@@ -402,10 +419,10 @@ const BLUETEN_BILD = canvasTextur(128, 128, (g) => {
 });
 const BLUETE = new THREE.PlaneGeometry(.62, .62);
 MAT.bougain = new THREE.MeshStandardMaterial({ map: BLUETEN_BILD, alphaTest: .45, side: THREE.DoubleSide, roughness: .6, emissive: 0x2a0816 });
-const blumen = new THREE.InstancedMesh(BLUETE, MAT.bougain, 9000); let blumenZahl = 0; const hilf = new THREE.Object3D();
+const blumen = new THREE.InstancedMesh(BLUETE, MAT.bougain, 13000); let blumenZahl = 0; const hilf = new THREE.Object3D();
 const BLUETEN = [new THREE.Color(0xe0287a), new THREE.Color(0xff4fa0), new THREE.Color(0xc21a6a), new THREE.Color(0x2f6b3a), new THREE.Color(0x3d7f45)];
 function blumenWolke(x, y, z, breite, hoehe, tiefe = .5, anzahl = 70) {
-  for (let i = 0; i < anzahl * 2.2 && blumenZahl < 9000; i++) {
+  for (let i = 0; i < anzahl * 2.2 && blumenZahl < 13000; i++) {
     // nach unten dichter, wie herabhängende Ranken
     const yy = y + (Math.pow(zufall(), .7) - .5) * hoehe;
     hilf.position.set(x + (zufall() - .5) * tiefe, yy, z + (zufall() - .5) * breite);
@@ -425,7 +442,7 @@ const LAEDEN = [0x2f6fb0, 0x2f8a6a, 0x3aa6a0, 0x9a3b2f, 0x4a5fa8, 0x6aa84a].map(
 const RAHMEN = new THREE.MeshStandardMaterial({ color: 0xf8f1e4, roughness: .8 });
 const SCHMIED = new THREE.MeshStandardMaterial({ color: 0x1c1f2c, metalness: .5, roughness: .45 });
 const G = {
-  fenster: new THREE.PlaneGeometry(1.1, 1.5), rahmen: new THREE.BoxGeometry(.1, 1.85, 1.45), bank: new THREE.BoxGeometry(.32, .12, 1.6),
+  kiste: new RoundedBoxGeometry(.4, .32, 1.5, 2, .05), fenster: new THREE.PlaneGeometry(1.1, 1.5), rahmen: new THREE.BoxGeometry(.1, 1.85, 1.45), bank: new THREE.BoxGeometry(.32, .12, 1.6),
   laden: new THREE.BoxGeometry(.06, 1.5, .55), balkon: new RoundedBoxGeometry(1.1, .16, 2.2, 2, .05), stab: new THREE.CylinderGeometry(.025, .025, .9, 5),
   handlauf: new THREE.BoxGeometry(.06, .06, 2.2), handlaufS: new THREE.BoxGeometry(1.1, .06, .06), tuer: new THREE.BoxGeometry(.18, 2.3, 1.3),
   tuerBogen: new THREE.CylinderGeometry(.65, .65, .18, 16, 1, false, 0, Math.PI), tuerRahmen: new THREE.TorusGeometry(.78, .14, 6, 16, Math.PI),
@@ -474,7 +491,9 @@ function haus(z, breite, hoehe, opt = {}) {
       const hl = new THREE.Mesh(G.handlauf, SCHMIED); hl.position.set(vorn + 1.05, fy + .15, fz); g.add(hl);
       for (const e of [-1, 1]) { const h2 = new THREE.Mesh(G.handlaufS, SCHMIED); h2.position.set(vorn + .55, fy + .15, fz + e * 1.08); g.add(h2); }
       blumenWolke(-7 + 1.05, fy - .2, z + fz, 2, .5, .4, 26);
-    } else { const bank = new THREE.Mesh(G.bank, RAHMEN); bank.position.set(vorn + .12, fy - .85, fz); g.add(bank); }
+    } else { const bank = new THREE.Mesh(G.bank, RAHMEN); bank.position.set(vorn + .12, fy - .85, fz); g.add(bank);
+      // Blumenkiste unter dem Fenster (Diego 22.10.: «wirklich Trickfilm»)
+      if (!opt.hang && deko() > .4) { const ki = new THREE.Mesh(G.kiste, deko() > .5 ? MAT.ton : MAT.holz); ki.position.set(vorn + .32, fy - .72, fz); g.add(ki); blumenWolke(-7 + .38, fy - .42, z + fz, 1.35, .3, .35, 12); } }
     if (an && deko() > .7) { const s2 = glut(0xffc070, 2.4, .35); s2.position.set(vorn + .3, fy, fz); g.add(s2); }
   }
   const t = new THREE.Mesh(G.tuer, MAT.holz); t.position.set(vorn + .05, 1.15, 0); g.add(t);
