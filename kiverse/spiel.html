@@ -1142,6 +1142,58 @@ for (const n of NEBEN) { const f = figur(n.figur, n.farbe, n.gross || .95); f.po
 // Kommt man näher, bleiben sie stehen, schauen her und grüssen.
 for (const [key, w] of [['kay', { von: -104, bis: -150, x: 2.8 }], ['mrping', { von: -226, bis: -264, x: 2.8 }], ['lumo', { kreis: true, cx: 0, cz: -42, r: 5.6, t: .2 }]]) {
   const n = npc.find(m => m.key === key); if (!n) continue; n.weg = { dir: -1, ...w }; if (!w.kreis) n.f.position.x = n.x = w.x; }
+// Welpe als Begleiter (Idee 3, 22.10.): trabt vorne-seitlich mit, damit man ihn auch aus der Ich-Sicht sieht; setzt sich, wenn man steht, und wedelt.
+// Name kommt von Diego, bis dahin «Welpe».
+const WELPE_NAME = 'Welpe';
+const welpe = (() => {
+  const g = new THREE.Group(), fell = new THREE.MeshStandardMaterial({ color: 0xe9b872, roughness: .75 }), hell = new THREE.MeshStandardMaterial({ color: 0xfff1dc, roughness: .8 }),
+    ohrM = new THREE.MeshStandardMaterial({ color: 0xa8683a, roughness: .8 }), schwarz = new THREE.MeshStandardMaterial({ color: 0x1a1410, roughness: .25 });
+  const leib = new THREE.Group(); g.add(leib);
+  const rumpf = new THREE.Mesh(new THREE.CapsuleGeometry(.24, .38, 6, 14), fell); rumpf.rotation.x = Math.PI / 2; rumpf.position.y = .42; leib.add(rumpf);
+  const bauch = new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), hell); bauch.scale.set(1, .8, 1.5); bauch.position.set(0, .34, .05); leib.add(bauch);
+  const kopf = new THREE.Group(); kopf.position.set(0, .78, .36); leib.add(kopf);
+  const schaedel = new THREE.Mesh(new THREE.SphereGeometry(.3, 20, 16), fell); schaedel.scale.set(1.05, .95, 1); kopf.add(schaedel);
+  const schnauze = new THREE.Mesh(new THREE.SphereGeometry(.15, 14, 10), hell); schnauze.scale.set(1.1, .8, 1); schnauze.position.set(0, -.09, .22); kopf.add(schnauze);
+  const nase = new THREE.Mesh(new THREE.SphereGeometry(.055, 10, 8), schwarz); nase.scale.set(1.3, .9, 1); nase.position.set(0, -.04, .36); kopf.add(nase);
+  const zunge = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf07a8a })); zunge.scale.set(1, .4, 1.4); zunge.position.set(0, -.19, .3); kopf.add(zunge);
+  for (const sx of [-1, 1]) {
+    const auge = new THREE.Mesh(new THREE.SphereGeometry(.07, 14, 10), schwarz); auge.position.set(sx * .12, .05, .25); kopf.add(auge);
+    const glanz = new THREE.Mesh(new THREE.SphereGeometry(.016, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff })); glanz.position.set(sx * .12 + .022, .085, .312); kopf.add(glanz);
+    const ohr = new THREE.Mesh(new THREE.SphereGeometry(.14, 12, 10), ohrM); ohr.scale.set(.5, 1.25, .9); ohr.position.set(sx * .27, -.04, -.02); ohr.rotation.z = sx * .35; kopf.add(ohr); ohr.userData.s = sx;
+    (kopf.userData.ohren ||= []).push(ohr);
+  }
+  const halsband = new THREE.Mesh(new THREE.TorusGeometry(.17, .03, 8, 20), new THREE.MeshStandardMaterial({ color: 0xd9367a, roughness: .5 })); halsband.position.set(0, .62, .3); halsband.rotation.x = Math.PI / 2 - .5; leib.add(halsband);
+  const marke = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .015, 12), MAT.gold); marke.rotation.x = Math.PI / 2; marke.position.set(0, .5, .45); leib.add(marke);
+  const schwanz = new THREE.Group(); schwanz.position.set(0, .5, -.42); leib.add(schwanz);
+  const sw = new THREE.Mesh(new THREE.CapsuleGeometry(.045, .26, 4, 8), fell); sw.position.y = .14; schwanz.add(sw); schwanz.rotation.x = -.7;
+  const beine = [];
+  for (const [bx, bz] of [[-.13, .2], [.13, .2], [-.13, -.22], [.13, -.22]]) { const b = new THREE.Group(); b.position.set(bx, .32, bz); leib.add(b);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(.065, .18, 4, 8), fell); m.position.y = -.17; b.add(m);
+    const pfote = new THREE.Mesh(new THREE.SphereGeometry(.075, 10, 8), hell); pfote.scale.set(1, .6, 1.2); pfote.position.set(0, -.3, .02); b.add(pfote); beine.push(b); }
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  g.scale.setScalar(1.15); g.position.set(1.5, 0, 4); szene.add(g);
+  return { g, leib, kopf, schwanz, beine, ziel: new THREE.Vector3(), tempo: 0, sitzen: 0, phase: 0, kopfNeig: 0 };
+})();
+window.__welpe = welpe;
+function welpeLeben(dt, zeit) {
+  const w = welpe; w.g.visible = !zustand.innen && zustand.modus !== 'start';
+  if (!w.g.visible) return;
+  const r = sp.richtung, steht = Math.abs(sp.tempo) < .05;
+  w.ziel.set(sp.pos.x + Math.sin(r) * 4.2 - Math.cos(r) * 1.5, 0, sp.pos.z + Math.cos(r) * 4.2 + Math.sin(r) * 1.5);
+  const dx = w.ziel.x - w.g.position.x, dz = w.ziel.z - w.g.position.z, d = Math.hypot(dx, dz);
+  const soll = d > .25 ? Math.min(4.5, d * 1.8) : 0; w.tempo = lerp(w.tempo, soll, Math.min(1, dt * 4));
+  if (d > 12) { w.g.position.copy(w.ziel); w.tempo = 0; }
+  else if (d > .01) { w.g.position.x += dx / d * w.tempo * dt; w.g.position.z += dz / d * w.tempo * dt; }
+  const blick = w.tempo > .3 ? Math.atan2(dx, dz) : Math.atan2(sp.pos.x - w.g.position.x, sp.pos.z - w.g.position.z);
+  w.g.rotation.y = winkelLerp(w.g.rotation.y, blick, Math.min(1, dt * 6));
+  const lauf = Math.min(1, w.tempo / 2); w.phase += dt * (6 + w.tempo * 3.5);
+  w.sitzen = lerp(w.sitzen, steht && w.tempo < .3 ? 1 : 0, Math.min(1, dt * 3));
+  w.beine.forEach((b, i) => { b.rotation.x = Math.sin(w.phase + (i === 0 || i === 3 ? 0 : Math.PI)) * .7 * lauf + (i > 1 ? w.sitzen * 1.1 : 0); });
+  w.leib.rotation.x = -w.sitzen * .45; w.leib.position.y = Math.abs(Math.sin(w.phase)) * .06 * lauf - w.sitzen * .08;
+  w.schwanz.rotation.z = Math.sin(zeit * (w.sitzen > .5 ? 16 : 10)) * (.35 + w.sitzen * .3);
+  w.kopfNeig = lerp(w.kopfNeig, w.sitzen > .7 ? Math.sin(zeit * .7) * .3 : 0, Math.min(1, dt * 2)); w.kopf.rotation.z = w.kopfNeig; w.kopf.rotation.x = w.sitzen * .35;
+  for (const o of w.kopf.userData.ohren) o.rotation.x = Math.sin(w.phase * 2) * .25 * lauf;
+}
 // Goldene Lichtsäule über Nova: von weit her sichtbar, leuchtet nach dem Anruf stärker
 window.__npc = npc; const novaN = npc.find(n => n.ort === 'novaplatz');
 const novaSaeule = new THREE.Mesh(new THREE.CylinderGeometry(.55, .9, 40, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
@@ -1739,7 +1791,7 @@ function schritt() {
   steine.forEach((s, i) => { s.material.opacity = .5 + Math.sin(zeit * 2 + i) * .4; });
   schuhe.forEach((s, i) => { s.position.y = 1.3 + Math.sin(zeit * 2 + i) * .08; });
   for (const n of npc) figurBewegen(n.f, zeit, n.geht && !n.weg.kreis ? 1 : 0);
-  figurenLeben(dt, zeit);
+  figurenLeben(dt, zeit); welpeLeben(dt, zeit);
   figurenSpielen(dt, zeit);
   sunnyTipps(dt);
   if (ortObjekte.hasi) ortObjekte.hasi.position.y = .9 + Math.abs(Math.sin(zeit * 2.5)) * .12;
