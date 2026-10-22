@@ -103,6 +103,7 @@ body.beamer #tastenHilfe { font-size: 19px; }
 #anruf { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 9; max-width: min(92vw, 640px); background: rgba(11, 20, 48, .88); color: #fff6dc; border: 2px solid #ffd27a; border-radius: 22px; padding: 14px 22px; font: 700 18px/1.4 "Atkinson Hyperlegible", sans-serif; box-shadow: 0 0 40px rgba(255, 210, 122, .45); }
 #anruf b { display: block; color: #ffd27a; font: 800 22px "Baloo 2", sans-serif; }
 body.beamer #anruf { font-size: 24px; } body.beamer #anruf b { font-size: 28px; }
+body.eingebettet #redeKnopf { display: none !important; }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
@@ -1586,6 +1587,7 @@ function naechsteFigur(max = 6) { let best = null, bd = max; for (const n of npc
 function zeile(wer, text, ich) { const p = document.createElement('p'); p.className = ich ? 'du' : ''; const b = document.createElement('b'); b.textContent = wer + ': '; p.append(b, document.createTextNode(text)); const l = $('#gesprLog'); l.appendChild(p); l.scrollTop = l.scrollHeight; }
 function gespraechOeffnen(n) {
   if (!n) return;
+  if (EINGEBETTET && figurVon(n) === 'nova') return; // auf Novas Bühne spricht die Bühnen-Nova, nicht die Figur
   gespr.n = n; gespr.fid = figurVon(n);
   $('#karte').hidden = true; $('#reden').hidden = true;
   $('#gesprTitel').textContent = NAMEN[gespr.fid] || 'Figur'; $('#gesprLog').innerHTML = '';
@@ -1762,9 +1764,13 @@ async function sunnyBefehl(t) {
   sunnySagt(antwort || 'Sag mir einfach, wohin du möchtest, zum Beispiel «zu Hasi» oder «zu Otti». Dann fliege ich dich hin!');
 }
 // ---------- Anruf bei Nova (Präsentation): sie sagt, wo sie ist, die goldene Säule über ihr leuchtet auf ----------
+// Auf Novas Bühne (eingebettet) spricht nur die Bühnen-Nova: kein eigenes Mikrofon, keine Nova-Stimme hier
+const EINGEBETTET = window.parent !== window;
+if (EINGEBETTET) document.body.classList.add('eingebettet');
 const anruf = document.createElement('div'); anruf.id = 'anruf'; anruf.hidden = true; document.body.appendChild(anruf);
 let novaRufBis = 0;
 function novaAnruf() {
+  if (EINGEBETTET) { novaRufBis = performance.now() + 60000; return; } // auf der Bühne nur das Licht
   erlebt('rief Nova an');
   const satz = 'Hallo Diego! Ich bin auf der Plaça, gleich beim Brunnen. Such die goldene Lichtsäule, ich warte dort auf euch.';
   anruf.innerHTML = '<b>📞 Nova</b><span></span>'; anruf.querySelector('span').textContent = satz; anruf.hidden = false;
@@ -2004,7 +2010,7 @@ if (!istHandy) {
     if (k === 'f') { e.preventDefault(); vollbild(); }
     else if (k === 'h') hilfeZeigen(8000);
     else if (k === 'n' && document.body.classList.contains('spielt')) novaAnruf();
-    else if (k === 'm' && document.body.classList.contains('spielt')) { e.preventDefault(); $('#redeKnopf').click(); }
+    else if (k === 'm' && !EINGEBETTET && document.body.classList.contains('spielt')) { e.preventDefault(); $('#redeKnopf').click(); }
     else if (k === 'x' || k === 'escape') {
       if (!$('#appFenster').hidden) $('#appZu').click();
       else if (!$('#gespraech').hidden) gespraechSchliessen();
