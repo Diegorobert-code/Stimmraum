@@ -187,6 +187,7 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
     <h1>Nova</h1>
     <button class="rund" id="wuchsKnopf" type="button" aria-label="Heute gewachsen">🌱</button>
     <button class="rund" id="pushKnopf" type="button" aria-label="Push-Nachrichten einschalten">🔔</button>
+    <button class="rund" id="zentraleKnopf" type="button" aria-label="Schaltzentrale">🎛</button>
     <button class="rund" id="ergKnopf" type="button" aria-label="Ergebnisse">📂<span class="badge" id="ergBadge" hidden></span></button>
     <button class="rund" id="menuKnopf" type="button" aria-label="Netz, Gedächtnis und Seele">☰</button>
   </header>
@@ -296,6 +297,8 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
     return d;
   }
   $('#zurueck').href = '/?welt=1&k=' + encodeURIComponent(K);
+  // Schaltzentrale mit Thread-Liste (Nova-Thread 22.10.): bekommt nur einen Lese-Schlüssel, nie den Besitzer-Schlüssel
+  $('#zentraleKnopf').onclick = async () => { const w = window.open('', '_blank'); try { const d = await api('api/zentrale/threads-link'); const u = 'https://diegorobert-code.github.io/DR_Lab/nova/zentrale.html#liste=' + encodeURIComponent(d.quelle); if (w) w.location = u; else location.href = u; } catch (e) { w?.close(); toast(e.message); } };
   let stand = { verlauf: [], gedaechtnis: [], seele: '', netz: { apps: [], figuren: [], schleife: {} } };
   const AVA = { lumo: ['🦉', '#2b3f7d'], tinko: ['🛠️', '#1f5a6b'], coinmaker: ['🪙', '#5a4720'], mamaaffe: ['🦧', '#6b3d1f'], sparky: ['🦊', '#7a3a1a'], otti: ['🦔', '#4d3b2b'],
     fompa: ['🦁', '#6b5520'], kimo: ['🐨', '#4a4f5c'], jackie: ['👠', '#6b2a4d'], letti: ['🕊️', '#3d4f6b'], eulin: ['🦉', '#5a2433'], fia: ['🐦‍🔥', '#7a2a2a'],

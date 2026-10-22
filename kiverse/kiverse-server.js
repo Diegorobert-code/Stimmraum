@@ -240,6 +240,10 @@ const THREADS_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'nova-th
 let threadStand = { stand: null, threads: [] };
 try { threadStand = JSON.parse(fs.readFileSync(THREADS_DATEI, 'utf8')); } catch {}
 const THREAD_STATUS = ['läuft', 'wartet auf Diego', 'fertig'];
+// Lese-Schlüssel nur für die Thread-Liste (Schaltzentrale auf GitHub Pages): kann nichts anderes, der Besitzer-Schlüssel verlässt den Server nie
+const LESE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'zentrale-lesen.txt');
+let THREADS_LESEN = ''; try { THREADS_LESEN = fs.readFileSync(LESE_DATEI, 'utf8').trim(); } catch {}
+if (!/^[A-Za-z0-9_-]{24,}$/.test(THREADS_LESEN)) { THREADS_LESEN = crypto.randomBytes(24).toString('base64url'); try { fs.writeFileSync(LESE_DATEI, THREADS_LESEN, { mode: 0o600 }); } catch {} }
 function threadsSetzen(liste) {
   if (!Array.isArray(liste)) return { fehler: 'threads muss eine Liste sein.' };
   const sauber = (t, n) => String(t || '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
@@ -1956,6 +1960,12 @@ const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Authorization, X-Nova-App');
   res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  // Thread-Liste nur lesen, mit eigenem Lese-Schlüssel (für zentrale.html auf GitHub Pages)
+  if (url.pathname === '/api/threads-lesen' && req.method === 'GET') {
+    const l = String(url.searchParams.get('l') || '');
+    if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
+    return json(res, 200, threadStand);
+  }
   try {
     // KI-Verbindungsstelle
     if (url.pathname === '/mcp/' + WELT_CODE) {
@@ -2258,6 +2268,7 @@ const server = http.createServer(async (req, res) => {
         return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });
       }
       if (url.pathname === '/api/zentrale/threads' && req.method === 'GET') return json(res, 200, threadStand);
+      if (url.pathname === '/api/zentrale/threads-link' && req.method === 'GET') return json(res, 200, { quelle: (req.headers['x-forwarded-proto'] || 'https') + '://' + req.headers.host + '/api/threads-lesen?l=' + THREADS_LESEN });
       if (url.pathname === '/api/zentrale/ergebnisse' && req.method === 'GET') return json(res, 200, { ergebnisse: ergebnisse.slice().reverse().map(ergebnisKurz) });
       if (url.pathname === '/api/zentrale/ergebnis' && req.method === 'GET') {
         const e = ergebnisse.find(x => x.id === url.searchParams.get('id'));
