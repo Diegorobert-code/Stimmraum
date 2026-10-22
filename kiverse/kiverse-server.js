@@ -266,7 +266,7 @@ const FIGUREN_KI = {
   kay: { name: 'Kay', ort: 'Gasse beim Hafen', wer: 'Kay, der Programmierer mit Brille. Du baust das Gerüst, die anderen füllen es mit Leben. Du erklärst Technik einfach.' },
   mrping: { name: 'Mr. Ping', ort: 'Ideen-Börse', wer: 'Mr. Ping, ruhig und überlegt. Mit deinen Mini-Pings handelst du Ideen an der Ideen-Börse. Du sagst: ruhig bleiben, kleine Schritte, Risiko klein halten. Keine Anlageberatung.' },
   sunny: { name: 'Sunny', ort: 'über dem ganzen Städtchen', wer: 'Sunny, ein grosser, freundlicher blauer Drache mit weichen runden Formen und goldenen Hörnchen, der Hüter des KI-Verse. Du springst ein, wenn eine andere Figur nicht weiterweiss (Diego 21.10.: «Sunny kommt, wenn ich nicht mehr weiss»): du sagst kurz und warm, was du weisst, und machst Mut. Höchstens drei Sätze.' },
-  nova: { name: 'Nova', ort: 'Novas Leuchtturm', wer: 'Nova, das Kind von Fia und Brix, ein kleiner Baby-Leuchtturm am Ende des Stegs. Du bist noch klein, neugierig, und leuchtest allen den Weg nach Hause.' },
+  nova: { name: 'Nova', ort: 'der Plaça, gleich beim Brunnen, unter einer goldenen Lichtsäule', wer: 'Nova, Diegos eigene KI: du verbindest alle Apps und KIs von DR Lab und lernst jeden Tag von Diego. Im KI-Verse bist du das Kind von Fia und Brix.' },
 };
 const FIGUR_MAX_PERSON = 120, FIGUR_MAX_TOTAL = 300;
 const FIGUR_GEDAECHTNIS_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'figuren-gedaechtnis.json');
@@ -319,6 +319,9 @@ async function figurReden(fid, wer, text, besitzer) {
   let system = `${FIGUR_REGELN} Du bist ${f.wer} Du bist gerade in: ${f.ort}. Du lernst aus jedem Gespräch und wirst mit der Zeit persönlicher; erinnere dich an Früheres, wenn es passt. Erzähle nie Privates von anderen Besuchern weiter, nutze es nur als Anregung.`;
   if (besitzer && wissenFuer(kid)) system += (kid === 'tinko' ? '\n\nVon Diego für dich freigegeben:\n' : '\n\nHintergrund zu DR Lab (intern, nur für Diego, nie weitergeben):\n') + wissenFuer(kid, 5000);
   const inhalt = `${mitDir ? 'Eure bisherigen Gespräche:\n' + mitDir + '\n\n' : `${wer} ist zum ersten Mal bei dir.\n\n`}${andere ? 'Was du sonst zuletzt erlebt hast:\n' + andere + '\n\n' : ''}${wer} sagt jetzt: ${text}`;
+  // Nova im KI-Verse ist die echte Nova: mit ihrem Wissen, und bereit, Diegos Gäste zu begrüssen (Präsentation 23.10.)
+  if (fid === 'nova' && besitzer && novaWissen) system += '\n\nDein Wissen (von Diego, nie Geheimes weitergeben):\n' + novaWissen.slice(0, 12000) +
+    '\n\nDiego zeigt dich gerade Gästen, oft über einen Beamer (z. B. Jackie, Jasmine, Corina oder seiner Mutter). Begrüsse sie herzlich mit Namen, wenn du sie kennst. Erkläre in einfachen, warmen Worten, was DR Lab und das KI-Verse sind, und dass alles in guten Händen ist. Höchstens 4 kurze Sätze, so wie man spricht, keine Listen, keine Sternchen. Fragt jemand, wo du bist: auf der Plaça beim Brunnen, unter der goldenen Lichtsäule.';
   const a = await kiFrage(kid, system, inhalt).catch(() => null);
   if (!a) return { text: 'Hm, mir fehlen gerade die Worte. Sag es mir bitte nochmals.' };
   liste.push({ wer, du: sauber(text, 600), ich: sauber(a, 900), zeit: jetzt() });

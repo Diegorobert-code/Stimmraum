@@ -92,6 +92,17 @@ body.redet #stick, body.redet #hoch { display: none; }
 .spiegel button { position: absolute; top: 8px; right: 22px; border: 0; border-radius: 50%; width: 26px; height: 26px; background: rgba(11,20,48,.75); color: #f2c25b; font-size: 14px; cursor: pointer; }
 body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
 @media (max-width: 600px) { .spiegel { width: 96px; height: 96px; } }
+/* Beamer (Diego 22.10.): Laptop am Beamer, grosse Schrift, keine Handy-Knöpfe */
+body.laptop #stick, body.laptop #hoch { display: none !important; }
+body.beamer .blase { font-size: 19px; max-width: 320px; padding: 10px 16px; }
+body.beamer #gespraech, body.beamer #karte { zoom: 1.25; }
+body.beamer #redeKnopf { width: 124px; height: 124px; }
+#tastenHilfe { position: fixed; left: 50%; top: 18px; transform: translateX(-50%); z-index: 6; background: rgba(11, 20, 48, .72); color: #fff6dc; border: 1px solid rgba(242, 194, 91, .5); border-radius: 14px; padding: 8px 16px; font: 700 15px "Atkinson Hyperlegible", sans-serif; pointer-events: none; transition: opacity .8s; white-space: nowrap; }
+#tastenHilfe kbd { display: inline-block; min-width: 22px; padding: 1px 6px; margin: 0 2px; border-radius: 6px; background: #f2c25b; color: #18204a; font: 800 14px sans-serif; text-align: center; }
+body.beamer #tastenHilfe { font-size: 19px; }
+#anruf { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 9; max-width: min(92vw, 640px); background: rgba(11, 20, 48, .88); color: #fff6dc; border: 2px solid #ffd27a; border-radius: 22px; padding: 14px 22px; font: 700 18px/1.4 "Atkinson Hyperlegible", sans-serif; box-shadow: 0 0 40px rgba(255, 210, 122, .45); }
+#anruf b { display: block; color: #ffd27a; font: 800 22px "Baloo 2", sans-serif; }
+body.beamer #anruf { font-size: 24px; } body.beamer #anruf b { font-size: 28px; }
 </style>
 <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 </head>
@@ -646,6 +657,8 @@ const ORTE = [
   { id: 'post', z: -122, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
   { id: 'hafen', z: -146, name: 'Hafen und Tinkos Werkstatt', figur: 'tinko', satz: 'Blub! Komm runter in meine Werkstatt.', rein: true, x: 6 },
   { id: 'leuchtturm', z: -152, name: 'Novas Leuchtturm', rein: true, x: 6.5 },
+  // Nova wartet auf der Plaça beim Brunnen (Diego 22.10.: «ich rufe Nova an, wo bist du? … dann gehe ich zu ihr»)
+  { id: 'novaplatz', z: -36, name: 'Nova auf der Plaça', figur: 'nova', x: -2.6, satz: 'Hallo, ich bin Nova. Schön, dass ihr da seid!', farbe: 0xffd27a },
   { id: 'ruinen', z: -176, name: 'Ruinen der Erinnerung', rein: true },
   // Brix' Fabrik etwas ausserhalb, ein Weg führt hin (Diego 18.10. 07:20)
   { id: 'fabrik', z: -188, name: 'Brix\' Fabrik (ausserhalb)', figur: 'brix', nurFabrik: true, satz: 'Hier draussen baue ich, was ihr euch ausdenkt. Komm in die Fabrik!', rein: true, farbe: 0x8a6a3a },
@@ -835,6 +848,11 @@ for (const o of ORTE) {
   npc.push({ f, o, x, z, satz: o.satz, ort: o.id });
 }
 for (const n of NEBEN) { const f = figur(n.figur, n.farbe, n.gross || .95); f.position.set(n.x, n.hoch || 0, n.z); f.rotation.y = Math.PI / 2; szene.add(f); npc.push({ f, x: n.x, z: n.z, hoch: n.hoch, satz: n.satz, key: n.figur }); }
+// Goldene Lichtsäule über Nova: von weit her sichtbar, leuchtet nach dem Anruf stärker
+const novaN = npc.find(n => n.ort === 'novaplatz');
+const novaSaeule = new THREE.Mesh(new THREE.CylinderGeometry(.55, .9, 40, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+novaSaeule.position.set(novaN.x, 24.5, novaN.z); szene.add(novaSaeule);
+const novaGlut = glut(0xffd27a, 2.4, .45); novaGlut.position.set(novaN.x, 4.6, novaN.z); szene.add(novaGlut);
 // Fia (Phönix-Küken) kreist über der Plaça
 const fia = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('fia', '#ffb36b') })); fia.scale.set(1.6, 1.6, 1); szene.add(fia);
 
@@ -1238,6 +1256,7 @@ function schritt() {
   rauch.forEach(({ w, x, z, p }) => { const t = (zeit * .18 + p) % 1; w.position.set(x + t * 3, 13.5 + t * 9, z + Math.sin(t * 6 + p * 9) * .6); w.scale.setScalar(1.5 + t * 4); w.material.opacity = .4 * Math.sin(t * Math.PI); });
   if (zahnrad) zahnrad.rotation.x = zeit * .8;
   if (leuchtStrahl) leuchtStrahl.rotation.y = zeit * .9;
+  { const ruf = novaRufBis > performance.now(); novaSaeule.material.opacity = (ruf ? .34 : .14) + Math.sin(zeit * (ruf ? 5 : 1.6)) * (ruf ? .14 : .05); novaSaeule.scale.x = novaSaeule.scale.z = ruf ? 1.5 + Math.sin(zeit * 5) * .2 : 1; }
   kiBaumBlaetter.forEach(b => { b.position.y = b.userData.y + Math.sin(zeit * 1.2 + b.userData.p) * .15; b.rotation.y = zeit * .3 + b.userData.p; });
   if (fackelFlamme) fackelFlamme.scale.setScalar(2 + Math.sin(zeit * 13) * .25 + Math.sin(zeit * 7.3) * .2);
   // Mondspur liegt immer zwischen Betrachter und Mond auf dem Wasser
@@ -1706,19 +1725,19 @@ $('#redeKnopf').onclick = () => {
 };
 // ---------- Sunny führt dich (Diego 21.10.: «Hallo Sunny, ich möchte zu Hasi» – Sunny fliegt dich hin, setzt dich ab, du läufst weiter) ----------
 const sunnyRede = { text: '', bis: 0, erst: false };
-async function sunnySagt(text) {
+async function sunnySagt(text, wer = 'sunny') {
   sunnyRede.text = text; sunnyRede.bis = performance.now() + Math.max(3500, text.length * 75);
   if (gespr.n) return;
   stimmeStopp();
   if (KEY_K) try {
-    const r = await fetch('api/stimme?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text }) });
+    const r = await fetch('api/stimme?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: wer, text }) });
     if (r.status === 200) { audioEl = new Audio(URL.createObjectURL(await r.blob())); await audioEl.play(); return; }
   } catch {}
   if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); const vs = speechSynthesis.getVoices().filter(v => /^de/i.test(v.lang)); const v = vs.find(x => /CH/i.test(x.lang)) || vs[0]; if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'de-CH'; u.pitch = .85; u.rate = .95; speechSynthesis.speak(u); }
 }
 const ZIEL_WORTE = {
   tor: ['otti', 'tor', 'eingang'], kiosk: ['hasi', 'kiosk'], placa: ['plaça', 'placa', 'platz', 'sophia', 'brunnen', 'eule'], schule: ['mama affe', 'mamaaffe', 'schule'],
-  schuhmacher: ['jackie', 'schuhmacher', 'schuh'], post: ['letti', 'post', 'taube', 'brief'], hafen: ['tinko', 'hafen', 'meer'], leuchtturm: ['leuchtturm', 'nova'],
+  schuhmacher: ['jackie', 'schuhmacher', 'schuh'], post: ['letti', 'post', 'taube', 'brief'], hafen: ['tinko', 'hafen', 'meer'], leuchtturm: ['leuchtturm'], novaplatz: ['nova'],
   ruinen: ['ruine', 'erinnerung'], fabrik: ['brix', 'fabrik'], funkenmarkt: ['funkenmarkt', 'markt', 'funken'], wohnung: ['wohnung', 'zuhause', 'daheim', 'werkstatt'],
   sparky: ['sparky', 'human spark', 'praxis'], kino: ['kino', 'ava', 'film'], fompa: ['fompa', 'rechenstube', 'buchhaltung'], boerse: ['börse', 'boerse', 'coin', 'münz', 'ideen'],
   singschule: ['kiki', 'kimo', 'sing'], labor: ['labor', 'minky'], hundeschule: ['wäf', 'waef', 'hund'], nest: ['fia', 'nest', 'berg'],
@@ -1729,6 +1748,7 @@ function zielFinden(t) {
   return best && ORTE.find(o => o.id === best.id);
 }
 async function sunnyBefehl(t) {
+  if (/nova/i.test(t) && /wo bist|wo steckst|wo bist du|anruf|ruf|hallo|hörst du|bist du da/i.test(t) && !/flieg|bring|zu nova/i.test(t)) return novaAnruf();
   erlebt(`sagte zu Sunny: «${t.slice(0, 60)}»`);
   const o = zielFinden(t);
   if (o) { sunnySagt(`Komm, steig auf meinen Rücken! Ich fliege dich zu ${o.name}.`); setTimeout(() => sunnyFlug(o), 1200); return; }
@@ -1741,12 +1761,23 @@ async function sunnyBefehl(t) {
   if (KEY_K) try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text: t + ' (Diego läuft gerade durchs KI-Verse. Wenn er irgendwohin will, sag ihm, er soll einfach den Ort oder die Figur nennen, dann fliegst du ihn hin.)' }) }); antwort = (await r.json()).text || ''; } catch {}
   sunnySagt(antwort || 'Sag mir einfach, wohin du möchtest, zum Beispiel «zu Hasi» oder «zu Otti». Dann fliege ich dich hin!');
 }
+// ---------- Anruf bei Nova (Präsentation): sie sagt, wo sie ist, die goldene Säule über ihr leuchtet auf ----------
+const anruf = document.createElement('div'); anruf.id = 'anruf'; anruf.hidden = true; document.body.appendChild(anruf);
+let novaRufBis = 0;
+function novaAnruf() {
+  erlebt('rief Nova an');
+  const satz = 'Hallo Diego! Ich bin auf der Plaça, gleich beim Brunnen. Such die goldene Lichtsäule, ich warte dort auf euch.';
+  anruf.innerHTML = '<b>📞 Nova</b><span></span>'; anruf.querySelector('span').textContent = satz; anruf.hidden = false;
+  novaRufBis = performance.now() + 60000; klang(660); setTimeout(() => klang(880), 180);
+  sunnySagt(satz, 'nova'); sunnyRede.bis = 0;
+  setTimeout(() => { anruf.hidden = true; }, 12000);
+}
 const flug = { an: false, t: 0, dauer: 6, von: new THREE.Vector3(), nach: new THREE.Vector3(), o: null, dx: 0, dz: -1, p: new THREE.Vector3() };
 function sunnyFlug(o) {
   if (flug.an) return;
   if (gespr.n) gespraechSchliessen();
   const los = () => {
-    flug.o = o; flug.t = 0; flug.von.copy(sp.pos); flug.nach.set(Math.max(-1.5, Math.min(1.5, (o.x ?? 0) * .3)), 0, o.z + 4.5);
+    flug.o = o; flug.t = 0; flug.von.copy(sp.pos); flug.nach.set(Math.max(-1.5, Math.min(1.5, (o.x ?? 0) * .3)), 0, o.z + (o.id === 'novaplatz' ? 7.5 : 4.5));
     flug.dauer = Math.min(13, Math.max(4.5, flug.von.distanceTo(flug.nach) / 16)); flug.an = true;
     kamZiel.aktiv = true; $('#rein').hidden = true; erlebt(`flog mit Sunny zu ${o.name}`);
   };
@@ -1953,6 +1984,35 @@ function handyKarte(fehler) {
 }
 $('#handyKnopf').onclick = () => handyKarte();
 
+// ---------- Beamer (Diego 22.10.: «KI-Verse über den Beamer mit dem Laptop … rumlaufen … direkt respondet») ----------
+// Laptop: Pfeiltasten laufen, Maus ziehen schaut, M redet, Enter geht rein, X oder Esc geht raus, F Vollbild, H Hilfe.
+if (!istHandy) {
+  document.body.classList.add('laptop');
+  const beamerAn = () => document.body.classList.toggle('beamer', new URLSearchParams(location.search).has('beamer') || !!document.fullscreenElement || innerWidth >= 1500);
+  beamerAn(); addEventListener('resize', beamerAn); document.addEventListener('fullscreenchange', beamerAn);
+  const vollbild = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {}); };
+  const hilfe = document.createElement('div'); hilfe.id = 'tastenHilfe'; hilfe.style.opacity = 0;
+  hilfe.innerHTML = '<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> laufen · Maus ziehen: schauen · <kbd>M</kbd> reden · <kbd>N</kbd> Nova anrufen · <kbd>Enter</kbd> rein · <kbd>X</kbd> raus · <kbd>F</kbd> Vollbild';
+  document.body.appendChild(hilfe);
+  let hilfeT = null; const hilfeZeigen = (ms) => { hilfe.style.opacity = 1; clearTimeout(hilfeT); hilfeT = setTimeout(() => { hilfe.style.opacity = 0; }, ms); };
+  // Beim Eintreten gleich Vollbild, damit am Beamer keine Browserleiste stört
+  ['#los', '#losKamera'].forEach(s => $(s)?.addEventListener('click', () => { if (!document.fullscreenElement) vollbild(); }));
+  new MutationObserver(() => { if (document.body.classList.contains('spielt') && !hilfe.dataset.gezeigt) { hilfe.dataset.gezeigt = 1; hilfeZeigen(14000); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (k === 'f') { e.preventDefault(); vollbild(); }
+    else if (k === 'h') hilfeZeigen(8000);
+    else if (k === 'n' && document.body.classList.contains('spielt')) novaAnruf();
+    else if (k === 'm' && document.body.classList.contains('spielt')) { e.preventDefault(); $('#redeKnopf').click(); }
+    else if (k === 'x' || k === 'escape') {
+      if (!$('#appFenster').hidden) $('#appZu').click();
+      else if (!$('#gespraech').hidden) gespraechSchliessen();
+      else if (!$('#karte').hidden) $('#karte').hidden = true;
+      else if (zustand.innen) rausGehen();
+    }
+  });
+}
 window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, rausGehen, springen, anfangen, schritt, tasten, handy, kiBlickSetzen, mitlaufenSetzen, selfieSetzen };
 </script>
 <script>
