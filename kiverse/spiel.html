@@ -1736,7 +1736,7 @@ async function sunnySagt(text, wer = 'sunny') {
   if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(text); const vs = speechSynthesis.getVoices().filter(v => /^de/i.test(v.lang)); const v = vs.find(x => /CH/i.test(x.lang)) || vs[0]; if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'de-CH'; u.pitch = .85; u.rate = .95; speechSynthesis.speak(u); }
 }
 const ZIEL_WORTE = {
-  tor: ['otti', 'tor', 'eingang'], kiosk: ['hasi', 'kiosk'], placa: ['plaça', 'placa', 'platz', 'sophia', 'brunnen', 'eule'], schule: ['mama affe', 'mamaaffe', 'schule'],
+  tor: ['otti', 'tor', 'eingang'], kiosk: ['hasi', 'kiosk'], placa: ['plaça', 'placa', 'platz', 'sophia', 'brunnen', 'eule', 'fischerdorf', 'dorf'], schule: ['mama affe', 'mamaaffe', 'schule'],
   schuhmacher: ['jackie', 'schuhmacher', 'schuh'], post: ['letti', 'post', 'taube', 'brief'], hafen: ['tinko', 'hafen', 'meer'], leuchtturm: ['leuchtturm'], novaplatz: ['nova'],
   ruinen: ['ruine', 'erinnerung'], fabrik: ['brix', 'fabrik'], funkenmarkt: ['funkenmarkt', 'markt', 'funken'], wohnung: ['wohnung', 'zuhause', 'daheim', 'werkstatt'],
   sparky: ['sparky', 'human spark', 'praxis'], kino: ['kino', 'ava', 'film'], fompa: ['fompa', 'rechenstube', 'buchhaltung'], boerse: ['börse', 'boerse', 'coin', 'münz', 'ideen'],
@@ -2012,6 +2012,36 @@ if (!istHandy) {
       else if (zustand.innen) rausGehen();
     }
   });
+}
+// ---------- Brücke zu Novas Bühne (Diego 22.10.: Nova führt durch den Abend, das KI-Verse läuft im Bühnenfenster) ----------
+// Nachrichten nur von Novas Seite; antwortet mit dem Ort, an dem Diego steht, und meldet, wenn er bei Nova ankommt.
+if (window.parent !== window) {
+  const NOVA_SEITE = 'https://diegorobert-code.github.io';
+  const ortName = () => { const b = naechsterOrt(); return b && b.d < 12 ? b.o.name : 'Gasse'; };
+  const melden = (extra) => window.parent.postMessage({ typ: 'kiverse', ort: ortName(), nova_ort: 'Plaça beim Brunnen, unter der goldenen Lichtsäule', orte: ORTE.map(o => o.name), ...extra }, NOVA_SEITE);
+  addEventListener('message', e => {
+    if (e.origin !== NOVA_SEITE || e.data?.typ !== 'kiverse') return;
+    const a = e.data.aktion;
+    if (a === 'stand') return melden();
+    if (a === 'anruf') { novaAnruf(); return melden(); }
+    if (a === 'gehe' || a === 'zu figur') {
+      const t = String(e.data.ort || e.data.figur || '').toLowerCase();
+      const o = ORTE.find(x => x.id === t || x.name.toLowerCase() === t) || zielFinden(t);
+      if (!o) return melden({ fehler: 'Diesen Ort kenne ich nicht.' });
+      let warte = 200;
+      if (zustand.modus !== 'spiel') { if (!$('#start').hidden) anfangen(); zustand.intro = 99; warte = 1800; }
+      if (zustand.innen) { rausGehen(); warte = 1200; }
+      setTimeout(() => sunnyFlug(o), warte); return melden({ ziel: o.name });
+    }
+  });
+  let letzterOrt = '', beiNova = false;
+  setInterval(() => {
+    if (zustand.modus !== 'spiel') return;
+    const o = ortName(); if (o !== letzterOrt) { letzterOrt = o; melden(); }
+    const d = Math.hypot(sp.pos.x - novaN.x, sp.pos.z - novaN.z);
+    if (!beiNova && d < 9 && !flug.an) { beiNova = true; melden({ ereignis: 'bei_nova' }); }
+    else if (beiNova && d > 16) beiNova = false;
+  }, 700);
 }
 window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, rausGehen, springen, anfangen, schritt, tasten, handy, kiBlickSetzen, mitlaufenSetzen, selfieSetzen };
 </script>

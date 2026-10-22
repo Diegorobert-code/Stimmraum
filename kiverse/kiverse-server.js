@@ -62,11 +62,13 @@ const GAESTE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'gaeste.j
 let gaeste = [];
 try { gaeste = JSON.parse(fs.readFileSync(GAESTE_DATEI, 'utf8')); } catch {}
 const gaesteSpeichern = () => { try { fs.writeFileSync(GAESTE_DATEI, JSON.stringify(gaeste, null, 1), { mode: 0o600 }); } catch (e) { console.error('Gäste nicht gespeichert:', e.message); } };
+// Beamer-Zugang (Diego 22.10., Präsentation bei Jackie): ein Gast, der zusätzlich Weltbilder und bewegte Szenen sehen darf
+const darfSehen = (z) => z && (z.rolle === 'besitzer' || z.zeigen);
 function zugang(k) {
   if (!BESITZER) return { rolle: 'besitzer', name: null };
   if (k && k === BESITZER) return { rolle: 'besitzer', name: null };
   const g = k && gaeste.find(x => x.k === k);
-  return g ? { rolle: 'gast', name: g.name, gid: g.id } : null;
+  return g ? { rolle: 'gast', name: g.name, gid: g.id, zeigen: !!g.zeigen } : null;
 }
 
 // ---------- Nova lernt mit (Sense Engine auf demselben Server) ----------
@@ -1152,6 +1154,8 @@ const WERKZEUGE = [
   { name: 'kiverse_buehne_liste', description: 'Filmliste der Bühne setzen: [{id, titel, datei, stichworte[]}] (datei = hochgeladener Name). Gibt die geheime Adresse von filme.json zurück.',
     inputSchema: { type: 'object', properties: { filme: { type: 'array', items: { type: 'object' } } }, required: ['filme'] } },
   { name: 'kiverse_buehne_stand', description: 'Bühne: hochgeladene Filme, Grösse, freier Platz, Adresse von filme.json.', inputSchema: { type: 'object', properties: {} } },
+  { name: 'kiverse_beamer_link', description: 'Beamer-Adresse fürs 3D-Städtchen (Gast «Beamer»: herumlaufen, Weltbilder und Szenen sehen, nichts Privates). Nur an Claude-Threads per Nachricht, nie in Dateien.',
+    inputSchema: { type: 'object', properties: { neu: { type: 'boolean', description: 'true = alten Beamer-Zugang widerrufen und neu' } } } },
   { name: 'kiverse_handy_koppeln', description: 'Diegos Handy ohne Terminal mit seinem KI-Verse verbinden: erzeugt einen 6-stelligen Kopplungs-Code (15 Minuten gültig, einmal). Diego öffnet die Seite /koppeln, tippt den Code und landet direkt bei Nova. Nur auf Diegos Wunsch, Code nur Diego sagen.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
@@ -1323,6 +1327,12 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_buehne_stand': {
       let d = []; try { d = fs.readdirSync(BUEHNE_ORDNER).map(n => `${n} ${(fs.statSync(path.join(BUEHNE_ORDNER, n)).size / 1048576).toFixed(1)} MB`); } catch {}
       return text(`Bühne: ${d.length ? d.join(', ') : 'noch leer'}. Liste mit ${buehne.filme.length} Filmen. Frei: ${(buehnePlatz() / 1073741824).toFixed(1)} GB. Liste: ${buehneBasis()}filme.json`);
+    }
+    case 'kiverse_beamer_link': {
+      let g = gaeste.find(x => x.zeigen);
+      if (g && a.neu) { gaeste = gaeste.filter(x => x !== g); g = null; }
+      if (!g) { g = { id: id('e'), name: 'Beamer', k: crypto.randomBytes(12).toString('base64url'), seit: jetzt(), zeigen: true }; gaeste.push(g); gaesteSpeichern(); }
+      return text(`${mcpBasis}/spiel?k=${g.k}&beamer=1`);
     }
     case 'kiverse_film_clip': {
       const r = await falStart(a);
@@ -2268,13 +2278,13 @@ const server = http.createServer(async (req, res) => {
     }
     // Bewegte Clips fürs 3D-Städtchen (Diego 21.10.: «gut gemischt zwischen Standbildern und bewegten Bildern»)
     if (url.pathname === '/api/filme') {
-      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (!darfSehen(req.zugang)) return json(res, 403, { fehler: 'Nur Diego.' });
       const liste = Object.entries(SORA.clips || {}).filter(([cid, c]) => c.fal && c.status === 'fertig' && fs.existsSync(path.join(FILM_ORDNER, cid + '.mp4'))).map(([cid, c]) => ({ cid, figur: c.figur || '', titel: c.titel || '', zeit: c.zeit, sek: c.sek }));
       return json(res, 200, liste);
     }
     const mfa = url.pathname.match(/^\/api\/film\/(film_[a-f0-9]+)\.mp4$/);
     if (mfa) {
-      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (!darfSehen(req.zugang)) return json(res, 403, { fehler: 'Nur Diego.' });
       let st; const datei = path.join(FILM_ORDNER, mfa[1] + '.mp4');
       try { st = fs.statSync(datei); } catch { return json(res, 404, { fehler: 'Clip nicht gefunden.' }); }
       const rg = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
@@ -2289,12 +2299,12 @@ const server = http.createServer(async (req, res) => {
       return fs.createReadStream(datei).pipe(res);
     }
     if (url.pathname === '/api/weltbilder') {
-      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      if (!darfSehen(req.zugang)) return json(res, 403, { fehler: 'Nur Diego.' });
       return json(res, 200, weltbilder);
     }
     const mwb = url.pathname.match(/^\/api\/weltbild\/(w_[a-z0-9_]+\.(?:png|jpg|webp))$/);
     if (mwb) {
-      const d = req.zugang.rolle === 'besitzer' && weltbildDatei(mwb[1]);
+      const d = darfSehen(req.zugang) && weltbildDatei(mwb[1]);
       if (!d) return json(res, 404, { fehler: 'Bild nicht gefunden.' });
       try { const b = fs.readFileSync(d); res.writeHead(200, { 'Content-Type': { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }[d.split('.').pop()], 'Cache-Control': 'private, max-age=604800' }); return res.end(b); }
       catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
