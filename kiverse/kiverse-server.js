@@ -774,6 +774,28 @@ function ablageSenden(res, bid) {
   try { const d = fs.readFileSync(path.join(ABLAGE_ORDNER, bid)); res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'private, max-age=86400' }); return res.end(d); }
   catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
 }
+// ---------- Weltbilder: feste Bilder fürs Städtchen (Diego 21.10.: «spanisches Fischerdorf wie auf dem DR-Lab-Bild») ----------
+// Anders als die Ablage (nur die letzten 60) bleiben sie, bis Diego sie wegnimmt. Jedes gehört einer Figur und läuft in ihrem Laden.
+const WELTBILD_ORDNER = path.join(DATEN, 'weltbilder');
+const WELTBILD_DATEI = path.join(DATEN, 'weltbilder.json');
+const MAX_WELTBILDER = 600;
+let weltbilder = [];
+try { weltbilder = JSON.parse(fs.readFileSync(WELTBILD_DATEI, 'utf8')); } catch {}
+function weltbildNeu(figur, titel, bild) {
+  const m = /^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(bild || ''));
+  if (!m) return { fehler: 'Bitte ein Bild (PNG, JPG, WebP) als data:-URL.' };
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > MAX_BILD) return { fehler: 'Bild zu gross (höchstens 10 MB).' };
+  if (weltbilder.length >= MAX_WELTBILDER) return { fehler: `Schon ${MAX_WELTBILDER} Weltbilder.` };
+  const bid = id('w') + '.' + (m[1] === 'jpeg' ? 'jpg' : m[1]);
+  fs.mkdirSync(WELTBILD_ORDNER, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(path.join(WELTBILD_ORDNER, bid), buf, { mode: 0o600 });
+  const e = { id: bid.split('.')[0], bid, figur: sauber(figur, 40), titel: sauber(titel, 160), zeit: jetzt() };
+  weltbilder.push(e);
+  try { fs.writeFileSync(WELTBILD_DATEI, JSON.stringify(weltbilder, null, 1), { mode: 0o600 }); } catch (er) { console.error('Weltbilder nicht gespeichert:', er.message); }
+  return e;
+}
+const weltbildDatei = (x) => { const e = weltbilder.find(w => w.id === x || w.bid === x); return e ? path.join(WELTBILD_ORDNER, e.bid) : null; };
 // ---------- Sora: flüssige Filmclips aus Tinkos Bildern (Diego 20.10.) ----------
 // Bezahlt über den Tinko-Schlüssel (OpenAI). Harter Monatsdeckel in CHF; 0 = aus. Kosten werden beim Start reserviert.
 const SORA_DECKEL_CHF = parseFloat(process.env.SORA_DECKEL_CHF || '180');
@@ -852,8 +874,9 @@ async function falStart(a) {
   const heute = jetzt().slice(0, 10), clipsHeute = Object.values(m.clips).filter(c => c.fal && String(c.zeit).startsWith(heute)).length;
   if (clipsHeute >= FAL_MAX_TAG) return { fehler: `Heute schon ${FAL_MAX_TAG} Clips bewegt. Morgen wieder.` };
   let bild = String(a.bild || '');
-  const ae = ablage.find(e => e.id === bild || e.bid === bild);
+  const ae = ablage.find(e => e.id === bild || e.bid === bild), wd = weltbildDatei(bild);
   if (ae && ae.bid) { const typ = { png: 'png', jpg: 'jpeg', webp: 'webp', gif: 'gif' }[ae.bid.split('.').pop()]; bild = `data:image/${typ};base64,` + fs.readFileSync(path.join(ABLAGE_ORDNER, ae.bid)).toString('base64'); }
+  else if (wd) { const typ = { png: 'png', jpg: 'jpeg', webp: 'webp' }[wd.split('.').pop()]; bild = `data:image/${typ};base64,` + fs.readFileSync(wd).toString('base64'); }
   else if (/^[A-Za-z0-9+/=]{200,}$/.test(bild)) bild = 'data:image/jpeg;base64,' + bild;
   if (!/^data:image\/(png|jpeg|jpg|webp);base64,/.test(bild) && !/^https:\/\//.test(bild)) return { fehler: 'Startbild fehlt: Ablage-Eintrag-ID, base64-JPG oder https-Adresse.' };
   const prompt = 'High-quality 3D animated film, soft cinematic lighting, warm colors, expressive characters, smooth natural motion, no text. ' + sauber(a.prompt || a.motiv, 1500);
@@ -1077,6 +1100,9 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { eintrag_id: { type: 'string' } }, required: ['eintrag_id'] } },
   { name: 'kiverse_ablage_ablegen', description: 'Etwas in die Ablage legen: ein Bild (bild als data:image/png;base64,…, höchstens 10 MB) und/oder eine Notiz, z. B. Tinko legt ein Bild ab, Lumo antwortet mit einer Notiz. Sunny meldet es auf der Plaça.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Dein Rufname, z. B. Lumo oder Tinko' }, text: { type: 'string' }, bild: { type: 'string', description: 'optional, data:-URL eines Bildes' } }, required: ['von'] } },
+  { name: 'kiverse_weltbild_ablegen', description: 'Ein festes Bild fürs 3D-Städtchen ablegen (bleibt, anders als die Ablage). Es läuft im Laden der Figur. Auch als Startbild für kiverse_film_clip nutzbar (bild = weltbild_id).',
+    inputSchema: { type: 'object', properties: { figur: { type: 'string', description: 'Figurname, z. B. Hasi, Otti, Sunny' }, titel: { type: 'string' }, bild: { type: 'string', description: 'data:image/jpeg;base64,…' } }, required: ['figur', 'bild'] } },
+  { name: 'kiverse_weltbilder', description: 'Liste der festen Weltbilder (id, Figur, Titel).', inputSchema: { type: 'object', properties: { figur: { type: 'string' } } } },
   { name: 'kiverse_handy_koppeln', description: 'Diegos Handy ohne Terminal mit seinem KI-Verse verbinden: erzeugt einen 6-stelligen Kopplungs-Code (15 Minuten gültig, einmal). Diego öffnet die Seite /koppeln, tippt den Code und landet direkt bei Nova. Nur auf Diegos Wunsch, Code nur Diego sagen.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
@@ -1226,6 +1252,14 @@ async function werkzeug(name, a = {}) {
       if (e.fehler) return text(e.fehler, true);
       sunny(`${e.von} hat ${e.bid ? 'ein Bild' : 'eine Notiz'} in die Ablage gelegt${e.text ? ': ' + e.text.slice(0, 120) : '.'}`, 'brief');
       return text(`Abgelegt (${e.id}).`);
+    }
+    case 'kiverse_weltbild_ablegen': {
+      const e = weltbildNeu(a.figur, a.titel, a.bild);
+      return e.fehler ? text(e.fehler, true) : text(`Weltbild ${e.id} für ${e.figur || 'alle'} abgelegt (${weltbilder.length} total).`);
+    }
+    case 'kiverse_weltbilder': {
+      const f = String(a.figur || '').toLowerCase(), l = weltbilder.filter(w => !f || w.figur.toLowerCase() === f);
+      return text(l.length ? l.map(w => `- ${w.id} | ${w.figur}: ${w.titel}`).join('\n') : 'Noch keine Weltbilder.');
     }
     case 'kiverse_film_clip': {
       const r = await falStart(a);
@@ -2183,6 +2217,17 @@ const server = http.createServer(async (req, res) => {
       }
       res.writeHead(200, { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Length': st.size, 'Cache-Control': 'private, max-age=86400' });
       return fs.createReadStream(datei).pipe(res);
+    }
+    if (url.pathname === '/api/weltbilder') {
+      if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Nur Diego.' });
+      return json(res, 200, weltbilder);
+    }
+    const mwb = url.pathname.match(/^\/api\/weltbild\/(w_[a-z0-9_]+\.(?:png|jpg|webp))$/);
+    if (mwb) {
+      const d = req.zugang.rolle === 'besitzer' && weltbildDatei(mwb[1]);
+      if (!d) return json(res, 404, { fehler: 'Bild nicht gefunden.' });
+      try { const b = fs.readFileSync(d); res.writeHead(200, { 'Content-Type': { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' }[d.split('.').pop()], 'Cache-Control': 'private, max-age=604800' }); return res.end(b); }
+      catch { return json(res, 404, { fehler: 'Bild nicht gefunden.' }); }
     }
     if (url.pathname === '/api/ablage') {
       if (req.zugang.rolle !== 'besitzer') return json(res, 403, { fehler: 'Die Ablage gehört Diego.' });

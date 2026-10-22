@@ -1789,7 +1789,7 @@ LADEN_APPS.tor && ORTE.forEach(o => { if (LADEN_APPS[o.id]) o.rein = true; });
 let ablageCache = null, filmTimer = null;
 // Standbilder und bewegte Clips gemischt (Diego 21.10.: «gut gemischt zwischen Standbildern und bewegten Bildern»):
 // zwei Bilder von Tinko, dann ein Seedance-Clip der Figur. Im Raum läuft der Clip im Bilderrahmen.
-let filmeCache = null, filmVideo = null;
+let filmeCache = null, filmVideo = null, weltbilderCache = null;
 function filmVideoStopp() {
   if (filmVideo) { filmVideo.pause(); filmVideo.removeAttribute('src'); filmVideo.load(); filmVideo = null; }
   if (raum.bild && raum.bildTex && raum.bild.material.map !== raum.bildTex) { raum.bild.material.map = raum.bildTex; raum.bild.material.needsUpdate = true; }
@@ -1808,11 +1808,14 @@ async function ladenFilm(ort) {
   const n = npc.find(x => x.ort === ort), name = n && NAMEN[figurVon(n)]; if (!name || !KEY_K) return;
   try { ablageCache = ablageCache || await fetch('api/ablage?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { ablageCache = []; }
   try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
+  try { weltbilderCache = weltbilderCache || await fetch('api/weltbilder?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { weltbilderCache = []; }
   const nm = name.toLowerCase();
-  const bilder = ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(nm)).slice(-12);
+  // Feste Weltbilder (Fischerdorf) zuerst, dazu die neusten Ablage-Bilder der Figur
+  const bilder = weltbilderCache.filter(w => (w.figur || '').toLowerCase() === nm).map(w => 'api/weltbild/' + w.bid)
+    .concat(ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(nm)).slice(-8).map(e => 'api/ablage/' + e.bid));
   const clips = filmeCache.filter(c => (c.figur || '').toLowerCase() === nm || (c.titel || '').toLowerCase().includes(nm)).slice(-8);
   if ((!bilder.length && !clips.length) || zustand.innen !== ort) return;
-  const urlB = (j) => 'api/ablage/' + bilder[j % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K);
+  const urlB = (j) => bilder[j % bilder.length] + '?k=' + encodeURIComponent(KEY_K);
   const urlC = (j) => 'api/film/' + clips[j % clips.length].cid + '.mp4?k=' + encodeURIComponent(KEY_K);
   // Ein Clip, der nicht abspielt, fliegt aus der Liste (sonst lädt er endlos neu)
   const weg = (j) => { clips.splice(j % clips.length, 1); };
