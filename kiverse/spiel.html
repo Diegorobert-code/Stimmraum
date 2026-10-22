@@ -252,7 +252,7 @@ try {
 qualitaetAnwenden();
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
 
-szene.add(new THREE.HemisphereLight(0x6a86e0, 0x7a4420, 0.7));
+const HEMI = new THREE.HemisphereLight(0x6a86e0, 0x7a4420, 0.7); szene.add(HEMI);
 // Weiches Umgebungslicht wie im Trickfilm (blaue Stunde oben, warmes Abendrot am Horizont): Formen wirken gerundet statt flach
 try {
   const pm = new THREE.PMREMGenerator(renderer), es = new THREE.Scene();
@@ -277,9 +277,10 @@ function canvasTextur(b, h, malen, wiederholen) {
   return t;
 }
 const GLUT = canvasTextur(128, 128, (g, b) => { const v = g.createRadialGradient(64, 64, 0, 64, 64, 64); v.addColorStop(0, 'rgba(255,255,255,1)'); v.addColorStop(.25, 'rgba(255,240,200,.55)'); v.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = v; g.fillRect(0, 0, b, b); });
+const GLUTEN = [];
 function glut(farbe, groesse, staerke = 1) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLUT, color: farbe, transparent: true, opacity: staerke, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-  s.scale.set(groesse, groesse, 1); return s;
+  s.scale.set(groesse, groesse, 1); s.userData.grund = new THREE.Color(farbe); GLUTEN.push(s); return s;
 }
 function rundRechteck(g, x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
 // Pflaster wie im Trickfilm: runde, leicht gewölbte Steine mit weichem Glanz; dazu eine Wölbungskarte, damit Laternenlicht auf jedem Stein spielt
@@ -336,6 +337,7 @@ const GLAS_AN = canvasTextur(64, 96, (g, b, h) => { const v = g.createRadialGrad
 const GLAS_AUS = canvasTextur(64, 96, (g, b, h) => { const v = g.createLinearGradient(0, 0, b, h); v.addColorStop(0, '#3d5a9a'); v.addColorStop(1, '#1a2550'); g.fillStyle = v; g.fillRect(0, 0, b, h); g.fillStyle = '#e8e2d4'; g.fillRect(29, 0, 6, h); g.fillRect(0, 44, b, 5); g.fillStyle = 'rgba(180,210,255,.35)'; g.fillRect(6, 6, 8, 30); });
 
 // ---------- Himmel, Sterne, Mond ----------
+const HIMMEL = {};
 {
   const himmel = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
@@ -343,14 +345,14 @@ const GLAS_AUS = canvasTextur(64, 96, (g, b, h) => { const v = g.createLinearGra
     vertexShader: 'varying vec3 p; void main(){ p = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: 'uniform vec3 oben; uniform vec3 mitte; uniform vec3 unten; varying vec3 p; void main(){ float h = p.y; vec3 c = h > 0.15 ? mix(mitte, oben, smoothstep(0.15, 0.7, h)) : mix(unten, mitte, smoothstep(-0.05, 0.15, h)); vec2 w = normalize(vec2(p.x, p.z) + 1e-4); float abend = pow(max(0.0, dot(w, normalize(vec2(.35, -1.0)))), 3.0) * exp(-max(h + .02, 0.0) * 7.0); c += vec3(1.0, .45, .32) * abend * .55 + vec3(.55, .3, .7) * exp(-abs(h) * 5.0) * .18; gl_FragColor = vec4(c, 1.0); }',
   }));
-  szene.add(himmel); AR_WEG.push(himmel);
+  szene.add(himmel); AR_WEG.push(himmel); HIMMEL.mat = himmel.material;
   const pos = [];
   for (let i = 0; i < 1400; i++) { const a = zufall() * Math.PI * 2, h = .08 + zufall() * .9, r = 800; pos.push(Math.cos(a) * r * Math.sqrt(1 - h * h), h * r, Math.sin(a) * r * Math.sqrt(1 - h * h)); }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  szene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xfff6dc, size: 1.8, sizeAttenuation: false, fog: false, transparent: true, opacity: .9 })));
+  szene.add(HIMMEL.sterne = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xfff6dc, size: 1.8, sizeAttenuation: false, fog: false, transparent: true, opacity: .9 })));
   const mond = new THREE.Mesh(new THREE.SphereGeometry(26, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffe8b0, fog: false }));
   mond.position.copy(MOND_RICHTUNG).normalize().multiplyScalar(700); szene.add(mond);
-  const mg = glut(0xffd98a, 260, .9); mg.position.copy(mond.position); szene.add(mg);
+  const mg = glut(0xffd98a, 260, .9); mg.position.copy(mond.position); szene.add(mg); HIMMEL.mond = mond; HIMMEL.mondGlut = mg;
 }
 // Weiche Wolken, die langsam am Mond vorbeiziehen, und ab und zu eine Sternschnuppe (Designvorschlag 4, 22.10.)
 const WOLKEN = [], schnuppe = { m: null, t: 9 };
@@ -364,6 +366,37 @@ const WOLKEN = [], schnuppe = { m: null, t: 9 };
   const sb = canvasTextur(256, 16, (g, b, hh) => { const v = g.createLinearGradient(0, 0, b, 0); v.addColorStop(0, 'rgba(255,255,255,0)'); v.addColorStop(1, 'rgba(255,248,220,1)'); g.fillStyle = v; g.fillRect(0, 6, b, 4); });
   schnuppe.m = new THREE.Sprite(new THREE.SpriteMaterial({ map: sb, transparent: true, opacity: 0, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); schnuppe.m.scale.set(90, 6, 1); szene.add(schnuppe.m);
 }
+// Tageszeit folgt der echten Uhr (Idee 1, 22.10.): Morgenrot, heller Tag, Abendrot, Nacht. Taste T schaltet durch.
+const TAGESZEITEN = {
+  nacht:  { oben: 0x0a1438, mitte: 0x24448c, unten: 0x5a68b4, nebel: 0x1a2456, hemi: 0x6a86e0, hemiI: .7, licht: 0xbcd0ff, lichtI: 1.25, belicht: 1.05, sterne: .9, glut: 1, bloom: .62, meer: 0x0c3a72, mond: 0xffe8b0 },
+  morgen: { oben: 0x3d64b0, mitte: 0x9cb2e2, unten: 0xffc4a4, nebel: 0xc8a9bc, hemi: 0xc4d4ff, hemiI: 1.3, licht: 0xffd2a6, lichtI: 2.3, belicht: .95, sterne: 0, glut: .3, bloom: .4, meer: 0x2a6aa8, mond: 0xfff0d8 },
+  tag:    { oben: 0x2c6cd2, mitte: 0x6cb0f2, unten: 0xd2eaff, nebel: 0xa9cbe9, hemi: 0xdcebff, hemiI: 1.55, licht: 0xfff1da, lichtI: 2.9, belicht: .92, sterne: 0, glut: .16, bloom: .32, meer: 0x1f72b8, mond: 0xfffbea },
+  abend:  { oben: 0x2b2c72, mitte: 0x8a5cae, unten: 0xff9c78, nebel: 0x6c4a7c, hemi: 0x9e8ede, hemiI: 1, licht: 0xffaa6a, lichtI: 1.8, belicht: 1, sterne: .3, glut: .75, bloom: .55, meer: 0x29407e, mond: 0xffd2a0 },
+};
+const TZ_PLAN = [[0, 'nacht'], [5, 'nacht'], [7, 'morgen'], [10, 'tag'], [17, 'tag'], [19.5, 'abend'], [21.5, 'nacht'], [24, 'nacht']];
+const tz = { fest: null, name: 'uhr', bloom: .62, namen: ['uhr', 'morgen', 'tag', 'abend', 'nacht'], el: null }; window.__tz = tz;
+function tageszeitAnwenden() {
+  const d = new Date(), h = tz.fest ?? (d.getHours() + d.getMinutes() / 60);
+  let a = TZ_PLAN[0], b = TZ_PLAN[1]; for (let i = 0; i < TZ_PLAN.length - 1; i++) if (h >= TZ_PLAN[i][0] && h <= TZ_PLAN[i + 1][0]) { a = TZ_PLAN[i]; b = TZ_PLAN[i + 1]; break; }
+  const t = b[0] > a[0] ? (h - a[0]) / (b[0] - a[0]) : 0, A = TAGESZEITEN[a[1]], B = TAGESZEITEN[b[1]];
+  const f = (k) => lerp(A[k], B[k], t), c = (k, ziel) => ziel.set(A[k]).lerp(new THREE.Color(B[k]), t);
+  if (HIMMEL.mat) { c('oben', HIMMEL.mat.uniforms.oben.value); c('mitte', HIMMEL.mat.uniforms.mitte.value); c('unten', HIMMEL.mat.uniforms.unten.value); }
+  c('nebel', NEBEL_NACHT); if (szene.fog && !zustand.innen) szene.fog.color.copy(NEBEL_NACHT);
+  c('hemi', HEMI.color); HEMI.intensity = f('hemiI'); c('licht', mondLicht.color); mondLicht.intensity = f('lichtI');
+  renderer.toneMappingExposure = f('belicht'); if (HIMMEL.sterne) HIMMEL.sterne.material.opacity = f('sterne');
+  const g = f('glut'); for (const s of GLUTEN) if (s !== HIMMEL.mondGlut) s.material.color.copy(s.userData.grund).multiplyScalar(g);
+  if (HIMMEL.mond) c('mond', HIMMEL.mond.material.color); if (HIMMEL.mondGlut) HIMMEL.mondGlut.material.opacity = .9 * (1 - (1 - g) * .5);
+  c('meer', meer.material.color); tz.bloom = f('bloom'); if (bloomPass && !zustand.innen) bloomPass.strength = tz.bloom;
+}
+function tageszeitWechseln() {
+  tz.name = tz.namen[(tz.namen.indexOf(tz.name) + 1) % tz.namen.length];
+  tz.fest = { uhr: null, morgen: 8, tag: 13, abend: 19.6, nacht: 23 }[tz.name]; tageszeitAnwenden();
+  if (!tz.el) { tz.el = document.createElement('div'); tz.el.className = 'schild'; tz.el.style.left = '50%'; tz.el.style.top = '16%'; tz.el.style.zIndex = 30; document.body.appendChild(tz.el); }
+  tz.el.textContent = { uhr: '🕰 Tageszeit wie draussen', morgen: '🌅 Morgen', tag: '☀️ Tag', abend: '🌇 Abend', nacht: '🌙 Nacht' }[tz.name];
+  tz.el.hidden = false; clearTimeout(tz.weg); tz.weg = setTimeout(() => { tz.el.hidden = true; }, 2500);
+}
+tz.anwenden = tageszeitAnwenden; setTimeout(tageszeitAnwenden, 0); setInterval(tageszeitAnwenden, 60000);
+addEventListener('keydown', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && (e.key === 't' || e.key === 'T')) tageszeitWechseln(); });
 function himmelBewegen(dt) {
   for (const w of WOLKEN) { const u = w.userData; u.a += u.v * dt * .1; if (u.a > 1.9) u.a = -.5; w.position.set(Math.cos(u.a) * u.r, u.hgt, -Math.sin(u.a) * u.r - 100); }
   schnuppe.t -= dt; const m = schnuppe.m;
@@ -1470,7 +1503,7 @@ function raumBild(url, key) {
 function raumSchliessen() {
   const n = raum.figur; if (n && raum.alt) { n.f.position.copy(raum.alt.pos); n.f.rotation.y = raum.alt.rot; n.imRaum = false; }
   raum.figur = null; raum.alt = null; raum.licht.intensity = 0; raum.licht2.intensity = 0;
-  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = .62;
+  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = tz.bloom;
 }
 const RAUM_ORTE = new Set(['schule', 'schuhmacher', 'post', 'ruinen', 'funkenmarkt', 'sparky', 'kino', 'fompa', 'boerse', 'singschule', 'labor', 'hundeschule', 'tor']);
 function reinGehen(o) {
@@ -2360,7 +2393,7 @@ if (!istHandy) {
   beamerAn(); addEventListener('resize', beamerAn); document.addEventListener('fullscreenchange', beamerAn);
   const vollbild = () => { if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {}); };
   const hilfe = document.createElement('div'); hilfe.id = 'tastenHilfe'; hilfe.style.opacity = 0;
-  hilfe.innerHTML = '<kbd>←</kbd><kbd>→</kbd> lenken · <kbd>1</kbd> stehen <kbd>2</kbd> langsam <kbd>3</kbd> schnell · Maus ziehen: schauen · <kbd>Q</kbd> 360° · <kbd>M</kbd> reden · <kbd>N</kbd> Nova anrufen · <kbd>Enter</kbd> rein · <kbd>X</kbd> raus · <kbd>F</kbd> Vollbild';
+  hilfe.innerHTML = '<kbd>←</kbd><kbd>→</kbd> lenken · <kbd>1</kbd> stehen <kbd>2</kbd> langsam <kbd>3</kbd> schnell · Maus ziehen: schauen · <kbd>Q</kbd> 360° · <kbd>T</kbd> Tageszeit · <kbd>M</kbd> reden · <kbd>N</kbd> Nova anrufen · <kbd>Enter</kbd> rein · <kbd>X</kbd> raus · <kbd>F</kbd> Vollbild';
   document.body.appendChild(hilfe);
   let hilfeT = null; const hilfeZeigen = (ms) => { hilfe.style.opacity = 1; clearTimeout(hilfeT); hilfeT = setTimeout(() => { hilfe.style.opacity = 0; }, ms); };
   // Beim Eintreten gleich Vollbild, damit am Beamer keine Browserleiste stört
