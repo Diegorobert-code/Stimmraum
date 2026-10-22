@@ -940,6 +940,23 @@ const briefe = [];
   const brief = new THREE.PlaneGeometry(.6, .4), bm = new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide, emissive: 0x3a3320 });
   for (let i = 0; i < 8; i++) { const b = new THREE.Mesh(brief, bm); b.userData = { p: i / 8 }; szene.add(b); briefe.push(b); }
 }
+// Fischerboot wie im Trickfilm: Rumpf mit spitzem Bug, rundem Heck, hochgezogener Linie und weissem Streifen (statt halbem Rohr)
+const BOOTSRUMPF = (() => {
+  const g = new THREE.BoxGeometry(1.5, 1, 4.2, 6, 8, 18), p = g.attributes.position;
+  for (let k = 0; k < p.count; k++) {
+    let x = p.getX(k), y = p.getY(k), z = p.getZ(k); const t = z / 2.1, bug = Math.max(0, t);
+    const breite = Math.sqrt(Math.max(.04, 1 - Math.pow(Math.abs(t), 2.2) * (t > 0 ? 1 : .55)));
+    const unten = (.5 - y);   // 0 oben, 1 unten
+    x *= breite * (1 - unten * .45); y = y + Math.pow(Math.abs(t), 2) * .3 * (y > 0 ? 1 : .2) + unten * Math.pow(Math.abs(t), 2) * .35;
+    p.setXYZ(k, x, y, z);
+  }
+  g.computeVertexNormals(); return g;
+})();
+function bootsRumpf(farbe) {
+  const g = BOOTSRUMPF.clone(), p = g.attributes.position, c = new THREE.Color(farbe), f = [];
+  for (let k = 0; k < p.count; k++) { const z = Math.abs(p.getZ(k)) / 2.1, y = p.getY(k) - Math.pow(z, 2) * .3; f.push(...(y > .3 && y < .47 ? [1, .97, .9] : [c.r, c.g, c.b])); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(f, 3)); return g;
+}
 // Hafen mit Booten, Steg und Tinkos leuchtender Kuppel unter Wasser
 const boote = [], blasen = [];
 let kuppel;
@@ -949,7 +966,9 @@ let kuppel;
   for (let i = 0; i < 6; i++) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 2.5, 6), MAT.stamm); p.position.set(8.5 + i * 2.6, -1.2, z + 1.6); szene.add(p); }
   for (let i = 0; i < 3; i++) {
     const b = new THREE.Group();
-    const rumpf = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4.2, 12, 1, true, Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: [0x2f6fb0, 0xf3ece0, 0xc4623d][i], roughness: .6, side: THREE.DoubleSide })); rumpf.rotation.x = Math.PI / 2; b.add(rumpf);
+    const rumpf = new THREE.Mesh(bootsRumpf([0x2f6fb0, 0x2f8a6a, 0xc4623d][i]), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .5 })); rumpf.castShadow = true; b.add(rumpf);
+    const deck = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 3.4), MAT.holz); deck.rotation.x = -Math.PI / 2; deck.position.y = .52; b.add(deck);
+    if (i === 1) { const kab = new THREE.Mesh(new RoundedBoxGeometry(.9, .6, 1, 2, .08), FASSADEN[0]); kab.position.set(0, .82, -.6); b.add(kab); const kd = new THREE.Mesh(new RoundedBoxGeometry(1.05, .1, 1.15, 2, .04), new THREE.MeshStandardMaterial({ color: 0x2f6fb0 })); kd.position.set(0, 1.15, -.6); b.add(kd); }
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 4, 6), MAT.stamm); mast.position.y = 2; b.add(mast);
     const sg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, .5, 0), new THREE.Vector3(0, 3.8, 0), new THREE.Vector3(0, .5, 2)]); sg.computeVertexNormals();
     b.add(new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide })));
