@@ -235,6 +235,23 @@ const tinkoFreiSpeichern = () => { try { fs.writeFileSync(TINKO_FREI_DATEI, JSON
 const NOVA_WISSEN_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'nova-wissen.md'), NOVA_WISSEN_MAX = 24000;
 let novaWissen = '';
 try { novaWissen = fs.readFileSync(NOVA_WISSEN_DATEI, 'utf8').slice(0, NOVA_WISSEN_MAX); } catch {}
+// Threads-Übersicht für Novas Schaltzentrale (Coordinator 22.10.): Claude füttert, Diego sieht sie in der Nova-App, Nova kann sie vorlesen
+const THREADS_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'nova-threads.json');
+let threadStand = { stand: null, threads: [] };
+try { threadStand = JSON.parse(fs.readFileSync(THREADS_DATEI, 'utf8')); } catch {}
+const THREAD_STATUS = ['läuft', 'wartet auf Diego', 'fertig'];
+function threadsSetzen(liste) {
+  if (!Array.isArray(liste)) return { fehler: 'threads muss eine Liste sein.' };
+  const sauber = (t, n) => String(t || '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
+  const threads = liste.slice(0, 40).map(t => {
+    let link = sauber(t.link, 400); if (!/^https:\/\//.test(link) || /[?&]k=/.test(link)) link = '';
+    return { titel: sauber(t.titel, 80), status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
+  }).filter(t => t.titel);
+  threadStand = { stand: new Date().toISOString(), threads };
+  try { fs.writeFileSync(THREADS_DATEI, JSON.stringify(threadStand), { mode: 0o600 }); } catch (e) { console.error('Threads nicht gespeichert:', e.message); }
+  return { anzahl: threads.length };
+}
+const threadsKurz = () => threadStand.threads.length ? threadStand.threads.filter(t => t.status !== 'fertig').map(t => `- ${t.titel}: ${t.status}${t.wichtig ? ' (wichtig)' : ' (hat noch Zeit)'}${t.was ? ', ' + t.was : ''}`).join('\n') : '';
 function novaWissenSetzen(t) {
   novaWissen = String(t || '').replace(/\r/g, '').slice(0, NOVA_WISSEN_MAX).trim();
   try { fs.writeFileSync(NOVA_WISSEN_DATEI, novaWissen, { mode: 0o600 }); } catch (e) { console.error('Nova-Wissen nicht gespeichert:', e.message); }
@@ -1162,6 +1179,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
+  { name: 'kiverse_threads_setzen', description: 'Threads-Übersicht für Diegos Nova-Schaltzentrale setzen (ersetzt die ganze Liste, höchstens 40). Pro Thread: titel, status («läuft», «wartet auf Diego», «fertig»), wichtig (true = wichtig, false = hat noch Zeit), was (ein kurzer Satz), link (optional https, nie mit ?k=). Keine Gesundheits-, Klienten- oder Finanzdetails.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
@@ -1380,6 +1399,10 @@ async function werkzeug(name, a = {}) {
       return text(`Kopplungs-Code für Diego: ${c} (15 Minuten gültig, einmal). Ein-Tipp-Link (Code steckt im #, geht nicht ans Server-Protokoll): ${mcpBasis || ''}/koppeln#${c} . Oder Diego öffnet ${mcpBasis || ''}/koppeln, tippt den Code und landet bei Nova. Dann Teilen → «Zum Home-Bildschirm» → Name «Nova».`);
     }
     case 'kiverse_update': return text(await knopfUpdate(3000));
+    case 'kiverse_threads_setzen': {
+      const r = threadsSetzen(a.threads);
+      return r.fehler ? text(r.fehler, true) : text(`Threads-Übersicht gesetzt (${r.anzahl} Threads). Diego sieht sie in der Nova-App, Nova kennt sie ab dem nächsten Satz.`);
+    }
     case 'kiverse_nova_wissen': {
       if (!String(a.text || '').trim()) return text('Leerer Text.', true);
       return text(`Novas Wissen gesetzt (${novaWissenSetzen(a.text)} Zeichen). Gilt ab dem nächsten Satz von Diego.`);
@@ -1639,7 +1662,7 @@ Heute ist ${new Date().toLocaleString('de-CH', { timeZone: 'Europe/Zurich', week
 
 Was du dir über Diego gemerkt hast:
 ${erinnerungen}
-${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}${(() => { const l = erfahrungenLetzte(12); return l.length ? '\nDiegos letzte Erlebnisse mit den Figuren (Erfahrungs-Tagebuch, mit seiner Einwilligung, intern):\n' + l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} ${x.figur}: Diego «${x.du.slice(0, 140)}» → «${x.ich.slice(0, 140)}»`).join('\n') : ''; })()}
+${threadsKurz() ? '\nDiegos offene Threads (Stand ' + threadStand.stand.slice(0, 16).replace('T', ' ') + ' UTC; wenn er «Threads» oder «was wartet auf mich» fragt, kurz die wichtigen nennen):\n' + threadsKurz() : ''}${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}${(() => { const l = erfahrungenLetzte(12); return l.length ? '\nDiegos letzte Erlebnisse mit den Figuren (Erfahrungs-Tagebuch, mit seiner Einwilligung, intern):\n' + l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} ${x.figur}: Diego «${x.du.slice(0, 140)}» → «${x.ich.slice(0, 140)}»`).join('\n') : ''; })()}
 ${wissen ? '\nHintergrundwissen DR Lab (intern):\n' + wissen.slice(0, 6000) : ''}
 
 ${ZENTRALE_FORMAT}`;
@@ -2220,6 +2243,7 @@ const server = http.createServer(async (req, res) => {
         const v = zentrale.verlauf.find(x => x.id === url.searchParams.get('id'));
         return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });
       }
+      if (url.pathname === '/api/zentrale/threads' && req.method === 'GET') return json(res, 200, threadStand);
       if (url.pathname === '/api/zentrale/ergebnisse' && req.method === 'GET') return json(res, 200, { ergebnisse: ergebnisse.slice().reverse().map(ergebnisKurz) });
       if (url.pathname === '/api/zentrale/ergebnis' && req.method === 'GET') {
         const e = ergebnisse.find(x => x.id === url.searchParams.get('id'));
