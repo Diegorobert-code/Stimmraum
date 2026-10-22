@@ -796,6 +796,47 @@ function weltbildNeu(figur, titel, bild) {
   return e;
 }
 const weltbildDatei = (x) => { const e = weltbilder.find(w => w.id === x || w.bid === x); return e ? path.join(WELTBILD_ORDNER, e.bid) : null; };
+// ---------- Bühne: Präsentationsfilme für Nova am Beamer (Diego 22.10.: «Präsentation mit Nova … wie durch den Abend führen») ----------
+// Die Filme sind nicht öffentlich: nur über einen geheimen Pfad /buehne/<token>/…, Hochladen in Teilen über MCP.
+const BUEHNE_ORDNER = path.join(DATEN, 'buehne'), BUEHNE_DATEI = path.join(DATEN, 'buehne.json');
+const BUEHNE_ORIGIN = 'https://diegorobert-code.github.io';
+let buehne = { token: '', filme: [] };
+try { buehne = JSON.parse(fs.readFileSync(BUEHNE_DATEI, 'utf8')); } catch {}
+function buehneSpeichern() { try { fs.writeFileSync(BUEHNE_DATEI, JSON.stringify(buehne, null, 1), { mode: 0o600 }); } catch (e) { console.error('Bühne nicht gespeichert:', e.message); } }
+function buehneToken() { if (!buehne.token) { buehne.token = crypto.randomBytes(24).toString('base64url'); buehneSpeichern(); } return buehne.token; }
+const buehneBasis = () => `${mcpBasis}/buehne/${buehneToken()}/`;
+const buehneName = (n) => /^[a-z0-9][a-z0-9_-]{0,80}\.mp4$/.test(String(n || '')) ? String(n) : null;
+function buehnePlatz() { try { const f = fs.statfsSync(DATEN); return f.bavail * f.bsize; } catch { return Infinity; } }
+function buehneTeil(a) {
+  const n = buehneName(a.datei); if (!n) return { fehler: 'Dateiname: klein, a-z 0-9 - _, endet auf .mp4' };
+  const teil = parseInt(a.teil, 10); if (!(teil >= 0)) return { fehler: 'teil fehlt (0, 1, 2 …).' };
+  const buf = Buffer.from(String(a.daten || ''), 'base64'); if (!buf.length && !a.letzter) return { fehler: 'daten leer.' };
+  if (teil === 0 && buehnePlatz() < 2 * 1073741824) return { fehler: 'Weniger als 2 GB frei auf dem Server.' };
+  fs.mkdirSync(BUEHNE_ORDNER, { recursive: true, mode: 0o700 });
+  const ziel = path.join(BUEHNE_ORDNER, n + '.teil');
+  if (teil === 0) fs.writeFileSync(ziel, buf, { mode: 0o600 }); else fs.appendFileSync(ziel, buf);
+  const gross = fs.statSync(ziel).size;
+  if (a.letzter) fs.renameSync(ziel, path.join(BUEHNE_ORDNER, n));
+  return { datei: n, bytes: gross, fertig: !!a.letzter };
+}
+function buehneListe() {
+  return buehne.filme.filter(f => fs.existsSync(path.join(BUEHNE_ORDNER, f.datei))).map(f => ({ id: f.id, titel: f.titel, datei: buehneBasis() + f.datei, stichworte: f.stichworte }));
+}
+function buehneSenden(req, res, n) {
+  const datei = path.join(BUEHNE_ORDNER, n); let st;
+  try { st = fs.statSync(datei); } catch { return json(res, 404, { fehler: 'Film nicht gefunden.' }); }
+  const kopf = { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=86400', 'Access-Control-Allow-Origin': BUEHNE_ORIGIN };
+  const rg = /bytes=(\d*)-(\d*)/.exec(req.headers.range || '');
+  if (rg) {
+    let a0 = rg[1] ? parseInt(rg[1], 10) : st.size - parseInt(rg[2] || '0', 10), b0 = rg[1] && rg[2] ? parseInt(rg[2], 10) : st.size - 1;
+    if (isNaN(a0) || a0 < 0 || a0 >= st.size || b0 < a0) { res.writeHead(416, { 'Content-Range': `bytes */${st.size}` }); return res.end(); }
+    b0 = Math.min(b0, st.size - 1);
+    res.writeHead(206, { ...kopf, 'Content-Range': `bytes ${a0}-${b0}/${st.size}`, 'Content-Length': b0 - a0 + 1 });
+    return fs.createReadStream(datei, { start: a0, end: b0 }).pipe(res);
+  }
+  res.writeHead(200, { ...kopf, 'Content-Length': st.size });
+  return fs.createReadStream(datei).pipe(res);
+}
 // ---------- Sora: flüssige Filmclips aus Tinkos Bildern (Diego 20.10.) ----------
 // Bezahlt über den Tinko-Schlüssel (OpenAI). Harter Monatsdeckel in CHF; 0 = aus. Kosten werden beim Start reserviert.
 const SORA_DECKEL_CHF = parseFloat(process.env.SORA_DECKEL_CHF || '180');
@@ -1103,6 +1144,11 @@ const WERKZEUGE = [
   { name: 'kiverse_weltbild_ablegen', description: 'Ein festes Bild fürs 3D-Städtchen ablegen (bleibt, anders als die Ablage). Es läuft im Laden der Figur. Auch als Startbild für kiverse_film_clip nutzbar (bild = weltbild_id).',
     inputSchema: { type: 'object', properties: { figur: { type: 'string', description: 'Figurname, z. B. Hasi, Otti, Sunny' }, titel: { type: 'string' }, bild: { type: 'string', description: 'data:image/jpeg;base64,…' } }, required: ['figur', 'bild'] } },
   { name: 'kiverse_weltbilder', description: 'Liste der festen Weltbilder (id, Figur, Titel).', inputSchema: { type: 'object', properties: { figur: { type: 'string' } } } },
+  { name: 'kiverse_buehne_teil', description: 'Präsentationsfilm in Teilen auf den Server laden (nicht öffentlich). teil 0 beginnt neu, letzter=true schliesst ab. daten = base64, höchstens ca. 9 MB pro Teil.',
+    inputSchema: { type: 'object', properties: { datei: { type: 'string', description: 'z. B. jasmine.mp4' }, teil: { type: 'number' }, daten: { type: 'string' }, letzter: { type: 'boolean' } }, required: ['datei', 'teil'] } },
+  { name: 'kiverse_buehne_liste', description: 'Filmliste der Bühne setzen: [{id, titel, datei, stichworte[]}] (datei = hochgeladener Name). Gibt die geheime Adresse von filme.json zurück.',
+    inputSchema: { type: 'object', properties: { filme: { type: 'array', items: { type: 'object' } } }, required: ['filme'] } },
+  { name: 'kiverse_buehne_stand', description: 'Bühne: hochgeladene Filme, Grösse, freier Platz, Adresse von filme.json.', inputSchema: { type: 'object', properties: {} } },
   { name: 'kiverse_handy_koppeln', description: 'Diegos Handy ohne Terminal mit seinem KI-Verse verbinden: erzeugt einen 6-stelligen Kopplungs-Code (15 Minuten gültig, einmal). Diego öffnet die Seite /koppeln, tippt den Code und landet direkt bei Nova. Nur auf Diegos Wunsch, Code nur Diego sagen.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
@@ -1260,6 +1306,20 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_weltbilder': {
       const f = String(a.figur || '').toLowerCase(), l = weltbilder.filter(w => !f || w.figur.toLowerCase() === f);
       return text(l.length ? l.map(w => `- ${w.id} | ${w.figur}: ${w.titel}`).join('\n') : 'Noch keine Weltbilder.');
+    }
+    case 'kiverse_buehne_teil': {
+      try { const r = buehneTeil(a); return r.fehler ? text(r.fehler, true) : text(`${r.datei}: ${(r.bytes / 1048576).toFixed(1)} MB${r.fertig ? ', fertig.' : ' bisher.'}`); }
+      catch (e) { return text('Fehler beim Speichern: ' + e.message, true); }
+    }
+    case 'kiverse_buehne_liste': {
+      const l = (Array.isArray(a.filme) ? a.filme : []).slice(0, 200).map(f => ({ id: sauber(f.id, 40), titel: sauber(f.titel, 160), datei: buehneName(f.datei), stichworte: (Array.isArray(f.stichworte) ? f.stichworte : []).slice(0, 12).map(w => sauber(w, 40)) })).filter(f => f.id && f.datei);
+      buehne.filme = l; buehneSpeichern();
+      const fehlt = l.filter(f => !fs.existsSync(path.join(BUEHNE_ORDNER, f.datei))).map(f => f.datei);
+      return text(`${l.length} Filme gesetzt${fehlt.length ? ', noch nicht hochgeladen: ' + fehlt.join(', ') : ''}. Liste: ${buehneBasis()}filme.json`);
+    }
+    case 'kiverse_buehne_stand': {
+      let d = []; try { d = fs.readdirSync(BUEHNE_ORDNER).map(n => `${n} ${(fs.statSync(path.join(BUEHNE_ORDNER, n)).size / 1048576).toFixed(1)} MB`); } catch {}
+      return text(`Bühne: ${d.length ? d.join(', ') : 'noch leer'}. Liste mit ${buehne.filme.length} Filmen. Frei: ${(buehnePlatz() / 1073741824).toFixed(1)} GB. Liste: ${buehneBasis()}filme.json`);
     }
     case 'kiverse_film_clip': {
       const r = await falStart(a);
@@ -1934,6 +1994,13 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/koppeln') {
       if (req.method === 'POST') { const a = await body(req, 1024); return json(res, 200, koppelPruefen(a.code)); }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(KOPPEL_SEITE);
+    }
+    const mbu = url.pathname.match(/^\/buehne\/([A-Za-z0-9_-]{32})\/(filme\.json|[a-z0-9][a-z0-9_-]{0,80}\.mp4)$/);
+    if (mbu) {
+      if (!buehne.token || !crypto.timingSafeEqual(Buffer.from(mbu[1]), Buffer.from(buehne.token.padEnd(32).slice(0, 32)))) return json(res, 404, { fehler: 'Nicht gefunden.' });
+      if (req.method === 'OPTIONS') { res.writeHead(204, { 'Access-Control-Allow-Origin': BUEHNE_ORIGIN, 'Access-Control-Allow-Headers': 'Range' }); return res.end(); }
+      if (mbu[2] === 'filme.json') { res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': BUEHNE_ORIGIN }); return res.end(JSON.stringify(buehneListe())); }
+      return buehne.filme.some(f => f.datei === mbu[2]) ? buehneSenden(req, res, mbu[2]) : json(res, 404, { fehler: 'Nicht gefunden.' });
     }
     if (url.pathname.startsWith('/apps/') || url.pathname === '/apps') return await appSenden(req, res, url);
     if (url.pathname.startsWith('/sense/')) return await senseWeiter(req, res, url);
