@@ -2141,7 +2141,7 @@ const server = http.createServer(async (req, res) => {
       // Kinder-Figuren dürfen nur Projektwissen abrufen und Aufträge geben, nichts von Kindern speichern
       const fig = sauber(String(a.figur || '').toLowerCase().replace(/[^a-z]/g, ''), 30) || 'nova';
       const KINDER_FIGUREN = ['otti', 'kimo', 'kiki', 'mamaaffe', 'zahnboecklein', 'tropfi', 'ava', 'mondschein', 'hasi', 'haeschen'];
-      if (fig !== 'nova' && ['update', 'sichern', 'stand'].includes(was)) return json(res, 200, { text: 'Das macht nur Nova.' });
+      if (!['nova', 'lumo'].includes(fig) && ['update', 'sichern', 'stand'].includes(was)) return json(res, 200, { text: 'Das machen nur Nova und Lumo.' });
       if (KINDER_FIGUREN.includes(fig) && !['erinnern', 'auftrag'].includes(was)) return json(res, 200, { text: 'Das darf ich hier nicht. Ich kann dir etwas erzählen oder Claude etwas ausrichten.' });
       const figName = fig === 'nova' ? 'Sprech-Nova' : 'Sprech-' + (FIGUREN_KI[fig]?.name || fig);
       // Sense Engine direkt (Diego 21.10.: «Sense Engine speichert alles … direkt über unsere App auf den Server»)
