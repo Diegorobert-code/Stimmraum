@@ -1234,7 +1234,7 @@ const WERKZEUGE = [
   { name: 'kiverse_claude_erledigt', description: 'Nova-Auftrag abschliessen: das Ergebnis landet in Novas Fenster «📂 Ergebnisse» (Markdown, Codeblöcke bekommen Kopieren-Knopf), Nova sagt es Diego.',
     inputSchema: { type: 'object', properties: { auftrag_id: { type: 'string' }, von: { type: 'string' }, titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string', description: 'optional https-Link' } }, required: ['auftrag_id', 'titel', 'text'] } },
   { name: 'kiverse_push', description: 'Push-Nachricht an Diegos Handy (Nova-App auf dem Home-Bildschirm), nur wenn etwas fertig ist oder sein Go braucht. Titel kurz, Text höchstens 2 Stichworte, optional https-Link. Keine Schlüssel, keine Gesundheits- oder Klientendaten.',
-    inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' } }, required: ['text'] } },
+    inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' }, sag: { type: 'string', description: 'optional: Satz, den Nova laut sagt, wenn Diego auf die Push tippt' } }, required: ['text'] } },
   { name: 'kiverse_erfahrungen', description: 'Diegos Erfahrungs-Tagebuch lesen: seine Gespräche mit allen Figuren (mit seiner Einwilligung, intern, nie weitergeben). leeren:true löscht alles (nur auf Diegos Wunsch).',
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'wie viele, Standard 30, höchstens 200' }, leeren: { type: 'boolean' } } } },
   { name: 'kiverse_sense_speichern', description: 'Wissen in die Sense Engine geben, damit Nova es kennt (Diego 21.10.: «du fütterst sie»). app z. B. «Diego Hauptchat» oder «Stella», art «wissen». Erscheint in Nova unter «🌱 Heute gewachsen». Nie Schlüssel, Codes, Klientennamen, Gesundheits- oder Finanzdaten.',
@@ -1458,7 +1458,7 @@ async function werkzeug(name, a = {}) {
       return text(l.length ? l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.figur} | Diego: ${x.du} | ${x.figur}: ${x.ich}`).join('\n') : 'Noch keine Erfahrungen gespeichert.');
     }
     case 'kiverse_sense_speichern': { const r = await senseSpeichern(a.app, a.art || 'wissen', a.text, a.stichwort); return r.fehler ? text(r.fehler, true) : text(`In der Sense Engine gespeichert (${r.teile} Teil${r.teile > 1 ? 'e' : ''}). Erscheint unter «🌱 Heute gewachsen».`); }
-    case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : ''));
+    case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : '', a.sag));
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
   }
@@ -1938,9 +1938,11 @@ function vapidKopf(endpoint) {
   const sig = crypto.sign('sha256', Buffer.from(kopf + '.' + daten), { key: crypto.createPrivateKey({ key: VAPID, format: 'jwk' }), dsaEncoding: 'ieee-p1363' });
   return `vapid t=${kopf}.${daten}.${b64u(sig)}, k=${VAPID_OEFFENTLICH}`;
 }
-async function pushSenden(titel, text, link) {
+// Push mit Novas Gesicht (Nova-Thread 23.10.): Novas Bild als Symbol; «sag» spricht Nova laut, wenn Diego auf die Push tippt
+const NOVA_GESICHT = 'https://diegorobert-code.github.io/DR_Lab/nova/nova-3d.jpg';
+async function pushSenden(titel, text, link, sag) {
   if (!pushAbos.length) return 'Noch kein Handy für Push angemeldet (in Nova einmal «🔔» tippen).';
-  const inhalt = JSON.stringify({ titel: sauber(titel, 80) || 'Nova', text: sauber(text, 300), link: link || '' });
+  const inhalt = JSON.stringify({ titel: sauber(titel, 80) || 'Nova', text: sauber(text, 300), link: link || '', sag: sauber(sag, 300), bild: NOVA_GESICHT });
   let ok = 0;
   for (const abo of [...pushAbos]) {
     try {
@@ -1953,9 +1955,13 @@ async function pushSenden(titel, text, link) {
   return ok ? `Push gesendet (${ok} Gerät${ok > 1 ? 'e' : ''}).` : 'Push ging nicht durch.';
 }
 const NOVA_SW = `self.addEventListener('push', e => { let d = {}; try { d = e.data.json(); } catch { d = { text: e.data && e.data.text() }; }
-  e.waitUntil(self.registration.showNotification(d.titel || 'Nova', { body: d.text || '', data: { link: d.link || '' }})); });
-self.addEventListener('notificationclick', e => { e.notification.close(); const l = e.notification.data && e.notification.data.link;
-  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(w => { if (w[0]) { w[0].focus(); if (l) w[0].navigate(l); } else if (l) clients.openWindow(l); })); });`;
+  e.waitUntil(self.registration.showNotification(d.titel || 'Nova', { body: d.text || '', icon: d.bild || undefined, badge: d.bild || undefined, vibrate: [120, 60, 120], data: { link: d.link || '', sag: d.sag || '' }})); });
+self.addEventListener('notificationclick', e => { e.notification.close(); const l = e.notification.data && e.notification.data.link, sag = e.notification.data && e.notification.data.sag;
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(w => {
+    if (w[0]) { return w[0].focus().then(c => { if (l) return (c || w[0]).navigate(l); if (sag) (c || w[0]).postMessage({ sag }); }); }
+    if (l) return clients.openWindow(l);
+    if (sag) return clients.openWindow(self.registration.scope + '#sag=' + encodeURIComponent(sag));
+  })); });`;
 // ---------- Handy koppeln ohne Terminal (Diego 20.10.: «verbrauchergerechte Variante») ----------
 // Claude erzeugt über den Connector einen 6-stelligen Code; Diego tippt ihn auf /koppeln und bekommt seinen Besitzer-Link.
 const NOVA_APP_HASH = process.env.NOVA_APP_HASH || '226ec9802628fc91552e27814957bee88db067676e8f7d8311ae2e90ff61597b';

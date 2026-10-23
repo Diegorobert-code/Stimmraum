@@ -372,6 +372,9 @@ a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
   }
   let kette = Promise.resolve(), stumm = false;
   const sprechen = (text, figur = null) => (kette = kette.then(() => sprichJetzt(text, figur)).catch(() => {}));
+  // Push mit Novas Gesicht (23.10.): Tippen auf die Push → Nova sagt den Satz
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.sag) sprichJetzt(e.data.sag); });
+  if (location.hash.startsWith('#sag=')) { const t = decodeURIComponent(location.hash.slice(5)); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => sprichJetzt(t), 800); }
   async function sprichJetzt(text, figur) {
     text = String(text || '').trim(); if (!text || stumm) return;
     setze('spricht', 'Nova spricht …'); requestAnimationFrame(pegelMessen);
