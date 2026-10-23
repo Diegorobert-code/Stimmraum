@@ -85,16 +85,30 @@ body.redet #stick, body.redet #hoch { display: none; }
 .appfenster .leiste b { flex: 1; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
 /* Zwei Welten (Diego 23.10. 18:24 «bitte die zwei Welten im KI-Verse»): Märchenwelt wie Otti und echte Gasse an der Costa Brava */
 .welten { position: fixed; inset: 0; z-index: 13; background: #050a1c; display: flex; flex-direction: column; }
-.welten .wahl { margin: auto; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); width: min(720px, 92vw); }
-.welten .wahl button { border: 2px solid var(--gold); border-radius: 18px; background: #0b1430; color: #fff; padding: 0; overflow: hidden; cursor: pointer; text-align: left; }
-.welten .wahl img { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; }
-.welten .wahl span { display: block; padding: 10px 14px; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
-.welten .wahl small { display: block; padding: 0 14px 12px; font-size: 14px; color: #d8d2c0; }
-.welten .kino { position: absolute; inset: 0; background: #000; }
-.welten .kino video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .8s; }
+.welten .kino { position: absolute; inset: 0; background: #000; touch-action: pan-y; }
+.welten .kino video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s; }
 .welten .kino video.an { opacity: 1; }
-.welten .zu { position: absolute; top: max(10px, env(safe-area-inset-top)); right: 12px; z-index: 2; }
-.welten .titel { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); text-align: center; z-index: 2; font: 800 20px "Baloo 2", sans-serif; color: var(--gold); text-shadow: 0 2px 8px #000; }
+.welten .zu { position: absolute; top: max(10px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 2; }
+.welten .ortname { position: absolute; top: max(14px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); z-index: 2; font: 800 22px "Baloo 2", sans-serif; color: var(--gold); text-shadow: 0 2px 10px #000; pointer-events: none; }
+.welten .tipps { position: absolute; left: 0; right: 0; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 34px); display: flex; justify-content: center; z-index: 2; }
+.welten .tipps button { border: 0; border-radius: 999px; padding: 14px 24px; font: 800 18px "Baloo 2", sans-serif; color: #1a1205; background: linear-gradient(#ffd98a, #e8a93a); box-shadow: 0 6px 24px rgba(0,0,0,.5); cursor: pointer; }
+.welten .punkte { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 8px; z-index: 2; }
+.welten .punkte i { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.4); }
+.welten .punkte i.an { background: var(--gold); transform: scale(1.3); }
+.welten .wisch { position: absolute; left: 0; right: 0; top: 50%; text-align: center; z-index: 2; color: #fff; font: 700 15px "Atkinson Hyperlegible", sans-serif; text-shadow: 0 2px 8px #000; opacity: .85; transition: opacity 1.2s; pointer-events: none; }
+.welten .wisch.weg { opacity: 0; }
+body.filmstadt .gespraech { z-index: 14; }
+body.filmstadt .appfenster { z-index: 15; }
+.welten .wohin { position: absolute; top: max(10px, env(safe-area-inset-top)); right: calc(max(12px, env(safe-area-inset-right)) + 150px); z-index: 2; }
+.welten .filmstart { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 max(16px, env(safe-area-inset-right)) calc(max(16px, env(safe-area-inset-bottom)) + 10px) max(16px, env(safe-area-inset-left)); background: linear-gradient(transparent 35%, rgba(5,10,28,.85)); }
+.welten .filmstart p { color: #fff; font: 700 20px "Baloo 2", sans-serif; text-shadow: 0 2px 8px #000; margin: 0 0 12px; }
+.welten .filmstart p b { color: var(--gold); }
+.welten .ziele { display: flex; flex-wrap: wrap; gap: 10px; }
+.welten .ziele button { border: 1px solid var(--gold); border-radius: 999px; background: rgba(11,20,48,.85); color: #fff; padding: 12px 18px; font: 700 17px "Baloo 2", sans-serif; cursor: pointer; }
+body.filmstadt.redet .welten .filmstart { justify-content: flex-start; padding-top: calc(max(14px, env(safe-area-inset-top)) + 52px); background: linear-gradient(rgba(5,10,28,.85), transparent 55%); }
+.welten .flug { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(circle, rgba(255,217,138,.95), rgba(232,169,58,.6) 40%, rgba(5,10,28,.95)); transition: opacity .45s; }
+.welten .flug.an { opacity: 1; }
+.welten .kino.zoom video.an { transform: scale(1.25); transition: transform .5s ease-in, opacity .9s; }
 .appfenster .leiste button { all: unset; cursor: pointer; color: var(--gold-hell); font: 700 14px "Atkinson Hyperlegible", sans-serif; border: 1px solid var(--rand); border-radius: 999px; padding: 6px 12px; }
 .appfenster iframe { flex: 1; border: 0; width: 100%; background: #fff; }
 [hidden] { display: none !important; }
@@ -141,7 +155,7 @@ body.eingebettet #redeKnopf { display: none !important; }
   <span class="pille"><button type="button" id="rundKnopf" title="Rundum schauen (Taste Q)">🔄<span class="txt"> 360°</span></button></span>
   <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
   <span class="pille"><button type="button" id="tonKnopf" aria-label="Ton">🔊</button></span>
-  <span class="pille"><button type="button" id="weltenKnopf">✨<span class="txt"> Märchenwelt</span></button></span>
+  <span class="pille"><button type="button" id="weltenKnopf">🎬<span class="txt"> Trickfilmstadt</span></button></span>
   <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
 </div>
 <video id="arVideo" playsinline muted autoplay></video>
@@ -153,11 +167,15 @@ body.eingebettet #redeKnopf { display: none !important; }
 <button id="reden" type="button" hidden>🎙 Reden</button>
 <div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""><video muted playsinline hidden></video></div>
 <div class="welten" id="welten" hidden>
-  <button type="button" class="knopf zu" id="weltenZu">✕ Zurück ins Städtchen</button>
-  <div class="wahl" id="weltenWahl">
-    <button type="button" data-welt="maerchen"><img id="weltBildM" alt=""><span>✨ Märchenwelt</span><small>Otti am Tor, die Lichtinsel und Sunny am Strand</small></button>
-  </div>
-  <div class="kino" id="weltenKino" hidden><video muted playsinline></video><video muted playsinline></video><div class="titel" id="weltenTitel"></div></div>
+  <div class="kino" id="weltenKino"><video muted playsinline preload="auto"></video><video muted playsinline preload="auto"></video></div>
+  <button type="button" class="knopf zu" id="weltenZu">🏠 3D-Städtchen</button>
+  <div class="ortname" id="weltenTitel"></div>
+  <div class="tipps"><button type="button" id="filmRedet">🎙 Mit <b id="filmFigur">Otti</b> reden</button></div>
+  <div class="punkte" id="filmPunkte"></div>
+  <div class="wisch" id="filmWisch">← wischen →</div>
+  <button type="button" class="knopf wohin" id="filmKarte">🐉 Wohin?</button>
+  <div class="filmstart" id="filmStart" hidden><p><b>Sunny:</b> Wo möchtest du hin? Tipp an oder sag es mir.</p><div class="ziele" id="filmZiele"></div></div>
+  <div class="flug" id="filmFlug"></div>
 </div>
 <div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
 <div class="gespraech" id="gespraech" hidden>
@@ -2073,7 +2091,7 @@ const KEY_K = new URLSearchParams(location.search).get('k');
 const figurVon = (n) => n && (n.key || n.o?.figur);
 function naechsteFigur(max = 6) { let best = null, bd = max; for (const n of npc) { if (!NAMEN[figurVon(n)]) continue; const d = Math.hypot(n.f.position.x - sp.pos.x, n.f.position.z - sp.pos.z); if (d < bd) { bd = d; best = n; } } return best; }
 function zeile(wer, text, ich) { const p = document.createElement('p'); p.className = ich ? 'du' : ''; const b = document.createElement('b'); b.textContent = wer + ': '; p.append(b, document.createTextNode(text)); const l = $('#gesprLog'); l.appendChild(p); l.scrollTop = l.scrollHeight; }
-function gespraechOeffnen(n) {
+function gespraechOeffnen(n, still = false) {
   if (!n) return;
   if (EINGEBETTET && figurVon(n) === 'nova') return; // auf Novas Bühne spricht die Bühnen-Nova, nicht die Figur
   gespr.n = n; gespr.fid = figurVon(n);
@@ -2083,7 +2101,7 @@ function gespraechOeffnen(n) {
   if (zustand.innen == null) { kamZiel.pos.set(n.f.position.x + Math.sin(Math.atan2(sp.pos.x - n.f.position.x, sp.pos.z - n.f.position.z)) * 2.6, 1.7, n.f.position.z + Math.cos(Math.atan2(sp.pos.x - n.f.position.x, sp.pos.z - n.f.position.z)) * 2.6); }
   else kamZiel.pos.set(n.f.position.x + Math.sin(n.f.rotation.y) * 2.6, 1.7, n.f.position.z + Math.cos(n.f.rotation.y) * 2.6);
   kamZiel.blick.set(n.f.position.x, 2.05 * n.f.scale.y, n.f.position.z); kamZiel.aktiv = true;
-  sagen(n.satz || 'Hallo! Schön, dass du da bist.');
+  if (!still) sagen(n.satz || 'Hallo! Schön, dass du da bist.');
   setTimeout(() => $('#gesprEingabe').focus(), 50);
 }
 function gespraechSchliessen() {
@@ -2094,6 +2112,7 @@ function gespraechSchliessen() {
 }
 async function senden() {
   const e = $('#gesprEingabe'), t = e.value.trim(); if (!t || !gespr.n) return;
+  if (filmSprachweg(t)) { e.value = ''; return; }
   e.value = ''; zeile('Du', t, true); horchenStopp(); erlebt(`redete mit ${NAMEN[gespr.fid]}: «${t.slice(0, 60)}»`);
   const tok = ++gespr.token; $('#gesprStatus').textContent = `${NAMEN[gespr.fid]} denkt nach …`;
   let antwort = null;
@@ -2376,45 +2395,102 @@ function appOeffnen(id, name) {
   $('#appFenster iframe').src = (id === 'nova' ? 'nova' : 'apps/' + id + '/') + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
   $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
 }
-// Märchenwelt (Diego 18:29: echte Gasse nicht nötig): Clips nach Titel, laufen nacheinander mit Überblendung in Schleife
-const WELTEN = {
-  maerchen: { name: '✨ Märchenwelt', titel: ['otti am tor', 'lichtinsel lagerfeuer', 'lichtinsel sternendach', 'sunny am strand'] }
-};
-let weltenTimer = 0;
-async function weltenClips(w) {
+// Trickfilmstadt (Diego 23.10. 18:43: «richtige Trickfilmstadt, genauso wie die beiden», 18:45: mit Otti reden = die KI, die lernt)
+// Jeder Ort ist ein bewegter Clip in Schleife; wischen = nächster Ort, Figur antippen oder «zum Hafen» sagen.
+const FILMORTE = [
+  { name: 'Ottis Tor', fig: 'otti', app: ['otti', 'Ottis Wunderland'], titel: ['otti am tor'], wort: /\b(tor|otti)\b/i },
+  { name: 'Sunnys Strand', fig: 'sunny', titel: ['sunny am strand'], wort: /\bstrand|sunny\b/i },
+  { name: 'Der Brunnen', fig: 'sparky', app: ['humanspark', 'Human Sparks'], titel: ['filmstadt brunnen'], wort: /brunnen|pla[cç]a|sparky/i },
+  { name: 'Der Hafen', fig: 'kimo', app: ['kiki', 'Kiki'], titel: ['filmstadt hafen'], wort: /hafen|boot|kiki|kimo/i },
+  { name: 'Die Laternengasse', fig: 'waefwaef', titel: ['filmstadt gasse'], wort: /gasse|laterne|goldi/i },
+  { name: 'Die Lichtinsel', fig: 'otti', titel: ['lichtinsel lagerfeuer'], wort: /insel|lagerfeuer|feuer/i },
+  { name: 'Das Sternendach', fig: 'kimo', titel: ['lichtinsel sternendach'], wort: /stern|dach|nacht/i }
+];
+const film = { orte: [], i: 0, clip: 0, vorn: null, timer: 0 };
+async function filmClips() {
   try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
   const t = (c) => (c.titel || '').toLowerCase();
-  return WELTEN[w].titel.flatMap(p => filmeCache.filter(c => t(c).startsWith(p)).sort((a, b) => t(a).localeCompare(t(b))));
+  return FILMORTE.map(o => ({ ...o, clips: o.titel.flatMap(p => filmeCache.filter(c => t(c).startsWith(p)).sort((a, b) => t(a).localeCompare(t(b)))) })).filter(o => o.clips.length);
+}
+const filmUrl = (c) => 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K);
+function filmZeigen() {
+  const o = film.orte[film.i]; if (!o) return;
+  $('#weltenTitel').textContent = o.name; $('#filmFigur').textContent = NAMEN[o.fig] || 'Otti';
+  $('#filmPunkte').innerHTML = film.orte.map((_, k) => `<i class="${k === film.i ? 'an' : ''}"></i>`).join('');
+  film.clip = 0; filmSpielen();
+}
+function filmSpielen() {
+  const o = film.orte[film.i]; if (!o || $('#welten').hidden) return;
+  const [a, b] = document.querySelectorAll('#weltenKino video'), v = film.vorn === a ? b : a, c = o.clips[film.clip++ % o.clips.length];
+  v.src = filmUrl(c); v.loop = o.clips.length === 1;
+  v.onended = () => { if (film.orte[film.i] === o) filmSpielen(); };
+  v.onerror = () => { o.clips.splice(o.clips.indexOf(c), 1); if (!o.clips.length) { film.orte.splice(film.i, 1); film.i = Math.min(film.i, film.orte.length - 1); return filmZeigen(); } clearTimeout(film.timer); film.timer = setTimeout(filmSpielen, 200); };
+  v.play().then(() => { v.classList.add('an'); if (film.vorn && film.vorn !== v) { const alt = film.vorn; alt.classList.remove('an'); setTimeout(() => alt.pause(), 950); } film.vorn = v; }).catch(() => {});
+}
+function filmGehe(d) { if (!film.orte.length) return; film.i = (film.i + d + film.orte.length) % film.orte.length; filmZeigen(); $('#filmWisch').classList.add('weg'); }
+function filmFigurNpc(fid) { return npc.find(n => figurVon(n) === fid) || npc.find(n => figurVon(n) === 'otti'); }
+function filmStartZeigen() {
+  $('#filmZiele').innerHTML = ''; film.orte.forEach((o, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o.name; b.onclick = () => filmFliege(k); $('#filmZiele').appendChild(b); });
+  $('#filmStart').hidden = false;
+}
+// Sunny fliegt dich hin: Zoom in den Ort, goldener Flug-Übergang (später echter Flugclip)
+function filmFliege(k) {
+  $('#filmStart').hidden = true; const kino = $('#weltenKino'), f = $('#filmFlug');
+  kino.classList.add('zoom'); f.classList.add('an');
+  setTimeout(() => { film.i = k; filmZeigen(); kino.classList.remove('zoom'); setTimeout(() => f.classList.remove('an'), 250); }, 550);
 }
 async function weltenOeffnen() {
-  $('#welten').hidden = false; $('#weltenWahl').hidden = false; $('#weltenKino').hidden = true;
-  for (const [w, id] of [['maerchen', '#weltBildM']]) {
-    const c = (await weltenClips(w))[0]; const img = $(id);
-    if (c && !img.src) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.crossOrigin = 'anonymous'; v.src = 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K) + '#t=1';
-      v.onloadeddata = () => { try { const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight; cv.getContext('2d').drawImage(v, 0, 0); img.src = cv.toDataURL('image/jpeg', .8); } catch {} }; v.load(); }
-  }
+  if (!KEY_K) return;
+  film.orte = await filmClips(); if (!film.orte.length) return;
+  $('#welten').hidden = false; document.body.classList.add('filmstadt'); $('#filmWisch').classList.remove('weg');
+  setTimeout(() => $('#filmWisch').classList.add('weg'), 3500);
+  film.i = film.orte.findIndex(o => o.fig === 'sunny'); if (film.i < 0) film.i = 0;
+  filmZeigen(); filmStartZeigen(); filmBegruessung(); erlebt('war in der Trickfilmstadt');
 }
-async function weltSpielen(w) {
-  const clips = await weltenClips(w); if (!clips.length) { $('#weltenTitel').textContent = 'Die Clips laden noch …'; }
-  $('#weltenWahl').hidden = true; $('#weltenKino').hidden = false; $('#weltenTitel').textContent = WELTEN[w].name;
-  const [a, b] = document.querySelectorAll('#weltenKino video'); let i = 0, vorn = a;
-  const naechster = () => {
-    if ($('#welten').hidden || !clips.length) return;
-    const v = vorn === a ? b : a, c = clips[i++ % clips.length];
-    v.src = 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K);
-    v.onended = naechster; v.onerror = () => { clips.splice(clips.indexOf(c), 1); clearTimeout(weltenTimer); weltenTimer = setTimeout(naechster, 200); };
-    v.play().then(() => { v.classList.add('an'); vorn.classList.remove('an'); const alt = vorn; vorn = v; setTimeout(() => alt.pause(), 900); }).catch(() => v.onerror());
-  };
-  naechster(); erlebt(`schaute die ${WELTEN[w].name}`);
+// Sunny sagt hey und erzählt, was neu ist, bevor du losfliegst (Diego 18:50)
+async function filmBegruessung() {
+  const n = filmFigurNpc('sunny'); if (!n || figurVon(n) !== 'sunny') return;
+  gespraechOeffnen(n, true); const tok = gespr.token; $('#gesprStatus').textContent = 'Sunny landet …';
+  let t = null;
+  try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text: '(Ich komme gerade in die Trickfilmstadt.) Sag hey, erzähl mir in zwei, drei Sätzen das Neuste aus dem KI-Verse und den Apps und frag mich, wohin ich fliegen möchte.' }) }); t = (await r.json()).text; } catch {}
+  if (tok !== gespr.token || gespr.n !== n) return;
+  $('#gesprStatus').textContent = '';
+  sagen(t || 'Hey, schön, dass du da bist! Wohin möchtest du fliegen?');
 }
-$('#weltenKnopf').onclick = () => { $('#welten').hidden = false; weltSpielen('maerchen'); };
-document.querySelectorAll('#weltenWahl [data-welt]').forEach(k => k.onclick = () => weltSpielen(k.dataset.welt));
-$('#weltenZu').onclick = () => {
-  $('#welten').hidden = true;
+function weltenSchliessen() {
+  if (gespr.n) gespraechSchliessen();
+  $('#welten').hidden = true; document.body.classList.remove('filmstadt');
   document.querySelectorAll('#weltenKino video').forEach(v => { v.pause(); v.classList.remove('an'); v.removeAttribute('src'); v.load(); });
-  clearTimeout(weltenTimer);
-};
+  film.vorn = null; clearTimeout(film.timer);
+}
+// Sprechen: «Otti, zum Hafen» bringt dich hin (Text aus dem Gespräch, vor dem Senden geprüft)
+function filmSprachweg(t) {
+  // «Ich möchte rein / deine Schule / dein Wunderland benutzen» → die Figur zieht dich in ihre App (Diego 18:48)
+  const hier = film.orte[film.i];
+  if (!$('#welten').hidden && hier?.app && /\b(rein|hinein|herein|zu dir|benutzen|deine? (app|schule|wunderland|laden|welt)|spielen)\b/i.test(t)) {
+    const f = $('#filmFlug'); f.classList.add('an'); if (gespr.n) gespraechSchliessen();
+    setTimeout(() => { appOeffnen(hier.app[0], hier.app[1]); setTimeout(() => f.classList.remove('an'), 300); }, 600); return true;
+  }
+  if ($('#welten').hidden || !/\b(zum|zur|zu|an den|an die|in die|in den|nach|geh|flieg|bring)\b/i.test(t)) return false;
+  const k = film.orte.findIndex(o => o.wort.test(t)); if (k < 0 || k === film.i) return false;
+  filmFliege(k); const n = filmFigurNpc(film.orte[k].fig);
+  if (gespr.n !== n) { gespraechSchliessen(); setTimeout(() => gespraechOeffnen(n), 600); }
+  return true;
+}
+$('#weltenKnopf').onclick = weltenOeffnen;
+$('#weltenZu').onclick = weltenSchliessen;
+$('#filmKarte').onclick = () => $('#filmStart').hidden ? filmStartZeigen() : ($('#filmStart').hidden = true);
+$('#filmRedet').onclick = () => { const o = film.orte[film.i]; if (o) gespraechOeffnen(filmFigurNpc(o.fig)); };
+(() => {
+  const k = $('#weltenKino'); let x0 = null, y0 = 0;
+  k.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  k.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) filmGehe(dx < 0 ? 1 : -1); else if (Math.abs(dx) < 12 && Math.abs(dy) < 12) $('#filmRedet').click(); });
+  k.addEventListener('click', e => { if (!('ontouchstart' in window)) filmGehe(e.clientX > innerWidth / 2 ? 1 : -1); });
+  addEventListener('keydown', e => { if ($('#welten').hidden || gespr.n) return; if (e.key === 'ArrowRight') filmGehe(1); if (e.key === 'ArrowLeft') filmGehe(-1); });
+})();
 $('#appZu').onclick = () => { $('#appFenster').hidden = true; $('#appFenster iframe').src = 'about:blank'; };
+window.__film = film;
 window.__kiverse = { sp, zustand, npc, sicht, gespraechOeffnen, reinGehen, ORTE };
 $('#reden').onclick = () => gespraechOeffnen(zustand.innen ? npc.find(x => x.ort === zustand.innen) : naechsteFigur());
 // ---------- Handy-Modus (Diego 18.10. 23:32): mitlaufen, sich selbst in der Welt sehen, KI-Blick durch die Kamera ----------

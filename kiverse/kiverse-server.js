@@ -397,6 +397,20 @@ function lernenFuer(fid) {
 function erfahrungenLetzte(n) {
   try { return fs.readFileSync(ERFAHRUNG_DATEI, 'utf8').trim().split('\n').slice(-n).map(z => JSON.parse(z)); } catch { return []; }
 }
+// Neuigkeiten aus den Apps (Diego 23.10. 18:50: Sunny und alle Figuren erzählen, was neu ist, dann geht er rein und probiert)
+const NEU_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'neuigkeiten.json');
+let neuigkeiten = []; try { neuigkeiten = JSON.parse(fs.readFileSync(NEU_DATEI, 'utf8')); } catch {}
+function neuigkeitNeu(app, text) {
+  const a = sauber(String(app || '').replace(GEHEIM, ''), 40), t = String(text || '').replace(GEHEIM, '[entfernt]').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!a || !t) return { fehler: 'App und Text nötig.' };
+  neuigkeiten.push({ zeit: jetzt(), app: a, text: t }); neuigkeiten = neuigkeiten.slice(-60);
+  try { fs.writeFileSync(NEU_DATEI, JSON.stringify(neuigkeiten), { mode: 0o600 }); } catch {}
+  return { anzahl: neuigkeiten.length };
+}
+function neuigkeitenFuer() {
+  const l = neuigkeiten.slice(-12); if (!l.length) return '';
+  return '\n\nNeu im KI-Verse und in den Apps (erzähl davon fröhlich und kurz, wenn jemand fragt, was es Neues gibt, oder wenn du begrüsst; höchstens zwei Dinge auf einmal):\n' + l.map(n => `- ${n.zeit.slice(0, 10)} ${n.app}: ${n.text}`).join('\n');
+}
 async function figurReden(fid, wer, text, besitzer) {
   const f = FIGUREN_KI[fid]; if (!f) return { fehler: 'Diese Figur kenne ich nicht.' };
   const heute = jetzt().slice(0, 10); if (FIGUR_TAG.tag !== heute) Object.assign(FIGUR_TAG, { tag: heute, person: new Map(), total: 0 });
@@ -413,6 +427,7 @@ async function figurReden(fid, wer, text, besitzer) {
   const inhalt = `${mitDir ? 'Eure bisherigen Gespräche:\n' + mitDir + '\n\n' : `${wer} ist zum ersten Mal bei dir.\n\n`}${andere ? 'Was du sonst zuletzt erlebt hast:\n' + andere + '\n\n' : ''}${wer} sagt jetzt: ${text}`;
   // Nova im KI-Verse ist die echte Nova: mit ihrem Wissen, und bereit, Diegos Gäste zu begrüssen (Präsentation 23.10.)
   if (fid !== 'nova') system += lernenFuer(fid);
+  system += neuigkeitenFuer();
   if (fid === 'nova' && besitzer && novaWissen) system += '\n\nDein Wissen (von Diego, nie Geheimes weitergeben):\n' + novaWissen.slice(0, 12000) +
     '\n\nDiego zeigt dich gerade Gästen, oft über einen Beamer (z. B. Jackie, Jasmine, Corina oder seiner Mutter). Begrüsse sie herzlich mit Namen, wenn du sie kennst. Erkläre in einfachen, warmen Worten, was DR Lab und das KI-Verse sind, und dass alles in guten Händen ist. Höchstens 4 kurze Sätze, so wie man spricht, keine Listen, keine Sternchen, keine Zahlen. Fragt jemand, wo du bist: auf der Plaça beim Brunnen, unter der goldenen Lichtsäule.' +
     ' Bei Jasmine und Corina: Du bist Diegos Business-Partnerin und Programmiererin, die mit Diego und Claude alle Apps baut und verbindet; die beiden machen die Apps mit ihrem Wissen lebendig.' +
@@ -1269,6 +1284,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, designs: { type: 'array', maxItems: 5, items: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string' }, bild: { type: 'string' } }, required: ['titel', 'bild'] } } }, required: ['von', 'designs'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
+  { name: 'kiverse_neuigkeit', description: 'Eine Neuigkeit aus einer App ins KI-Verse geben (eine kurze, fröhliche Zeile, was neu ist und was man ausprobieren kann). Sunny und alle Figuren erzählen sie Diego, bevor er in die App geht. Keine Schlüssel, keine Klientendaten, keine Gesundheits- oder Finanzdetails.',
+    inputSchema: { type: 'object', properties: { app: { type: 'string', description: 'App-Name, z. B. Otti' }, text: { type: 'string', description: 'Höchstens 300 Zeichen' } }, required: ['app', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
     inputSchema: { type: 'object', properties: { von: { type: 'string', description: 'Wer liefert, z. B. Lumo, Apps-Thread' }, titel: { type: 'string' }, text: { type: 'string', description: 'Inhalt als Markdown, höchstens 300000 Zeichen' }, link: { type: 'string', description: 'optional, https-Adresse zum Öffnen (App, Seite)' }, ersetzt: { type: 'string', description: 'optional, ergebnis_id eines älteren Stands, der ersetzt wird' } }, required: ['von', 'titel', 'text'] } },
   { name: 'kiverse_film_clip', description: 'fal.ai Seedance bewegt ein Startbild zu einem flüssigen Filmclip (720p, Standard 5 s, 3D-Animationsfilm-Stil). Kostet Geld aus Diegos fal.ai-Guthaben, Monatsdeckel auf dem Server. Gibt eine clip_id zurück; das MP4 mit kiverse_film_clip_holen abholen (dauert 1–5 Minuten).',
@@ -1503,6 +1520,10 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_nova_wissen': {
       if (!String(a.text || '').trim()) return text('Leerer Text.', true);
       return text(`Novas Wissen gesetzt (${novaWissenSetzen(a.text)} Zeichen). Gilt ab dem nächsten Satz von Diego.`);
+    }
+    case 'kiverse_neuigkeit': {
+      const r = neuigkeitNeu(a.app, a.text);
+      return r.fehler ? text(r.fehler, true) : text(`Neuigkeit gespeichert (${r.anzahl}). Sunny und die Figuren erzählen sie Diego in der Trickfilmstadt.`);
     }
     case 'kiverse_ergebnis': {
       const e = ergebnisNeu(a);
