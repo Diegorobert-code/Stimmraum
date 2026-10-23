@@ -141,7 +141,7 @@ body.eingebettet #redeKnopf { display: none !important; }
   <span class="pille"><button type="button" id="rundKnopf" title="Rundum schauen (Taste Q)">🔄<span class="txt"> 360°</span></button></span>
   <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
   <span class="pille"><button type="button" id="tonKnopf" aria-label="Ton">🔊</button></span>
-  <span class="pille"><button type="button" id="weltenKnopf">🌍<span class="txt"> Welten</span></button></span>
+  <span class="pille"><button type="button" id="weltenKnopf">✨<span class="txt"> Märchenwelt</span></button></span>
   <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
 </div>
 <video id="arVideo" playsinline muted autoplay></video>
@@ -156,7 +156,6 @@ body.eingebettet #redeKnopf { display: none !important; }
   <button type="button" class="knopf zu" id="weltenZu">✕ Zurück ins Städtchen</button>
   <div class="wahl" id="weltenWahl">
     <button type="button" data-welt="maerchen"><img id="weltBildM" alt=""><span>✨ Märchenwelt</span><small>Otti am Tor, die Lichtinsel und Sunny am Strand</small></button>
-    <button type="button" data-welt="echt"><img id="weltBildE" alt=""><span>🏘️ Echte Gasse · Costa Brava</span><small>Otti, Nova, Sparky und Goldi in deiner echten Gasse</small></button>
   </div>
   <div class="kino" id="weltenKino" hidden><video muted playsinline></video><video muted playsinline></video><div class="titel" id="weltenTitel"></div></div>
 </div>
@@ -2377,10 +2376,9 @@ function appOeffnen(id, name) {
   $('#appFenster iframe').src = (id === 'nova' ? 'nova' : 'apps/' + id + '/') + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
   $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
 }
-// Zwei Welten: Clips nach Titel, laufen nacheinander mit Überblendung in Schleife
+// Märchenwelt (Diego 18:29: echte Gasse nicht nötig): Clips nach Titel, laufen nacheinander mit Überblendung in Schleife
 const WELTEN = {
-  maerchen: { name: '✨ Märchenwelt', titel: ['otti am tor', 'lichtinsel lagerfeuer', 'lichtinsel sternendach', 'sunny am strand'] },
-  echt: { name: '🏘️ Echte Gasse · Costa Brava', titel: ['stadt tuer', 'stadt ecke', 'costa brava gasse 1', 'stadt schatten', 'costa brava gasse 2'] }
+  maerchen: { name: '✨ Märchenwelt', titel: ['otti am tor', 'lichtinsel lagerfeuer', 'lichtinsel sternendach', 'sunny am strand'] }
 };
 let weltenTimer = 0;
 async function weltenClips(w) {
@@ -2390,7 +2388,7 @@ async function weltenClips(w) {
 }
 async function weltenOeffnen() {
   $('#welten').hidden = false; $('#weltenWahl').hidden = false; $('#weltenKino').hidden = true;
-  for (const [w, id] of [['maerchen', '#weltBildM'], ['echt', '#weltBildE']]) {
+  for (const [w, id] of [['maerchen', '#weltBildM']]) {
     const c = (await weltenClips(w))[0]; const img = $(id);
     if (c && !img.src) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.crossOrigin = 'anonymous'; v.src = 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K) + '#t=1';
       v.onloadeddata = () => { try { const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight; cv.getContext('2d').drawImage(v, 0, 0); img.src = cv.toDataURL('image/jpeg', .8); } catch {} }; v.load(); }
@@ -2409,11 +2407,10 @@ async function weltSpielen(w) {
   };
   naechster(); erlebt(`schaute die ${WELTEN[w].name}`);
 }
-$('#weltenKnopf').onclick = weltenOeffnen;
+$('#weltenKnopf').onclick = () => { $('#welten').hidden = false; weltSpielen('maerchen'); };
 document.querySelectorAll('#weltenWahl [data-welt]').forEach(k => k.onclick = () => weltSpielen(k.dataset.welt));
 $('#weltenZu').onclick = () => {
-  if (!$('#weltenKino').hidden) { $('#weltenKino').hidden = true; $('#weltenWahl').hidden = false; }
-  else $('#welten').hidden = true;
+  $('#welten').hidden = true;
   document.querySelectorAll('#weltenKino video').forEach(v => { v.pause(); v.classList.remove('an'); v.removeAttribute('src'); v.load(); });
   clearTimeout(weltenTimer);
 };
