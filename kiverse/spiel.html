@@ -83,6 +83,18 @@ body.redet #stick, body.redet #hoch { display: none; }
 .appfenster { position: fixed; inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); z-index: 12; display: flex; flex-direction: column; background: #0b1430; border: 2px solid var(--gold); border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(242, 194, 91, .35); }
 .appfenster .leiste { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(242, 194, 91, .12); }
 .appfenster .leiste b { flex: 1; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
+/* Zwei Welten (Diego 23.10. 18:24 «bitte die zwei Welten im KI-Verse»): Märchenwelt wie Otti und echte Gasse an der Costa Brava */
+.welten { position: fixed; inset: 0; z-index: 13; background: #050a1c; display: flex; flex-direction: column; }
+.welten .wahl { margin: auto; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); width: min(720px, 92vw); }
+.welten .wahl button { border: 2px solid var(--gold); border-radius: 18px; background: #0b1430; color: #fff; padding: 0; overflow: hidden; cursor: pointer; text-align: left; }
+.welten .wahl img { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; }
+.welten .wahl span { display: block; padding: 10px 14px; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
+.welten .wahl small { display: block; padding: 0 14px 12px; font-size: 14px; color: #d8d2c0; }
+.welten .kino { position: absolute; inset: 0; background: #000; }
+.welten .kino video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .8s; }
+.welten .kino video.an { opacity: 1; }
+.welten .zu { position: absolute; top: max(10px, env(safe-area-inset-top)); right: 12px; z-index: 2; }
+.welten .titel { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); text-align: center; z-index: 2; font: 800 20px "Baloo 2", sans-serif; color: var(--gold); text-shadow: 0 2px 8px #000; }
 .appfenster .leiste button { all: unset; cursor: pointer; color: var(--gold-hell); font: 700 14px "Atkinson Hyperlegible", sans-serif; border: 1px solid var(--rand); border-radius: 999px; padding: 6px 12px; }
 .appfenster iframe { flex: 1; border: 0; width: 100%; background: #fff; }
 [hidden] { display: none !important; }
@@ -129,6 +141,7 @@ body.eingebettet #redeKnopf { display: none !important; }
   <span class="pille"><button type="button" id="rundKnopf" title="Rundum schauen (Taste Q)">🔄<span class="txt"> 360°</span></button></span>
   <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
   <span class="pille"><button type="button" id="tonKnopf" aria-label="Ton">🔊</button></span>
+  <span class="pille"><button type="button" id="weltenKnopf">🌍<span class="txt"> Welten</span></button></span>
   <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
 </div>
 <video id="arVideo" playsinline muted autoplay></video>
@@ -139,6 +152,14 @@ body.eingebettet #redeKnopf { display: none !important; }
 <button id="redeKnopf" type="button" aria-label="Reden"><span class="ico">🎙</span><span class="txt">Reden</span></button>
 <button id="reden" type="button" hidden>🎙 Reden</button>
 <div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""><video muted playsinline hidden></video></div>
+<div class="welten" id="welten" hidden>
+  <button type="button" class="knopf zu" id="weltenZu">✕ Zurück ins Städtchen</button>
+  <div class="wahl" id="weltenWahl">
+    <button type="button" data-welt="maerchen"><img id="weltBildM" alt=""><span>✨ Märchenwelt</span><small>Otti am Tor, die Lichtinsel und Sunny am Strand</small></button>
+    <button type="button" data-welt="echt"><img id="weltBildE" alt=""><span>🏘️ Echte Gasse · Costa Brava</span><small>Otti, Nova, Sparky und Goldi in deiner echten Gasse</small></button>
+  </div>
+  <div class="kino" id="weltenKino" hidden><video muted playsinline></video><video muted playsinline></video><div class="titel" id="weltenTitel"></div></div>
+</div>
 <div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
 <div class="gespraech" id="gespraech" hidden>
   <div class="kopfzeile"><h2 id="gesprTitel"></h2><button type="button" class="klein" id="gesprVergessen" title="Gedächtnis dieser Figur für dich löschen">Vergessen</button><button type="button" class="klein" id="gesprZu" aria-label="Gespräch beenden">✕</button></div>
@@ -2356,6 +2377,46 @@ function appOeffnen(id, name) {
   $('#appFenster iframe').src = (id === 'nova' ? 'nova' : 'apps/' + id + '/') + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
   $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
 }
+// Zwei Welten: Clips nach Titel, laufen nacheinander mit Überblendung in Schleife
+const WELTEN = {
+  maerchen: { name: '✨ Märchenwelt', titel: ['otti am tor', 'lichtinsel lagerfeuer', 'lichtinsel sternendach', 'sunny am strand'] },
+  echt: { name: '🏘️ Echte Gasse · Costa Brava', titel: ['stadt tuer', 'stadt ecke', 'costa brava gasse 1', 'stadt schatten', 'costa brava gasse 2'] }
+};
+let weltenTimer = 0;
+async function weltenClips(w) {
+  try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
+  const t = (c) => (c.titel || '').toLowerCase();
+  return WELTEN[w].titel.flatMap(p => filmeCache.filter(c => t(c).startsWith(p)).sort((a, b) => t(a).localeCompare(t(b))));
+}
+async function weltenOeffnen() {
+  $('#welten').hidden = false; $('#weltenWahl').hidden = false; $('#weltenKino').hidden = true;
+  for (const [w, id] of [['maerchen', '#weltBildM'], ['echt', '#weltBildE']]) {
+    const c = (await weltenClips(w))[0]; const img = $(id);
+    if (c && !img.src) { const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.crossOrigin = 'anonymous'; v.src = 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K) + '#t=1';
+      v.onloadeddata = () => { try { const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight; cv.getContext('2d').drawImage(v, 0, 0); img.src = cv.toDataURL('image/jpeg', .8); } catch {} }; v.load(); }
+  }
+}
+async function weltSpielen(w) {
+  const clips = await weltenClips(w); if (!clips.length) { $('#weltenTitel').textContent = 'Die Clips laden noch …'; }
+  $('#weltenWahl').hidden = true; $('#weltenKino').hidden = false; $('#weltenTitel').textContent = WELTEN[w].name;
+  const [a, b] = document.querySelectorAll('#weltenKino video'); let i = 0, vorn = a;
+  const naechster = () => {
+    if ($('#welten').hidden || !clips.length) return;
+    const v = vorn === a ? b : a, c = clips[i++ % clips.length];
+    v.src = 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K);
+    v.onended = naechster; v.onerror = () => { clips.splice(clips.indexOf(c), 1); clearTimeout(weltenTimer); weltenTimer = setTimeout(naechster, 200); };
+    v.play().then(() => { v.classList.add('an'); vorn.classList.remove('an'); const alt = vorn; vorn = v; setTimeout(() => alt.pause(), 900); }).catch(() => v.onerror());
+  };
+  naechster(); erlebt(`schaute die ${WELTEN[w].name}`);
+}
+$('#weltenKnopf').onclick = weltenOeffnen;
+document.querySelectorAll('#weltenWahl [data-welt]').forEach(k => k.onclick = () => weltSpielen(k.dataset.welt));
+$('#weltenZu').onclick = () => {
+  if (!$('#weltenKino').hidden) { $('#weltenKino').hidden = true; $('#weltenWahl').hidden = false; }
+  else $('#welten').hidden = true;
+  document.querySelectorAll('#weltenKino video').forEach(v => { v.pause(); v.classList.remove('an'); v.removeAttribute('src'); v.load(); });
+  clearTimeout(weltenTimer);
+};
 $('#appZu').onclick = () => { $('#appFenster').hidden = true; $('#appFenster iframe').src = 'about:blank'; };
 window.__kiverse = { sp, zustand, npc, sicht, gespraechOeffnen, reinGehen, ORTE };
 $('#reden').onclick = () => gespraechOeffnen(zustand.innen ? npc.find(x => x.ort === zustand.innen) : naechsteFigur());
