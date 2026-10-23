@@ -253,7 +253,8 @@ function threadsSetzen(liste) {
     let link = sauber(t.link, 400); if (!/^https:\/\//.test(link) || /[?&]k=/.test(link)) link = '';
     const titel = sauber(t.titel, 80), alt = vorher.get(titel);
     const todos = (Array.isArray(t.todos) ? t.todos : []).slice(0, 12).map(x => ({ text: sauber(x && x.text, 140), erledigt: !!(x && x.erledigt), neu: typeof (x && x.neu) === 'boolean' ? x.neu : !!alt && !alt.has(sauber(x && x.text, 140)) })).filter(x => x.text);
-    const z = { titel, status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
+    // projekt: damit die Zentrale DR Lab 1 und ein späteres DR Lab 2 getrennt zeigen kann (Nova-Thread 23.10.)
+    const z = { titel, projekt: sauber(t.projekt, 40) || 'DR Lab 1', status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
     const zf = sauber(t.zusammenfassung, 400); if (zf) z.zusammenfassung = zf; if (todos.length) z.todos = todos;
     return z;
   }).filter(t => t.titel);
@@ -1217,7 +1218,7 @@ const WERKZEUGE = [
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_threads_setzen', description: 'Threads-Übersicht für Diegos Nova-Schaltzentrale setzen (ersetzt die ganze Liste, höchstens 40). Pro Thread: titel, status («läuft», «wartet auf Diego», «fertig»), wichtig (true = wichtig, false = hat noch Zeit), was (ein kurzer Satz), link (optional https, nie mit ?k=), zusammenfassung (optional, 1–3 Sätze), todos (optional [{text, erledigt, neu}]). Keine Gesundheits-, Klienten- oder Finanzdetails.',
-    inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' }, zusammenfassung: { type: 'string', description: 'letzte Zusammenfassung, 1–3 Sätze' }, todos: { type: 'array', description: 'höchstens 12; neu weglassen = Server vergleicht mit letzter Liste', items: { type: 'object', properties: { text: { type: 'string' }, erledigt: { type: 'boolean' }, neu: { type: 'boolean' } }, required: ['text'] } } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
+    inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' }, projekt: { type: 'string', description: 'Projektname, Standard «DR Lab 1»' }, zusammenfassung: { type: 'string', description: 'letzte Zusammenfassung, 1–3 Sätze' }, todos: { type: 'array', description: 'höchstens 12; neu weglassen = Server vergleicht mit letzter Liste', items: { type: 'object', properties: { text: { type: 'string' }, erledigt: { type: 'boolean' }, neu: { type: 'boolean' } }, required: ['text'] } } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
   { name: 'kiverse_designs_setzen', description: 'Die 5 Designvorschläge des Tages für Novas Ansicht «Designvorschläge» setzen (ersetzt alle). Pro Design: titel, app, bild (https-Bild-URL, nie mit ?k=).',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, designs: { type: 'array', maxItems: 5, items: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string' }, bild: { type: 'string' } }, required: ['titel', 'bild'] } } }, required: ['von', 'designs'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
@@ -1996,7 +1997,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/threads-lesen' && req.method === 'GET') {
     const l = String(url.searchParams.get('l') || '');
     if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
-    return json(res, 200, threadStand);
+    return json(res, 200, { ...threadStand, threads: (threadStand.threads || []).map(t => ({ projekt: 'DR Lab 1', ...t })) });
   }
   if (url.pathname === '/api/designs-lesen' && req.method === 'GET') {
     const l = String(url.searchParams.get('l') || '');
