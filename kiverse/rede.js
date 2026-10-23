@@ -10,6 +10,10 @@
   try { if (K) sessionStorage.setItem('kiverse_k', K); else K = sessionStorage.getItem('kiverse_k'); } catch {}
   if (!K) return; // ohne KI-Verse-Zugang bleibt die App wie sie ist
   const q = (p) => '/api/' + p + '?k=' + encodeURIComponent(K);
+  // Schnittstelle für Apps mit eigenem Reden-Knopf (Nova-Thread, PR 191): gleiches Server-Gehirn, kein zweiter Knopf
+  const fragen = async (text, figur = fid) => { const r = await fetch(q('figur'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur, text }) }); return (await r.json()).text || ''; };
+  window.kiverseGehirn = { fragen, stimme: (text, figur = fid) => fetch(q('stimme'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur, text }) }), figur: fid };
+  if (document.querySelector('[data-kiverse-reden]')) return;
   const css = `.rede-k{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:2147483000;font:700 16px system-ui,sans-serif}
 .rede-k button{border:0;border-radius:999px;padding:14px 20px;background:linear-gradient(#ffd98a,#e8a93a);color:#1a1205;font:inherit;box-shadow:0 6px 24px rgba(0,0,0,.35);cursor:pointer}
 .rede-k button.an{background:linear-gradient(#ff9a8a,#e8573a);color:#fff;animation:rede-p 1.2s infinite}
