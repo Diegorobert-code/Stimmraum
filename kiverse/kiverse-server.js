@@ -244,6 +244,29 @@ const THREAD_STATUS = ['läuft', 'wartet auf Diego', 'fertig'];
 const LESE_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'zentrale-lesen.txt');
 let THREADS_LESEN = ''; try { THREADS_LESEN = fs.readFileSync(LESE_DATEI, 'utf8').trim(); } catch {}
 if (!/^[A-Za-z0-9_-]{24,}$/.test(THREADS_LESEN)) { THREADS_LESEN = crypto.randomBytes(24).toString('base64url'); try { fs.writeFileSync(LESE_DATEI, THREADS_LESEN, { mode: 0o600 }); } catch {} }
+// To-dos in der Zentrale abhaken (Diego 23.10. 18:08 über Nova-Thread): stabile id je To-do, Abgehaktes bleibt über Neubauten erhalten
+const ABGEHAKT_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'zentrale-abgehakt.json');
+let abgehakt = { ids: [], offen: [] }; try { abgehakt = JSON.parse(fs.readFileSync(ABGEHAKT_DATEI, 'utf8')); } catch {}
+const todoId = (titel, text) => crypto.createHash('sha1').update(titel + '\n' + text).digest('hex').slice(0, 12);
+function abgehaktSpeichern() { abgehakt.ids = abgehakt.ids.slice(-500); abgehakt.offen = abgehakt.offen.slice(-100); try { fs.writeFileSync(ABGEHAKT_DATEI, JSON.stringify(abgehakt), { mode: 0o600 }); } catch {} }
+const abhakZeiten = [];
+function zentraleAbhaken(a) {
+  const nun = Date.now(); while (abhakZeiten.length && nun - abhakZeiten[0] > 60000) abhakZeiten.shift();
+  if (abhakZeiten.length >= 20) return { code: 429, fehler: 'Zu viele auf einmal, kurz warten.' };
+  abhakZeiten.push(nun);
+  const id = String(a && a.todo_id || '').replace(/[^a-f0-9]/g, '').slice(0, 12);
+  let gefunden = null;
+  for (const t of threadStand.threads || []) for (const x of t.todos || []) if ((id && x.id === id) || (!id && t.titel === String(a && (a.titel || a.thread) || '') && x.text === String(a && a.todo || ''))) gefunden = { t, x };
+  if (!gefunden) return { code: 404, fehler: 'To-do nicht gefunden.' };
+  if (!gefunden.x.erledigt) {
+    gefunden.x.erledigt = true; gefunden.x.von_diego = true;
+    if (!abgehakt.ids.includes(gefunden.x.id)) abgehakt.ids.push(gefunden.x.id);
+    abgehakt.offen.push({ zeit: new Date().toISOString(), titel: gefunden.t.titel, todo: gefunden.x.text, todo_id: gefunden.x.id });
+    abgehaktSpeichern();
+    try { fs.writeFileSync(THREADS_DATEI, JSON.stringify(threadStand), { mode: 0o600 }); } catch {}
+  }
+  return { code: 200, ok: true, todo_id: gefunden.x.id };
+}
 function threadsSetzen(liste) {
   if (!Array.isArray(liste)) return { fehler: 'threads muss eine Liste sein.' };
   const sauber = (t, n) => String(t || '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
@@ -252,7 +275,7 @@ function threadsSetzen(liste) {
   const threads = liste.slice(0, 40).map(t => {
     let link = sauber(t.link, 400); if (!/^https:\/\//.test(link) || /[?&]k=/.test(link)) link = '';
     const titel = sauber(t.titel, 80), alt = vorher.get(titel);
-    const todos = (Array.isArray(t.todos) ? t.todos : []).slice(0, 12).map(x => ({ text: sauber(x && x.text, 140), erledigt: !!(x && x.erledigt), neu: typeof (x && x.neu) === 'boolean' ? x.neu : !!alt && !alt.has(sauber(x && x.text, 140)) })).filter(x => x.text);
+    const todos = (Array.isArray(t.todos) ? t.todos : []).slice(0, 12).map(x => { const tx = sauber(x && x.text, 140), id = todoId(titel, tx), diego = abgehakt.ids.includes(id); return { id, text: tx, erledigt: !!(x && x.erledigt) || diego, ...(diego ? { von_diego: true } : {}), neu: typeof (x && x.neu) === 'boolean' ? x.neu : !!alt && !alt.has(tx) }; }).filter(x => x.text);
     // projekt: damit die Zentrale DR Lab 1 und ein späteres DR Lab 2 getrennt zeigen kann (Nova-Thread 23.10.)
     const z = { titel, projekt: sauber(t.projekt, 40) || 'DR Lab 1', status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
     const zf = sauber(t.zusammenfassung, 400); if (zf) z.zusammenfassung = zf; if (todos.length) z.todos = todos;
@@ -1254,6 +1277,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' }, sag: { type: 'string', description: 'optional: Satz, den Nova laut sagt, wenn Diego auf die Push tippt' } }, required: ['text'] } },
   { name: 'kiverse_erfahrungen', description: 'Diegos Erfahrungs-Tagebuch lesen: seine Gespräche mit allen Figuren (mit seiner Einwilligung, intern, nie weitergeben). leeren:true löscht alles (nur auf Diegos Wunsch).',
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'wie viele, Standard 30, höchstens 200' }, leeren: { type: 'boolean' } } } },
+  { name: 'kiverse_zentrale_abgehakt', description: 'Nova-Brücke: To-dos, die Diego in der Sense Engine (Zentrale) abgehakt hat und die noch keinem Thread gemeldet wurden. Mit quittieren:true werden sie als gemeldet markiert.',
+    inputSchema: { type: 'object', properties: { quittieren: { type: 'boolean' } } } },
   { name: 'kiverse_studie_ablegen', description: 'Anonyme Studien-Notizen (Human Sparks, nur Kürzel wie K1) als eigene Datei auf dem Server sichern, getrennt von Nova. Gleicher Dateiname = ersetzen (Abgleich am Sitzungsende). Nie Namen, Kontaktdaten oder Schlüssel.',
     inputSchema: { type: 'object', properties: { datei: { type: 'string', description: 'z. B. sitzungen-2026-10-23.md' }, text: { type: 'string' } }, required: ['datei', 'text'] } },
   { name: 'kiverse_sense_speichern', description: 'Wissen in die Sense Engine geben, damit Nova es kennt (Diego 21.10.: «du fütterst sie»). app z. B. «Diego Hauptchat» oder «Stella», art «wissen». Erscheint in Nova unter «🌱 Heute gewachsen». Nie Schlüssel, Codes, Klientennamen, Gesundheits- oder Finanzdaten.',
@@ -1475,6 +1500,11 @@ async function werkzeug(name, a = {}) {
       if (a.leeren) { try { fs.rmSync(ERFAHRUNG_DATEI, { force: true }); } catch {} return text('Erfahrungs-Tagebuch gelöscht.'); }
       const l = erfahrungenLetzte(Math.min(200, Math.max(1, parseInt(a.anzahl || 30, 10))));
       return text(l.length ? l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.figur} | Diego: ${x.du} | ${x.figur}: ${x.ich}`).join('\n') : 'Noch keine Erfahrungen gespeichert.');
+    }
+    case 'kiverse_zentrale_abgehakt': {
+      const liste = abgehakt.offen.slice();
+      if (a.quittieren) { abgehakt.offen = []; abgehaktSpeichern(); }
+      return text(liste.length ? (a.quittieren ? 'Quittiert:\n' : 'Abgehakt in der Zentrale:\n') + liste.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.titel} | ${x.todo} | ${x.todo_id}`).join('\n') : 'Nichts Neues abgehakt.');
     }
     case 'kiverse_studie_ablegen': { const r = studieAblegen(a.datei, a.text); return r.fehler ? text(r.fehler, true) : text(`Gesichert: studie/${r.name} (${r.zeichen} Zeichen). Im Studien-Ordner: ${r.dateien.join(', ')}.`); }
     case 'kiverse_sense_speichern': { const r = await senseSpeichern(a.app, a.art || 'wissen', a.text, a.stichwort); return r.fehler ? text(r.fehler, true) : text(`In der Sense Engine gespeichert (${r.teile} Teil${r.teile > 1 ? 'e' : ''}). Erscheint unter «🌱 Heute gewachsen».`); }
@@ -2015,6 +2045,13 @@ const server = http.createServer(async (req, res) => {
     const l = String(url.searchParams.get('l') || '');
     if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
     return json(res, 200, { ...threadStand, threads: (threadStand.threads || []).map(t => ({ projekt: 'DR Lab 1', ...t })) });
+  }
+  // Zentrale: nur «erledigt markieren» erlaubt, gleicher Lese-Schlüssel, Rate-Limit 20/Min.
+  if (url.pathname === '/api/zentrale/erledigt' && req.method === 'POST') {
+    const l = String(url.searchParams.get('l') || '');
+    if (l.length !== THREADS_LESEN.length || !crypto.timingSafeEqual(Buffer.from(l), Buffer.from(THREADS_LESEN))) return json(res, 403, { fehler: 'Kein Zugang.' });
+    const a = await body(req, 2048).catch(() => ({}));
+    const r = zentraleAbhaken(a); return json(res, r.code, r.code === 200 ? { ok: true, todo_id: r.todo_id } : { fehler: r.fehler });
   }
   if (url.pathname === '/api/designs-lesen' && req.method === 'GET') {
     const l = String(url.searchParams.get('l') || '');
