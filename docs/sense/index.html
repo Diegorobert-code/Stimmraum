@@ -127,6 +127,8 @@ body.suche-dock main { padding-bottom: calc(160px + env(safe-area-inset-bottom, 
 .sys .an::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); margin-right: 6px; vertical-align: 1px; animation: glimmen 1.6s ease-in-out infinite; }
 
 /* ===== Glas-Panels: ausgeschnittene Ecken, Lichtlinien, Klammern, Tiefe ===== */
+.threads-rahmen { display: block; width: 100%; height: calc(100vh - 150px); height: calc(100dvh - 150px); border: 0; border-radius: 14px; background: #0b1a3a; }
+.brand h1 { cursor: pointer; }
 .kachel, .karte, .tabs, .startfeld {
   --n: 16px; --e: var(--edge); --b: var(--brk);
   --fill: linear-gradient(165deg, rgba(160,192,222,.13), rgba(70,96,130,.07) 38%, rgba(8,13,22,.72));
@@ -569,6 +571,7 @@ body.suche-dock .nova-knopf { bottom: calc(118px + env(safe-area-inset-bottom, 0
       <button class="tab" type="button" role="tab" id="t-zentrale" data-tab="zentrale" data-nr="01" aria-controls="tab-zentrale" aria-selected="true">Zentrale</button>
       <button class="tab" type="button" role="tab" id="t-transkript" data-tab="transkript" data-nr="02" aria-controls="tab-transkript" aria-selected="false">Transkript</button>
       <button class="tab" type="button" role="tab" id="t-suche" data-tab="suche" data-nr="03" aria-controls="tab-suche" aria-selected="false">Suche</button>
+      <button class="tab" type="button" role="tab" id="t-threads" data-tab="threads" data-nr="04" aria-controls="tab-threads" aria-selected="false">Threads</button>
     </nav>
   </div>
 </header>
@@ -703,6 +706,10 @@ body.suche-dock .nova-knopf { bottom: calc(118px + env(safe-area-inset-bottom, 0
   </section>
 
   <!-- ===== Suche ===== -->
+  <!-- ===== Threads: die Schaltzentrale aus der Nova-App (Threads, To-dos, Tagesbericht, Links, Wischen zu den KIs) ===== -->
+  <section id="tab-threads" role="tabpanel" aria-labelledby="t-threads" hidden>
+    <iframe id="threads-rahmen" class="threads-rahmen" title="Schaltzentrale" allow="microphone; autoplay"></iframe>
+  </section>
   <section id="tab-suche" role="tabpanel" aria-labelledby="t-suche" hidden>
     <div class="bar" id="bar" hidden>
       <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false"
@@ -1119,7 +1126,9 @@ let aktiv = "zentrale";
 function zeigeTab(name) {
   aktiv = name;
   document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false"));
-  ["zentrale", "transkript", "suche"].forEach(n => { $("tab-" + n).hidden = n !== name; });
+  ["zentrale", "transkript", "suche", "threads"].forEach(n => { $("tab-" + n).hidden = n !== name; });
+  // Die Schaltzentrale liegt im DR_Lab-Repo auf derselben Adresse, darum kennt sie die Thread-Quelle aus der Nova-App.
+  if (name === "threads" && !$("threads-rahmen").src) $("threads-rahmen").src = "../../DR_Lab/nova/zentrale.html";
   if (name !== "suche" && listening) stop();
   dockZeigen();
   window.scrollTo(0, 0);
@@ -1132,6 +1141,8 @@ function dockZeigen() {
   document.body.classList.toggle("suche-dock", an);
 }
 document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => zeigeTab(b.dataset.tab)));
+// Auf Novas Gesicht oben tippen: direkt zu den Threads.
+document.querySelector(".brand h1").addEventListener("click", () => zeigeTab("threads"));
 
 /* ---------- Freigaben ---------- */
 const FREIGABEN = [
