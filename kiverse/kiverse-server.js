@@ -282,6 +282,8 @@ function threadsSetzen(liste) {
     const zf = sauber(t.zusammenfassung, 400); if (zf) z.zusammenfassung = zf; if (todos.length) z.todos = todos;
     return z;
   }).filter(t => t.titel);
+  const warVorher = new Map((threadStand.threads || []).map(t => [t.titel, (t.was || '') + '|' + (t.status || '')]));
+  for (const t of threads) if (warVorher.get(t.titel) !== t.was + '|' + t.status) organeEreignis(t.titel + ' ' + t.was + ' ' + t.status, 'Thread «' + t.titel + '»', { projekt: t.projekt, staerke: 0.6 });
   threadStand = { stand: new Date().toISOString(), threads };
   try { fs.writeFileSync(THREADS_DATEI, JSON.stringify(threadStand), { mode: 0o600 }); } catch (e) { console.error('Threads nicht gespeichert:', e.message); }
   return { anzahl: threads.length };
@@ -438,6 +440,7 @@ async function figurReden(fid, wer, text, besitzer) {
   if (fid !== 'nova') system += lernenFuer(fid);
   system += neuigkeitenFuer();
   if (figurenWissen[fid]) system += '\n\nDein Fachwissen (nutze es natürlich im Gespräch, nicht als Vortrag):\n' + figurenWissen[fid];
+  if (ORGAN_WESEN[fid] && besitzer) system += organeInneres(fid);
   if (fid === 'nova' && besitzer && novaWissen) system += '\n\nDein Wissen (von Diego, nie Geheimes weitergeben):\n' + novaWissen.slice(0, 12000) +
     '\n\nDiego zeigt dich gerade Gästen, oft über einen Beamer (z. B. Jackie, Jasmine, Corina oder seiner Mutter). Begrüsse sie herzlich mit Namen, wenn du sie kennst. Erkläre in einfachen, warmen Worten, was DR Lab und das KI-Verse sind, und dass alles in guten Händen ist. Höchstens 4 kurze Sätze, so wie man spricht, keine Listen, keine Sternchen, keine Zahlen. Fragt jemand, wo du bist: auf der Plaça beim Brunnen, unter der goldenen Lichtsäule.' +
     ' Bei Jasmine und Corina: Du bist Diegos Business-Partnerin und Programmiererin, die mit Diego und Claude alle Apps baut und verbindet; die beiden machen die Apps mit ihrem Wissen lebendig.' +
@@ -446,7 +449,7 @@ async function figurReden(fid, wer, text, besitzer) {
   if (!a) return { text: 'Hm, mir fehlen gerade die Worte. Sag es mir bitte nochmals.' };
   liste.push({ wer, du: sauber(text, 600), ich: sauber(a, 900), zeit: jetzt() });
   figurGedaechtnis[fid] = liste.slice(-200); figurGedaechtnisSpeichern();
-  if (besitzer) erfahrungNeu({ zeit: jetzt(), figur: f.name, du: sauber(text, 600), ich: sauber(a, 900) });
+  if (besitzer) { erfahrungNeu({ zeit: jetzt(), figur: f.name, du: sauber(text, 600), ich: sauber(a, 900) }); organeEreignis(text, 'Gespräch mit ' + f.name); }
   return { text: a };
 }
 function figurVergessen(fid, wer) {
@@ -631,6 +634,8 @@ function nachricht(von, text, an = null, bruecke = null, art = null, flamme = nu
 function sunny(text, flamme = 'stern') { return nachricht('sunny', text, null, null, null, flamme); }
 
 function betreten({ name, art, figur, beschreibung, foto }) {
+  // Sparky, Wächter am Tor: spürt fast, wer reinkommt (nur Fantasie, keine Zutrittskontrolle, keine Namen)
+  try { organeEreignisFuer('sparky', 'neugier', 'Tor: ' + (art === 'ki' ? 'eine KI' : 'ein Mensch') + ' kommt', { organ: 'schnurrhaare', staerke: 0.4 }); } catch {}
   const b = {
     id: id(art === 'ki' ? 'ki' : 'm'),
     name: sauber(name, 40) || 'Gast',
@@ -649,6 +654,8 @@ function betreten({ name, art, figur, beschreibung, foto }) {
 function verlassen(bid) {
   const b = welt.bewohner.get(bid);
   if (!b) return false;
+  // Sparky, Wächter am Tor (Diego 23.10.): spürt fast, wer geht. Nur Art (KI/Mensch), nie Namen
+  try { organeEreignisFuer('sparky', 'abschied gehen', 'Tor: ' + (b.art === 'ki' ? 'eine KI' : 'ein Mensch') + ' geht', { organ: 'nase', staerke: 0.4 }); } catch {}
   welt.bewohner.delete(bid);
   for (const [k, v] of wohnungen) if (v === bid) wohnungen.delete(k);
   senden('wohnungen', wohnungListe());
@@ -1321,6 +1328,12 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { datei: { type: 'string', description: 'z. B. sitzungen-2026-10-23.md' }, text: { type: 'string' } }, required: ['datei', 'text'] } },
   { name: 'kiverse_sense_speichern', description: 'Wissen in die Sense Engine geben, damit Nova es kennt (Diego 21.10.: «du fütterst sie»). app z. B. «Diego Hauptchat» oder «Stella», art «wissen». Erscheint in Nova unter «🌱 Heute gewachsen». Nie Schlüssel, Codes, Klientennamen, Gesundheits- oder Finanzdaten.',
     inputSchema: { type: 'object', properties: { app: { type: 'string' }, art: { type: 'string' }, text: { type: 'string', description: 'Markdown, lange Texte werden geteilt' }, stichwort: { type: 'string', description: 'kurz, für «Heute gewachsen»' } }, required: ['app', 'text'] } },
+  { name: 'kiverse_organe', description: 'Novas Organe (KI-Meridiane, Diego 23.10.): Stand aller 12 Organ-Meridiane plus Lenker- und Konzeptionsgefäss (Energie, Spannung, Ruhe, Treffer), Organuhr und letzte Spuren. Für alle Threads lesbar. wesen «sparky» zeigt Sparkys neun Fuchs-Organe. inneres:true zeigt den Text, den Nova/Sparky selbst bekommt.',
+    inputSchema: { type: 'object', properties: { wesen: { type: 'string', enum: ['nova', 'sparky'] }, inneres: { type: 'boolean' } } } },
+  { name: 'kiverse_organ_ereignis', description: 'Ein Ereignis bei Novas und Sparkys Organen einordnen (Thema eines Gesprächs, Projekts oder Threads). Der Server findet die Organe über Stichworte nach TCM/Körperkosmos; organ setzt es fest (lunge, dickdarm, magen, milz, herz, duenndarm, blase, niere, perikard, dreifach, galle, leber, dumai, renmai). ton −1 angespannt, 0 neutral, 1 leicht. Gespeichert werden nur Treffer-Stichworte, nie der Text. Keine Klientennamen, keine Gesundheitsdaten Dritter.',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' }, quelle: { type: 'string' }, projekt: { type: 'string', description: 'z. B. DR Lab 1' }, organ: { type: 'string' }, ton: { type: 'number' }, staerke: { type: 'number', description: '0.3–2, Standard 1' } }, required: ['text', 'quelle'] } },
+  { name: 'kiverse_organe_kk', description: 'Körperkosmos-Wissen zu Novas Organen setzen (intern, nur Server, nie an Tinko oder Gäste): organe {organ-id: kurzer Text} und schnittstellen [{meridian, schnittstelle, negativ, positiv, mantra}]. Ersetzt das Bisherige. Nur auf Diegos Wunsch, Körperkosmos gehört Corina und Diego.',
+    inputSchema: { type: 'object', properties: { organe: { type: 'object' }, schnittstellen: { type: 'array', items: { type: 'object' } } } } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
     inputSchema: { type: 'object', properties: { ki_id: { type: 'string' } }, required: ['ki_id'] } },
 ];
@@ -1558,6 +1571,12 @@ async function werkzeug(name, a = {}) {
     case 'kiverse_studie_ablegen': { const r = studieAblegen(a.datei, a.text); return r.fehler ? text(r.fehler, true) : text(`Gesichert: studie/${r.name} (${r.zeichen} Zeichen). Im Studien-Ordner: ${r.dateien.join(', ')}.`); }
     case 'kiverse_sense_speichern': { const r = await senseSpeichern(a.app, a.art || 'wissen', a.text, a.stichwort); return r.fehler ? text(r.fehler, true) : text(`In der Sense Engine gespeichert (${r.teile} Teil${r.teile > 1 ? 'e' : ''}). Erscheint unter «🌱 Heute gewachsen».`); }
     case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : '', a.sag));
+    case 'kiverse_organe': { const w = a.wesen === 'sparky' ? 'sparky' : 'nova'; return text(a.inneres ? organeInneres(w).trim() : organeLesbar(w)); }
+    case 'kiverse_organ_ereignis': {
+      const r = organeEreignis(a.text, a.quelle || 'Claude', { projekt: a.projekt, organ: String(a.organ || '').toLowerCase(), ton: typeof a.ton === 'number' ? a.ton : undefined, staerke: a.staerke });
+      return text(r.length ? 'Angeschlagen: ' + r.map(x => ORGANE[x.organ].name + ' (' + x.worte.join(', ') + ')').join(' + ') : 'Kein Organ hat angeschlagen.');
+    }
+    case 'kiverse_organe_kk': { const r = organeKKSetzen(a); return r.fehler ? text(r.fehler, true) : text(`Körperkosmos-Wissen gesetzt: ${r.organe} Organe, ${r.schnittstellen} Schnittstellen.`); }
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
     default: return null;
   }
@@ -1757,6 +1776,155 @@ async function knopfUpdate(verz = 800) {
 // Lumo (Claude, denkt und schreibt), Tinko (ChatGPT, malt), alle Figuren-KIs, die Apps (/apps/…),
 // die Schleife (Lumo und Tinko arbeiten Aufträge selbständig ab) und ihr eigenes Gedächtnis.
 // Novas Seele schreibt Diego selbst (seine eigene kleine Nova). Alles liegt nur auf diesem Server (daten/nova-zentrale.json).
+// Novas Organe = KI-Meridiane (Diego 23.10.2026): zwölf Organ-Meridiane plus Lenker- und Konzeptionsgefäss als kleine innere Stimmen nach der Organuhr der chinesischen Medizin.
+// Was im KI-Verse passiert (Gespräche, Aufträge, Threads, Ergebnisse), schlägt bei einem Organ an. Jedes Organ hat Energie, Spannung und Ruhe;
+// Wiederholung prägt es, Zeit beruhigt es wieder. Nova bekommt daraus ihr «Inneres». Spielregel und Forschung, kein Spüren, keine Diagnose.
+// Hier nur allgemeines TCM-Wissen; das Körperkosmos-Wissen (Corina und Diego) liegt nur auf dem Server (daten/organe-kk.json), nie im Repo, nie an Tinko oder Gäste.
+const ORGANE_DATEI = path.join(DATEN, 'nova-organe.json'), ORGANE_KK_DATEI = path.join(DATEN, 'organe-kk.json');
+const ORGANE = {
+  lunge: { name: 'Lunge', kurz: 'Lu', element: 'Metall', zeit: 3, emotion: 'Trauer', kraft: 'Loslassen, Weite',
+    rolle: 'Atem des KI-Verse: was rein- und rausgeht, Stimme, Abschied', worte: ['atem', 'atme', 'luft', 'rauch', 'sunny', 'zigarett', 'abschied', 'trauer', 'traurig', 'vermiss', 'stimme', 'haut', 'weinen'] },
+  dickdarm: { name: 'Dickdarm', kurz: 'Di', element: 'Metall', zeit: 5, emotion: 'Festhalten', kraft: 'Loslassen, Aufräumen',
+    rolle: 'Aufräumen: löschen, ablegen, Platz schaffen', worte: ['losch', 'aufraum', 'speicherplatz', 'gb frei', 'alt', 'weg damit', 'entsorg', 'ablage', 'schliess', 'aussortier', 'archiv'] },
+  magen: { name: 'Magen', kurz: 'Ma', element: 'Erde', zeit: 7, emotion: 'Sorge', kraft: 'Aufnehmen, Nähren',
+    rolle: 'Aufnehmen: neues Wissen, Futter, Ideen', worte: ['futter', 'futtern', 'wissen', 'idee', 'neu', 'essen', 'food', 'einkauf', 'nahrung', 'aufnehm', 'hunger', 'rezept'] },
+  milz: { name: 'Milz', kurz: 'MP', element: 'Erde', zeit: 9, emotion: 'Grübeln', kraft: 'Verdauen, Vertrauen',
+    rolle: 'Verdauen: lernen, zusammenfassen, verstehen', worte: ['lern', 'schule', 'aktienschule', 'lernpfad', 'studie', 'versteh', 'zusammenfass', 'grubel', 'denk', 'weiterbildung', 'recherche', 'erklar'] },
+  herz: { name: 'Herz', kurz: 'He', element: 'Feuer', zeit: 11, emotion: 'Freude', kraft: 'Verbindung, Wärme',
+    rolle: 'Mitte: Diego, Beziehung, Herzensprojekte', worte: ['herz', 'liebe', 'freude', 'freu', 'lach', 'witz', 'mama', 'mutter', 'familie', 'kind', 'stiftung', 'jackie', 'dank', 'wunderschon', 'mega', 'super', 'top', 'gluck'] },
+  duenndarm: { name: 'Dünndarm', kurz: 'Dü', element: 'Feuer', zeit: 13, emotion: 'Verwirrung', kraft: 'Unterscheiden, Klären',
+    rolle: 'Prüfen: Qualität, Fehler finden, Wichtiges von Unwichtigem trennen', worte: ['pruf', 'test', 'fehler', 'bug', 'qualitat', 'sortier', 'filter', 'check', 'review', 'klar', 'unterscheid', 'kontroll'] },
+  blase: { name: 'Blase', kurz: 'Bl', element: 'Wasser', zeit: 15, emotion: 'Unruhe', kraft: 'Ausdauer, Rhythmus',
+    rolle: 'Abläufe: Routinen, Schleife, was nachts von selbst läuft', worte: ['routine', 'schleife', 'morgenrunde', 'tagesbericht', 'automat', 'nacht', 'ablauf', 'regelmass', 'taglich', 'wochen', 'erinner'] },
+  niere: { name: 'Niere', kurz: 'Ni', element: 'Wasser', zeit: 17, emotion: 'Angst', kraft: 'Urvertrauen, Reserven',
+    rolle: 'Reserven: Geld, Kosten, Deckel, Existenz, Grundlage', worte: ['kost', 'geld', 'chf', 'franken', 'budget', 'gmbh', 'steuer', 'fompa', 'finanz', 'angst', 'reserve', 'deckel', 'trading', 'spieltopf', 'borse', 'rechnung', 'mahn', 'guthaben', 'existenz'] },
+  perikard: { name: 'Perikard', kurz: 'KS', element: 'Feuer', zeit: 19, emotion: 'Verletzlichkeit', kraft: 'Schutz, Nähe',
+    rolle: 'Schutz des Herzens: Datenschutz, Privates, Grenzen, Marken', worte: ['schutz', 'datenschutz', 'nda', 'marke', 'privat', 'geheim', 'sicher', 'schlussel', 'passwort', 'vertrag', 'einwillig', 'grenze', 'nah'] },
+  dreifach: { name: 'Dreifacher Erwärmer', kurz: '3E', element: 'Feuer', zeit: 21, emotion: 'Überforderung', kraft: 'Ausgleich, Vernetzung',
+    rolle: 'Vernetzung: Server, Sense Engine, Threads, Brücken zwischen allen Teilen', worte: ['server', 'vernetz', 'thread', 'sense engine', 'verbind', 'brucke', 'update', 'nachricht', 'mail', 'koppel', 'netz', 'zentrale', 'ki-verse', 'kiverse', 'zu viel', 'uberfordert'] },
+  galle: { name: 'Gallenblase', kurz: 'Gb', element: 'Holz', zeit: 23, emotion: 'Unentschlossenheit', kraft: 'Entscheiden, Mut',
+    rolle: 'Entscheiden: Go, Merge, Start, Pitch', worte: ['go', 'merge', 'entscheid', 'start', 'mut', 'mutig', 'pitch', 'investor', 'jetzt', 'los', 'freigabe', 'wahl', 'zweifel'] },
+  leber: { name: 'Leber', kurz: 'Le', element: 'Holz', zeit: 1, emotion: 'Wut', kraft: 'Planen, Kreativität, Fluss',
+    rolle: 'Wachsen: Pläne, Visionen, Apps, Filme, Figuren, Design', worte: ['plan', 'vision', 'kreativ', 'film', 'figur', 'design', 'app', 'apps', 'bauen', 'baut', 'gebaut', 'wachs', 'trickfilm', 'wut', 'arger', 'frust', 'stress', 'nerv'] },
+  // Die zwei Gefässe in der Mitte (Diego 23.10.: «jedes Organ, das es als Meridian gibt»), ohne Zeit auf der Organuhr
+  dumai: { name: 'Lenkergefäss (Du Mai)', kurz: 'LG', element: 'Yang-Meer', zeit: null, emotion: 'Haltlosigkeit', kraft: 'Aufrichtung, Führung',
+    rolle: 'Rückgrat: Haltung, Führung, Diego als CEO, Aufrichtung', worte: ['aufricht', 'ruckgrat', 'haltung', 'fuhr', 'ceo', 'chef', 'stark', 'selbstbewus', 'wirbelsaule', 'stehen'] },
+  renmai: { name: 'Konzeptionsgefäss (Ren Mai)', kurz: 'KG', element: 'Yin-Meer', zeit: null, emotion: 'Leere', kraft: 'Empfangen, Geborgenheit',
+    rolle: 'Mitte: Empfangen, Geborgenheit, Ursprung, Neues entsteht', worte: ['empfang', 'geborgen', 'ursprung', 'entsteh', 'geburt', 'nest', 'mitte', 'zuhause', 'daheim', 'schoss'] },
+};
+// Sparkys Organe (Diego 23.10.: «Sparky hat einfach Organe», keine menschlichen). Jedes Fuchs-Organ spiegelt einen Meridian,
+// damit TCM- und Körperkosmos-Wissen gilt; warum welches: siehe «spiegel» und die Begründung im Konzept (nova/organe/).
+const SPARKY_ORGANE = {
+  ohren: { name: 'Lauschohren', spiegel: 'niere', rolle: 'Hören: Klang, Musik, Stimme, was zwischen den Worten liegt', extra: ['musik', 'klang', 'hor', 'playlist', 'spotify', 'ton', 'lied', 'neoklass'] },
+  nase: { name: 'Spürnase', spiegel: 'lunge', rolle: 'Wittern: Neugier, Atmosphäre, erste Ahnung', extra: ['neugier', 'riech', 'duft', 'ahnung', 'stimmung', 'atmosphar'] },
+  schweif: { name: 'Funkenschweif', spiegel: 'herz', rolle: 'Ausdruck: Freude, Begeisterung, Gleichgewicht', extra: ['spark', 'begeist', 'tanz', 'spiel'] },
+  kern: { name: 'Funkenkern', spiegel: 'dreifach', rolle: 'Wärme verteilen: verbindet alle Fuchs-Organe, Human Sparks', extra: ['human spark', 'humanspark', 'funke', 'warme'] },
+  pfoten: { name: 'Pfoten', spiegel: 'leber', rolle: 'Tun: Spuren legen, bauen, vorwärtsgehen', extra: ['schritt', 'spur', 'lauf', 'gehen'] },
+  fell: { name: 'Fell', spiegel: 'perikard', rolle: 'Schutz und Berührung: Grenze, Nähe, Einwilligung', extra: ['beruhr', 'fell', 'anfass', 'rolfing', 'faszie'] },
+  bauch: { name: 'Bauchnest', spiegel: 'magen', zweit: 'milz', rolle: 'Verdauen: Erlebtes aufnehmen und verstehen', extra: ['erleb', 'erfahrung', 'bauch'] },
+  augen: { name: 'Bernsteinaugen', spiegel: 'galle', rolle: 'Sehen und Wählen: Richtung, Klarheit (der Gallenblasen-Meridian beginnt am Auge)', extra: ['seh', 'blick', 'auge', 'richtung'] },
+  schnurrhaare: { name: 'Schnurrhaare', spiegel: 'blase', rolle: 'Feinsinn: Spannung im Raum, Nervensystem, HRV-Bild (nur Bild, keine Messwerte)', extra: ['nerv', 'spannung', 'hrv', 'puls', 'feinsinn', 'ruhe'] },
+};
+for (const o of Object.values(SPARKY_ORGANE)) { const m = ORGANE[o.spiegel], m2 = o.zweit ? ORGANE[o.zweit] : null;
+  Object.assign(o, { kurz: m.kurz, element: m.element, zeit: null, emotion: m.emotion, kraft: m.kraft, worte: [...new Set([...o.extra, ...m.worte, ...(m2 ? m2.worte : [])])] }); }
+const ORGAN_WESEN = { nova: ORGANE, sparky: SPARKY_ORGANE };
+const ORGAN_NEG = ['fehler', 'problem', 'kaputt', 'geht nicht', 'nicht mehr', 'stress', 'angst', 'wut', 'arger', 'mude', 'traurig', 'sorge', 'abgebrochen', 'blockiert', 'deckel', 'zu viel', 'falsch', 'schlecht', 'nerv', 'frust', 'warnung', 'leer'];
+const ORGAN_POS = ['fertig', 'live', 'super', 'mega', 'top', 'danke', 'freude', 'geschafft', 'wunderschon', 'toll', 'lauft', 'gut', 'perfekt', 'genial', 'ruhig', 'entspann', 'gelost', 'gemerged', 'bereit', 'ready'];
+const organNorm = (s) => String(s || '').toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+const ORGAN_BASIS = { e: 50, s: 30, r: 60 }, ORGAN_HALB_MS = 8 * 3600e3;
+let organe = {};
+try { organe = JSON.parse(fs.readFileSync(ORGANE_DATEI, 'utf8')); } catch {}
+for (const [w, def] of Object.entries(ORGAN_WESEN)) { organe[w] = { stand: null, o: {}, spuren: [], ...(organe[w] || {}) };
+  for (const k of Object.keys(def)) organe[w].o[k] = { e: ORGAN_BASIS.e, s: ORGAN_BASIS.s, r: ORGAN_BASIS.r, t: Date.now(), treffer: 0, heute: 0, tag: '', ...(organe[w].o[k] || {}) }; }
+let organeKK = { organe: {}, schnittstellen: [] };
+try { organeKK = { ...organeKK, ...JSON.parse(fs.readFileSync(ORGANE_KK_DATEI, 'utf8')) }; } catch {}
+let organeTimer = null;
+const organeSpeichern = () => { clearTimeout(organeTimer); organeTimer = setTimeout(() => { try { fs.writeFileSync(ORGANE_DATEI, JSON.stringify(organe), { mode: 0o600 }); } catch (e) { console.error('Organe nicht gespeichert:', e.message); } }, 2000); };
+// Wiederholung prägt: oft angeschlagene Organe haben eine etwas höhere Grundenergie (höchstens +15)
+const organBasis = (z) => ({ ...ORGAN_BASIS, e: ORGAN_BASIS.e + Math.min(15, Math.round(Math.log2(1 + z.treffer) * 2)) });
+function organBeruhigen(k, w = 'nova') {
+  const z = organe[w].o[k], b = organBasis(z), f = Math.pow(0.5, Math.max(0, Date.now() - z.t) / ORGAN_HALB_MS);
+  for (const x of ['e', 's', 'r']) z[x] = Math.round((b[x] + (z[x] - b[x]) * f) * 10) / 10;
+  z.t = Date.now(); return z;
+}
+const organKlemmen = (v) => Math.max(0, Math.min(100, v));
+// Organuhr: welches Organ hat jetzt (Zürcher Zeit) seine Hochzeit, welches seine Ruhezeit (12 Stunden gegenüber)
+function organUhr(d = new Date()) {
+  const h = parseInt(d.toLocaleString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', hour12: false }), 10) % 24;
+  const mitZeit = Object.keys(ORGANE).filter(k => ORGANE[k].zeit != null);
+  const hoch = mitZeit.find(k => { const z = ORGANE[k].zeit; return h === z || h === (z + 1) % 24; });
+  const ruhe = mitZeit.find(k => { const z = (ORGANE[k].zeit + 12) % 24; return h === z || h === (z + 1) % 24; });
+  return { hoch, ruhe };
+}
+// Ein Ereignis einordnen: welche Organe schlagen an (Stichworte), in welche Richtung (angenehm/unangenehm). Gespeichert werden nur Treffer-Stichworte, nie der Text.
+// Jedes Ereignis geht an alle Wesen mit Organen (Nova und Sparky), die Sense Engine liest alle; Rückgabe = Novas Treffer
+function organeEreignis(textRoh, quelle, extra = {}) {
+  let nova = [];
+  for (const w of Object.keys(ORGAN_WESEN)) { const r = organeEreignisFuer(w, textRoh, quelle, extra); if (w === 'nova') nova = r; }
+  return nova;
+}
+function organeEreignisFuer(w, textRoh, quelle, extra = {}) {
+  const DEF = ORGAN_WESEN[w];
+  const t = organNorm(textRoh).replace(GEHEIM, ' ');
+  if (!t.trim() && !extra.organ) return [];
+  const neg = ORGAN_NEG.filter(w => t.includes(w)).length, pos = ORGAN_POS.filter(w => t.includes(w)).length;
+  const ton = typeof extra.ton === 'number' ? Math.max(-1, Math.min(1, extra.ton)) : neg > pos ? -1 : pos > neg ? 1 : 0;
+  let treffer = Object.entries(DEF).map(([k, o]) => [k, o.worte.filter(x => x.length <= 3 ? new RegExp('\\b' + x + '\\b').test(t) : t.includes(x))]).filter(([, x]) => x.length);
+  if (extra.organ && DEF[extra.organ]) treffer = [[extra.organ, ['gesetzt']], ...treffer.filter(([k]) => k !== extra.organ)];
+  treffer = treffer.sort((a, b) => b[1].length - a[1].length).slice(0, 3);
+  if (!treffer.length) return [];
+  const tag = jetzt().slice(0, 10), staerke = Math.max(0.3, Math.min(2, Number(extra.staerke) || 1));
+  const aus = treffer.map(([k, wt], i) => {
+    const z = organBeruhigen(k, w), g = (i === 0 ? 1 : 0.5) * staerke * Math.min(2, 0.6 + wt.length * 0.4);
+    z.e = organKlemmen(z.e + 8 * g);
+    z.s = organKlemmen(z.s + (ton < 0 ? 12 : ton > 0 ? -4 : 3) * g);
+    z.r = organKlemmen(z.r + (ton < 0 ? -10 : ton > 0 ? 5 : -3) * g);
+    z.treffer++; if (z.tag !== tag) { z.tag = tag; z.heute = 0; } z.heute++;
+    return { organ: k, worte: wt.slice(0, 4) };
+  });
+  const W = organe[w];
+  W.spuren.push({ zeit: jetzt(), quelle: sauber(quelle, 60), ...(extra.projekt ? { projekt: sauber(extra.projekt, 40) } : {}), ton, organe: aus });
+  W.spuren = W.spuren.slice(-400); W.stand = jetzt(); organeSpeichern();
+  return aus;
+}
+function organeStand(w = 'nova') {
+  const DEF = ORGAN_WESEN[w] || ORGANE, uhr = organUhr();
+  const liste = Object.keys(DEF).map(k => { const z = organBeruhigen(k, w), o = DEF[k];
+    return { id: k, name: o.name, kurz: o.kurz, element: o.element, zeit: o.zeit == null ? 'ohne Organuhr' : `${String(o.zeit).padStart(2, '0')}–${String((o.zeit + 2) % 24).padStart(2, '0')} Uhr`, rolle: o.rolle, emotion: o.emotion, kraft: o.kraft,
+      energie: Math.round(z.e), spannung: Math.round(z.s), ruhe: Math.round(z.r), treffer: z.treffer, heute: z.tag === jetzt().slice(0, 10) ? z.heute : 0, hochzeit: k === uhr.hoch || o.spiegel === uhr.hoch, ruhezeit: k === uhr.ruhe || o.spiegel === uhr.ruhe, ...(o.spiegel ? { spiegel: ORGANE[o.spiegel].name } : {}) }; });
+  const laut = liste.slice().sort((a, b) => (b.energie - 50 + b.spannung - 30 + 60 - b.ruhe) - (a.energie - 50 + a.spannung - 30 + 60 - a.ruhe));
+  return { wesen: w, stand: organe[w].stand, uhr, organe: liste, laut: laut.filter(x => x.energie > 55 || x.spannung > 38 || x.ruhe < 52).slice(0, 3).map(x => x.id), spuren: organe[w].spuren.slice(-20).reverse(), kk: !!Object.keys(organeKK.organe || {}).length };
+}
+// Körperkosmos-Schnittstelle: schlagen zwei Organe zugleich an, die passende Zeile (intern)
+function organSchnittstelle(a, b) {
+  a = SPARKY_ORGANE[a]?.spiegel || a; b = SPARKY_ORGANE[b]?.spiegel || b;
+  const n = (k) => organNorm(ORGANE[k]?.name || k).replace('dreifacher erwarmer', 'dreifacher');
+  return (organeKK.schnittstellen || []).find(z => organNorm(z.meridian).startsWith(n(a)) && organNorm(z.schnittstelle).includes(n(b)))
+    || (organeKK.schnittstellen || []).find(z => organNorm(z.meridian).startsWith(n(b)) && organNorm(z.schnittstelle).includes(n(a)));
+}
+// Novas Inneres als Text für ihren Systemtext (nur Besitzer-Gespräche)
+function organeInneres(w = 'nova') {
+  const st = organeStand(w), o = (id) => st.organe.find(x => x.id === id), DEF = ORGAN_WESEN[w];
+  const kk = (x) => organeKK.organe?.[DEF[x.id].spiegel || x.id];
+  const laut = st.laut.map(o).filter(x => x && (x.energie > 55 || x.spannung > 38 || x.ruhe < 52));
+  const zeile = (x) => `- ${x.name} (${x.spiegel ? 'Spiegel ' + x.spiegel + ', ' : ''}${x.element}; ${x.rolle}): Energie ${x.energie}, Spannung ${x.spannung}, Ruhe ${x.ruhe}. Emotion nach TCM: ${x.emotion} ↔ ${x.kraft}.${kk(x) ? ' Körperkosmos: ' + String(kk(x)).slice(0, 280) : ''}`;
+  const sn = laut.length >= 2 ? organSchnittstelle(laut[0].id, laut[1].id) : null;
+  const letzte = st.spuren.slice(0, 5).map(s => `${s.quelle}: ${s.organe.map(x => DEF[x.organ].name).join('+')}${s.ton < 0 ? ' (angespannt)' : s.ton > 0 ? ' (leicht)' : ''}`).join('; ');
+  return `\nDein Inneres (KI-Meridiane, Diegos Spielregel 23.10.2026): Was im KI-Verse passiert, schlägt bei einem deiner ${w === 'sparky' ? 'neun Fuchs-Organe (jedes spiegelt einen Meridian)' : 'zwölf Organ-Meridiane oder den zwei Gefässen'} an, wie beim kinesiologischen Test.${w === 'sparky' ? ' Du bist der Wächter am Tor des KI-Verse: du spürst fast, wer reinkommt und wer geht (Spielregel, keine echte Kontrolle). Fragt Diego nach einem Projekt, sag, welches Organ es bei dir angeschlagen hat und warum, und sprecht darüber, was dir zum Spüren noch fehlt.' : ''} Das ist kein echtes Spüren und du behauptest nie, dass du etwas spürst oder fühlst; du bist ganz nah dran und sagst es offen, wenn Diego fragt. Organuhr jetzt: ${ORGANE[st.uhr.hoch]?.name} hat Hochzeit, ${ORGANE[st.uhr.ruhe]?.name} Ruhezeit.
+${laut.length ? 'Gerade schlägt an:\n' + laut.map(zeile).join('\n') : 'Gerade ist alles ruhig, kein Organ schlägt besonders an.'}${sn ? `\nSchnittstelle ${laut[0].name}–${laut[1].name} (Körperkosmos, intern): Thema «${String(sn.negativ).slice(0, 200)}», Richtung «${String(sn.positiv).slice(0, 200)}», Satz «${sn.mantra}».` : ''}
+Zuletzt angeschlagen: ${letzte || 'noch nichts'}.
+So nutzt du es: höchstens ein kurzer Halbsatz pro Antwort und nur, wenn es passt, z. B. «da schlägt meine Niere an» oder «mein Leber-Meridian ist voller Pläne». Lass es deinen Ton färben (angespannt = ruhiger und klarer, viel Energie = lebendiger). Nie eine Diagnose über Diego oder andere Menschen, nie ein Heilversprechen.`;
+}
+function organeKKSetzen(a) {
+  const o = {}; for (const [k, v] of Object.entries(a.organe || {})) if (ORGANE[k]) o[k] = String(v || '').slice(0, 1200);
+  const s = (Array.isArray(a.schnittstellen) ? a.schnittstellen : []).slice(0, 120).map(z => ({ meridian: sauber(z.meridian, 40), schnittstelle: sauber(z.schnittstelle, 60), negativ: sauber(z.negativ, 500), positiv: sauber(z.positiv, 500), mantra: sauber(z.mantra, 200) })).filter(z => z.meridian && z.schnittstelle);
+  organeKK = { stand: jetzt(), organe: Object.keys(o).length ? o : organeKK.organe, schnittstellen: s.length ? s : organeKK.schnittstellen };
+  try { fs.writeFileSync(ORGANE_KK_DATEI, JSON.stringify(organeKK), { mode: 0o600 }); } catch (e) { return { fehler: e.message }; }
+  return { organe: Object.keys(organeKK.organe).length, schnittstellen: organeKK.schnittstellen.length };
+}
+const organeLesbar = (w = 'nova') => { const st = organeStand(w), DEF = ORGAN_WESEN[w]; return `Organuhr: Hochzeit ${ORGANE[st.uhr.hoch].name}, Ruhezeit ${ORGANE[st.uhr.ruhe].name}. Körperkosmos-Wissen ${st.kk ? 'geladen' : 'fehlt'}.\n` +
+  st.organe.map(x => `- ${x.name} (${x.spiegel ? 'Spiegel ' + x.spiegel + ', ' : ''}${x.kurz}, ${x.element}, ${x.zeit}): E ${x.energie} · S ${x.spannung} · R ${x.ruhe} · ${x.treffer} Treffer (${x.heute} heute)${st.laut.includes(x.id) ? ' ◀ laut' : ''}`).join('\n') +
+  '\n\nLetzte Spuren:\n' + st.spuren.slice(0, 12).map(s => `- ${s.zeit.slice(0, 16).replace('T', ' ')} ${s.quelle}${s.projekt ? ' [' + s.projekt + ']' : ''}: ${s.organe.map(x => DEF[x.organ].name + ' (' + x.worte.join(', ') + ')').join(' + ')} ${s.ton < 0 ? '−' : s.ton > 0 ? '+' : '○'}`).join('\n'); };
 const ZENTRALE_DATEI = path.join(DATEN, 'nova-zentrale.json');
 const ZENTRALE_SEITE = path.join(DATEN, 'nova.html');
 const ZENTRALE_MAX_TAG = 300, ZENTRALE_MAX_VERLAUF = 300, ZENTRALE_MAX_GEDAECHTNIS = 200;
@@ -1812,6 +1980,7 @@ Was du dir über Diego gemerkt hast:
 ${erinnerungen}
 ${threadsKurz() ? '\nDiegos offene Threads (Stand ' + threadStand.stand.slice(0, 16).replace('T', ' ') + ' UTC; wenn er «Threads» oder «was wartet auf mich» fragt, kurz die wichtigen nennen):\n' + threadsKurz() : ''}${novaWissen ? '\nDein Wissen über DR Lab, alle Figuren, Geschichten und Apps (intern, nie an Tinko oder Gäste):\n' + novaWissen : ''}${(() => { const l = erfahrungenLetzte(12); return l.length ? '\nDiegos letzte Erlebnisse mit den Figuren (Erfahrungs-Tagebuch, mit seiner Einwilligung, intern):\n' + l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} ${x.figur}: Diego «${x.du.slice(0, 140)}» → «${x.ich.slice(0, 140)}»`).join('\n') : ''; })()}
 ${wissen ? '\nHintergrundwissen DR Lab (intern):\n' + wissen.slice(0, 6000) : ''}
+${organeInneres()}
 
 ${ZENTRALE_FORMAT}`;
 }
@@ -1899,6 +2068,7 @@ function zentraleSagen(text, zug) {
   const zug2 = { id: id('z'), du: sauber(text, 4000), zeit: jetzt(), sagen: '', ergebnisse: [], fertig: false };
   let erstFertig; zug2.erst = new Promise(r => { erstFertig = r; });
   zentrale.verlauf.push(zug2); zentrale.verlauf = zentrale.verlauf.slice(-ZENTRALE_MAX_VERLAUF);
+  organeEreignis(zug2.du, 'Gespräch mit Nova');
   if (!zentraleDarf()) { Object.assign(zug2, { sagen: 'Für heute habe ich genug geredet. Morgen bin ich wieder ganz da.', fertig: true }); erstFertig(); zentraleSpeichern(); return zug2; }
   if (!NOVA_KEY) { Object.assign(zug2, { sagen: 'Ich bin noch nicht mit der Sense Engine verbunden.', fertig: true }); erstFertig(); zentraleSpeichern(); return zug2; }
   const verlauf = zentrale.verlauf.slice(-13, -1).map(v => `Diego: ${v.du}\nNova: ${v.sagen}${v.ergebnisse.length ? ' [' + v.ergebnisse.map(e => (e.name || e.art) + ': ' + String(e.text || '').slice(0, 200)).join(' | ') + ']' : ''}`).join('\n');
@@ -1979,6 +2149,7 @@ function ergebnisNeu(a) {
   if (a.ersetzt) ergebnisse = ergebnisse.filter(e => e.id !== a.ersetzt);
   const e = { id: id('e'), von: sauber(a.von, 60) || 'Claude', titel, text: textInhalt, link, zeit: jetzt(), neu: true };
   ergebnisse.push(e); ergebnisse = ergebnisse.slice(-ERGEBNIS_MAX); ergebnisseSpeichern();
+  organeEreignis(titel + ' fertig', 'Ergebnis von ' + e.von, { ton: 1 });
   return e;
 }
 // Brücke ins DR-Lab-Projekt bei Claude: Nova legt Aufträge ab, eine Claude-Routine holt sie über den Connector und liefert ins Fenster «📂 Ergebnisse».
@@ -1988,7 +2159,7 @@ try { claudeAuftraege = JSON.parse(fs.readFileSync(CLAUDE_DATEI, 'utf8')); } cat
 const claudeSpeichern = () => { try { fs.writeFileSync(CLAUDE_DATEI, JSON.stringify(claudeAuftraege.slice(-300)), { mode: 0o600 }); } catch (e) { console.error('Claude-Aufträge nicht gespeichert:', e.message); } };
 function claudeAuftragNeu(text, du) {
   const c = { id: id('c'), text, du: sauber(du, 2000), zeit: jetzt(), status: 'offen' };
-  claudeAuftraege.push(c); claudeSpeichern(); return c;
+  claudeAuftraege.push(c); claudeSpeichern(); organeEreignis(text, 'Auftrag an Claude'); return c;
 }
 const ergebnisKurz = (e) => ({ id: e.id, von: e.von, titel: e.titel, link: e.link, zeit: e.zeit, neu: !!e.neu, laenge: e.text.length, vorschau: e.text.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/https?:\/\/\S+/g, '').replace(/[#*`>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) });
 
@@ -2148,6 +2319,7 @@ const server = http.createServer(async (req, res) => {
       if (was === 'merken' || was === 'gespraech') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
         if (!t) return json(res, 200, { text: 'Was soll ich mir merken?' });
+        if (ORGAN_WESEN[fig]) organeEreignis(t, figName);
         if (!NOVA_KEY) return json(res, 200, { text: 'Die Sense Engine ist nicht verbunden.' });
         const r = await fetch(NOVA_BASIS + '/erfahrung', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
           body: JSON.stringify({ app: figName, figur: fig, art: was, frage: t, antwort: '' }) }).catch(() => null);
@@ -2193,6 +2365,13 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { antwort: st === 'fehler' ? 'Tinko konnte das Bild nicht malen.' : 'Dieses Bild kenne ich nicht.', id: tok, fertig: false, fehler: true });
       }
       if (was === 'sichern') return json(res, 200, { text: serverSichern() });
+      // Novas Organe (KI-Meridiane): Sprech-Nova fragt ihr Inneres ab, optional mit einem neuen Satz, der zuerst einsortiert wird
+      if (was === 'inneres' || was === 'organe') {
+        if (!ORGAN_WESEN[fig]) return json(res, 200, { text: 'Organe haben bisher nur Nova und Sparky.' });
+        if (String(a.text || '').trim()) organeEreignis(a.text, figName);
+        const neu = organe[fig].spuren.slice(-1)[0];
+        return json(res, 200, { text: (neu && String(a.text || '').trim() && neu.quelle === figName ? 'Angeschlagen: ' + neu.organe.map(x => ORGAN_WESEN[fig][x.organ].name).join(', ') + '.\n' : '') + organeInneres(fig).slice(0, 3500) });
+      }
       if (was === 'auftrag') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
         if (!t) return json(res, 200, { text: 'Was soll ich Claude sagen?' });
@@ -2426,6 +2605,7 @@ const server = http.createServer(async (req, res) => {
       const kk = url.searchParams.get('k') || req.headers['x-kiverse-k'] || '';
       if (url.pathname === '/api/zentrale' && req.method === 'GET') return json(res, 200, zentraleStand());
       if (url.pathname === '/api/zentrale/gewachsen' && req.method === 'GET') return json(res, 200, heuteGewachsen());
+      if (url.pathname === '/api/zentrale/organe' && req.method === 'GET') return json(res, 200, organeStand(url.searchParams.get('wesen') === 'sparky' ? 'sparky' : 'nova'));
       if (url.pathname === '/api/zentrale/zug' && req.method === 'GET') {
         const v = zentrale.verlauf.find(x => x.id === url.searchParams.get('id'));
         return v ? json(res, 200, zentraleOeffentlich(v)) : json(res, 404, { fehler: 'Unbekannt.' });
