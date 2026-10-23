@@ -1635,7 +1635,8 @@ async function appDatei(branch, datei) {
   return e;
 }
 const APP_FIGUR = { humanspark: 'sparky', fiasnest: 'fia', mondschein: 'otti', otti: 'otti', jackie: 'jackie', kiki: 'kimo', mamaaffe: 'mamaaffe', fompa: 'fompa', tradeping: 'mrping' };
-const REDE_JS = (() => { try { return fs.readFileSync(path.join(__dirname, 'rede.js')); } catch { return Buffer.from(''); } })();
+// rede.js liegt im Datenordner, weil der Server im Programmordner keine neuen Dateien anlegen darf
+const REDE_JS = (() => { for (const d of [DATEN, __dirname]) try { return fs.readFileSync(path.join(d, 'rede.js')); } catch {} return Buffer.from(''); })();
 async function appSenden(req, res, url) {
   const m = url.pathname.match(/^\/apps\/([a-z0-9]+)(?:\/(.*))?$/);
   const app = m && KIVERSE_APPS[m[1]];
@@ -1741,8 +1742,9 @@ async function knopfUpdate(verz = 800) {
     fs.rmSync(pruef, { force: true });
     if (c.status !== 0) return 'Update abgebrochen: die neue Version hat einen Fehler. Die alte läuft weiter.';
     try { const r = await fetch(UPDATE_QUELLE + 'nova.html?v=' + Date.now(), { signal: AbortSignal.timeout(60000) }); if (r.ok) fs.writeFileSync(ZENTRALE_SEITE, Buffer.from(await r.arrayBuffer()), { mode: 0o600 }); } catch {}
-    if (Object.entries(neu).every(([f, b]) => { try { return fs.readFileSync(path.join(__dirname, f)).equals(b); } catch { return false; } })) return 'Schon auf dem neusten Stand.';
-    for (const [f, b] of Object.entries(neu)) fs.writeFileSync(path.join(__dirname, f), b);
+    const ziel = (f) => path.join(f === 'rede.js' ? DATEN : __dirname, f);
+    if (Object.entries(neu).every(([f, b]) => { try { return fs.readFileSync(ziel(f)).equals(b); } catch { return false; } })) return 'Schon auf dem neusten Stand.';
+    for (const [f, b] of Object.entries(neu)) fs.writeFileSync(ziel(f), b);
     letztesUpdate = jetzt();
     setTimeout(() => process.exit(0), verz);
     return 'Update geladen. Das KI-Verse startet neu, in ein paar Sekunden neu laden.';
