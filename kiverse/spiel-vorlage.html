@@ -1,0 +1,1579 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>KI-Verse Spiel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+:root { --nacht: #0b1430; --gold: #f2c25b; --gold-hell: #ffe3a1; --text: #f5f1e6; --karte: rgba(14, 26, 64, .94); --rand: rgba(242, 194, 91, .35); }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--nacht); color: var(--text); font-family: "Atkinson Hyperlegible", system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+/* Handy-Modus: Kamera hinten als Hintergrund (KI-Blick), nur im Gerät */
+#arVideo { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; display: none; }
+html.ar, html.ar body { background: transparent; }
+html.ar #arVideo { display: block; }
+#schrittAnzeige[hidden] { display: none; }
+.anzeige { position: fixed; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; font-family: "Baloo 2", sans-serif; z-index: 5; }
+.pille { background: rgba(11, 20, 48, .7); border: 1px solid var(--rand); border-radius: 999px; padding: 4px 12px; font-weight: 700; color: var(--gold-hell); pointer-events: auto; }
+.pille button { all: unset; cursor: pointer; }
+.pille { white-space: nowrap; }
+@media (max-width: 600px) { .anzeige { gap: 4px; left: 8px; right: 8px; } .anzeige .pille { padding: 4px 9px; font-size: 15px; } .anzeige .txt { display: none; } }
+#hoch { position: fixed; right: 18px; bottom: max(18px, env(safe-area-inset-bottom)); width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .55); color: var(--gold-hell); font: 800 28px "Baloo 2", sans-serif; display: grid; place-items: center; z-index: 4; }
+#stick { position: fixed; left: 26px; bottom: max(26px, env(safe-area-inset-bottom)); width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--rand); background: rgba(11, 20, 48, .4); z-index: 4; touch-action: none; }
+#stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(242, 194, 91, .75); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
+#rein { position: fixed; left: 50%; bottom: max(150px, calc(env(safe-area-inset-bottom) + 140px)); transform: translateX(-50%); background: var(--gold); color: #1a1406; border: 0; border-radius: 999px; padding: 12px 26px; font: 800 18px "Baloo 2", sans-serif; box-shadow: 0 0 24px rgba(242, 194, 91, .7); z-index: 6; }
+.blase { position: fixed; transform: translate(-50%, -100%); max-width: 230px; background: rgba(255, 250, 238, .97); color: #18204a; border-radius: 16px; padding: 8px 12px; font: 700 14px/1.35 "Atkinson Hyperlegible", sans-serif; text-align: center; pointer-events: none; z-index: 3; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); }
+.blase::after { content: ""; position: absolute; left: 50%; bottom: -9px; margin-left: -9px; border: 9px solid transparent; border-bottom: 0; border-top-color: rgba(255, 250, 238, .97); }
+.schild { position: fixed; transform: translate(-50%, -50%); background: rgba(11, 20, 48, .75); color: var(--gold); border: 1px solid var(--rand); border-radius: 999px; padding: 3px 12px; font: 800 15px "Baloo 2", sans-serif; pointer-events: none; z-index: 2; white-space: nowrap; }
+.karte { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100% - 24px)); background: var(--karte); border: 1px solid var(--rand); border-radius: 18px; padding: 14px 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); z-index: 8; }
+.karte h2 { margin: 0 0 6px; font: 800 22px "Baloo 2", sans-serif; color: var(--gold); }
+.karte p { margin: 0 0 10px; line-height: 1.45; white-space: pre-line; }
+.karte .knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.knopf { background: rgba(255, 255, 255, .08); color: var(--text); border: 1px solid var(--rand); border-radius: 999px; padding: 9px 16px; font: 700 15px "Atkinson Hyperlegible", sans-serif; }
+.knopf.gold { background: var(--gold); color: #1a1406; border-color: var(--gold); }
+.karte input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(255, 255, 255, .06); color: var(--text); font: 15px "Atkinson Hyperlegible", sans-serif; margin-bottom: 10px; }
+.balken { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 7; transition: height .8s ease; pointer-events: none; }
+.balken.oben { top: 0; } .balken.unten { bottom: 0; }
+body.kino .balken { height: 9vh; }
+#blitz { position: fixed; inset: 0; background: radial-gradient(circle, #fff3c8, #f2c25b 60%, rgba(242, 194, 91, .9)); opacity: 0; pointer-events: none; z-index: 9; transition: opacity .45s ease; }
+#ortbild { position: fixed; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity .8s ease; z-index: 1; pointer-events: none; animation: kenburns 20s ease-in-out infinite alternate; }
+@keyframes kenburns { to { transform: scale(1.08); } }
+#titel { position: fixed; left: 0; right: 0; top: 20vh; text-align: center; pointer-events: none; z-index: 8; opacity: 0; transition: opacity 1s ease; }
+#titel b { display: block; font: 800 60px/1 "Baloo 2", sans-serif; color: var(--gold); text-shadow: 0 0 30px rgba(242, 194, 91, .6), 0 4px 18px rgba(0, 0, 0, .6); }
+#titel span { display: block; margin-top: 8px; font: 700 20px "Atkinson Hyperlegible", sans-serif; color: #fff6dc; text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
+.start { position: fixed; inset: 0; display: grid; place-items: center; background: #0b1430 center / cover no-repeat; padding: 16px; z-index: 10; transition: opacity .9s ease; }
+.start .innen { width: min(520px, 100%); text-align: center; background: rgba(11, 20, 48, .72); border: 1px solid var(--rand); border-radius: 22px; padding: 18px 16px; backdrop-filter: blur(4px); }
+.start h1 { font: 800 44px/1 "Baloo 2", sans-serif; color: var(--gold); margin: 0 0 6px; text-shadow: 0 0 30px rgba(242, 194, 91, .6); }
+.start p { margin: 0 0 14px; line-height: 1.45; }
+.wahl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0 0 16px; }
+.wahl button { all: unset; cursor: pointer; text-align: center; font: 700 13px "Atkinson Hyperlegible", sans-serif; }
+.wahl img { width: 100%; aspect-ratio: 1; border-radius: 50%; object-fit: cover; border: 3px solid transparent; display: block; margin-bottom: 4px; }
+.wahl button[aria-pressed="true"] img { border-color: var(--gold); box-shadow: 0 0 18px rgba(242, 194, 91, .7); }
+.laden { position: fixed; inset: 0; display: grid; place-items: center; z-index: 11; background: #0b1430; color: var(--gold); font: 800 22px "Baloo 2", sans-serif; text-align: center; padding: 20px; }
+#reden { position: fixed; left: 50%; bottom: max(96px, calc(env(safe-area-inset-bottom) + 86px)); transform: translateX(-50%); background: rgba(11, 20, 48, .85); color: var(--gold-hell); border: 2px solid var(--gold); border-radius: 999px; padding: 10px 22px; font: 800 17px "Baloo 2", sans-serif; box-shadow: 0 0 20px rgba(242, 194, 91, .45); z-index: 6; }
+.gespraech { position: fixed; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: min(420px, calc(100% - 32px)); max-height: 46vh; display: flex; flex-direction: column; background: var(--karte); border: 1px solid var(--rand); border-radius: 20px; padding: 12px 14px; z-index: 8; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); }
+.gespraech .kopfzeile { display: flex; align-items: center; gap: 8px; }
+.gespraech h2 { margin: 0; flex: 1; font: 800 22px "Baloo 2", sans-serif; color: var(--gold); }
+.gespraech .klein { all: unset; cursor: pointer; font: 700 13px "Atkinson Hyperlegible", sans-serif; color: var(--gold-hell); opacity: .8; padding: 4px 8px; border: 1px solid var(--rand); border-radius: 999px; }
+.gespraech .log { overflow-y: auto; margin: 8px 0 4px; display: flex; flex-direction: column; gap: 6px; min-height: 60px; }
+.gespraech .log p { margin: 0; line-height: 1.4; background: rgba(255, 255, 255, .06); border-radius: 12px; padding: 7px 10px; }
+.gespraech .log p.du { background: rgba(242, 194, 91, .16); align-self: flex-end; }
+.gespraech .log b { color: var(--gold-hell); }
+.gespraech .status { min-height: 18px; font-size: 13px; opacity: .8; }
+.gespraech .zeile { display: flex; gap: 8px; align-items: center; }
+.gespraech input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--rand); background: rgba(255, 255, 255, .06); color: var(--text); font: 15px "Atkinson Hyperlegible", sans-serif; }
+#gesprMikro { all: unset; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; border: 2px solid var(--gold); background: rgba(242, 194, 91, .12); }
+#gesprMikro.an { background: #d6413b; border-color: #ff8a80; animation: puls 1s ease-in-out infinite; }
+@keyframes puls { 50% { box-shadow: 0 0 0 10px rgba(214, 65, 59, .25); } }
+body.redet #stick, body.redet #hoch { display: none; }
+@media (max-width: 600px) { .gespraech { right: 16px; left: 16px; width: auto; max-height: 52vh; } }
+.ladenfilm { position: fixed; top: max(56px, calc(env(safe-area-inset-top) + 46px)); right: 16px; width: min(300px, 42vw); z-index: 7; background: var(--karte); border: 1px solid var(--rand); border-radius: 16px; padding: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
+.ladenfilm b { display: block; font: 800 14px "Baloo 2", sans-serif; color: var(--gold); margin: 0 0 6px; }
+.ladenfilm img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; transition: opacity .4s ease; }
+.appfenster { position: fixed; inset: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); z-index: 12; display: flex; flex-direction: column; background: #0b1430; border: 2px solid var(--gold); border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(242, 194, 91, .35); }
+.appfenster .leiste { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(242, 194, 91, .12); }
+.appfenster .leiste b { flex: 1; font: 800 18px "Baloo 2", sans-serif; color: var(--gold); }
+.appfenster .leiste button { all: unset; cursor: pointer; color: var(--gold-hell); font: 700 14px "Atkinson Hyperlegible", sans-serif; border: 1px solid var(--rand); border-radius: 999px; padding: 6px 12px; }
+.appfenster iframe { flex: 1; border: 0; width: 100%; background: #fff; }
+[hidden] { display: none !important; }
+.leise { opacity: .75; font-size: 13px; }
+.spiegel { position: fixed; left: 14px; bottom: 14px; width: 150px; height: 150px; border-radius: 50%; overflow: hidden; border: 4px solid #f2c25b; box-shadow: 0 0 24px rgba(242,194,91,.55); z-index: 30; background: #0b1430; }
+.spiegel video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.spiegel button { position: absolute; top: 8px; right: 22px; border: 0; border-radius: 50%; width: 26px; height: 26px; background: rgba(11,20,48,.75); color: #f2c25b; font-size: 14px; cursor: pointer; }
+body.redet .spiegel { bottom: auto; top: 64px; width: 110px; height: 110px; }
+@media (max-width: 600px) { .spiegel { width: 96px; height: 96px; } }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<div class="balken oben"></div><div class="balken unten"></div>
+<div id="ortbild"></div>
+<div id="blitz"></div>
+<div id="titel"><b>KI-Verse</b><span>Otti öffnet das Tor ...</span></div>
+
+<div class="anzeige">
+  <span class="pille" id="funkenAnzeige">✦ 0 / 12</span>
+  <span class="pille" id="orteAnzeige">Orte 0 / 6</span>
+  <span class="pille" id="schrittAnzeige" hidden>👣 0</span>
+  <span class="pille"><button type="button" id="sichtKnopf">👁 Ich-Sicht</button></span>
+  <span class="pille"><button type="button" id="handyKnopf">📱<span class="txt"> Handy</span></button></span>
+  <span class="pille"><button type="button" id="zurWelt">🏠<span class="txt"> KI-Verse</span></button></span>
+</div>
+<video id="arVideo" playsinline muted autoplay></video>
+<div id="stick" hidden><i></i></div>
+<div id="hoch" hidden aria-label="springen">⤒</div>
+<button id="rein" type="button" hidden>Rein</button>
+<button id="reden" type="button" hidden>🎙 Reden</button>
+<div class="ladenfilm" id="ladenFilm" hidden><b></b><img alt=""></div>
+<div class="appfenster" id="appFenster" hidden><div class="leiste"><b id="appTitel"></b><button type="button" id="appZu">✕ Zurück in den Laden</button></div><iframe title="App" allow="microphone; camera; autoplay; clipboard-write"></iframe></div>
+<div class="gespraech" id="gespraech" hidden>
+  <div class="kopfzeile"><h2 id="gesprTitel"></h2><button type="button" class="klein" id="gesprVergessen" title="Gedächtnis dieser Figur für dich löschen">Vergessen</button><button type="button" class="klein" id="gesprZu" aria-label="Gespräch beenden">✕</button></div>
+  <div class="log" id="gesprLog"></div>
+  <div class="status" id="gesprStatus"></div>
+  <div class="zeile"><button type="button" id="gesprMikro" aria-label="Sprechen">🎙</button><input id="gesprEingabe" type="text" maxlength="600" placeholder="Sag etwas …" autocomplete="off"><button type="button" class="knopf gold" id="gesprSenden">Senden</button></div>
+</div>
+<div id="ebene"></div>
+
+<div class="karte" id="karte" hidden>
+  <h2 id="karteTitel"></h2>
+  <p id="karteText"></p>
+  <input id="karteEingabe" type="text" maxlength="120" hidden>
+  <div class="knoepfe" id="karteKnoepfe"></div>
+</div>
+
+<div class="start" id="start">
+  <div class="innen">
+    <h1>KI-Verse</h1>
+    <p>Ein Trickfilm-Städtchen am Meer, in 3D. Lauf durch die Gassen, geh in die Läden, rede mit den Figuren und sammle Sunnys goldene Funken.</p>
+    <p class="leise">Wer bist du heute?</p>
+    <div class="wahl" id="wahl"></div>
+    <button class="knopf gold" type="button" id="losKamera" style="font-size:18px;padding:12px 30px">📷 Mit Kamera eintreten</button>
+    <button class="knopf" type="button" id="los" style="font-size:16px;padding:10px 24px">Ohne Kamera</button>
+    <p class="leise" style="margin-top:8px">Mit Kamera siehst du dich unten links im Zauberspiegel, und die Figuren hören dir zu, ohne dass du tippst. Kamera und Mikrofon bleiben auf deinem Gerät: nichts wird gespeichert oder gesendet.</p>
+    <p class="leise" style="margin-top:12px">Links den goldenen Knopf ziehen zum Laufen, rechts ⤒ zum Springen. Am Computer: Pfeiltasten, Maus ziehen zum Umschauen, Leertaste springt, «R» redet mit der Figur vor dir. Am Handy oben «📱 Handy»: mitlaufen, dich selbst sehen, KI-Blick durch die Kamera.</p>
+  </div>
+</div>
+<div class="spiegel" id="spiegel" hidden><video id="spiegelVideo" autoplay muted playsinline></video><button type="button" id="spiegelAus" aria-label="Kamera aus">✕</button></div>
+<div class="laden" id="laden">Das Städtchen wird gebaut ...</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const BILDER = __BILDER__;
+// Bilder von Tinko für die Orte (tor ist da; placa, schule, schuhmacher, post, werkstatt-meer, ruinen, kiosk folgen)
+const ORT_BILDER = __ORT_BILDER__;
+const $ = (s) => document.querySelector(s);
+const lerp = (a, b, t) => a + (b - a) * t;
+const zufall = (s => () => (s = (s * 16807) % 2147483647) / 2147483647)(11);
+
+// ---------- Renderer, Szene, Licht ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setClearColor(0x000000, 1);
+// Was im KI-Blick (Kamera hinten) verschwindet: Himmel, Meer, Mondspur, Gassenboden. Die echte Welt scheint durch.
+const AR_WEG = [];
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const szene = new THREE.Scene();
+// Filmlook wie Tinkos Torbild: Leuchten (Bloom), warme Farben, dunkle Ränder
+const FILMLOOK = {
+  uniforms: { tDiffuse: { value: null }, staerke: { value: 1.0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float staerke; varying vec2 vUv;
+    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(.299,.587,.114));
+      vec3 warm = mix(c.rgb, c.rgb * vec3(1.08, .98, .86), smoothstep(.35, .9, l));
+      vec3 kalt = mix(warm, warm * vec3(.9, .95, 1.12), 1.0 - smoothstep(.05, .35, l));
+      vec3 satt = mix(vec3(l), kalt, 1.18);
+      float v = smoothstep(1.05, .35, length(vUv - .5) * 1.35);
+      gl_FragColor = vec4(satt * mix(.55, 1.0, v) * staerke, c.a); }`,
+};
+let composer = null;
+const NEBEL_NACHT = new THREE.Color(0x1a2456), NEBEL_WASSER = new THREE.Color(0x0a5a78);
+szene.fog = new THREE.FogExp2(NEBEL_NACHT, 0.0075);
+const kamera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 1500);
+let bloomPass = null;
+try {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(szene, kamera));
+  composer.addPass(bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .85, .55, .72));
+  composer.addPass(new ShaderPass(FILMLOOK));
+  composer.addPass(new OutputPass());
+} catch (e) { composer = null; }
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
+
+szene.add(new THREE.HemisphereLight(0x5a78d6, 0x6a3a18, 0.85));
+const MOND_RICHTUNG = new THREE.Vector3(320, 150, -330);
+const mondLicht = new THREE.DirectionalLight(0xbcd0ff, 1.25);
+mondLicht.castShadow = true;
+mondLicht.shadow.mapSize.set(1024, 1024);
+Object.assign(mondLicht.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 220 });
+mondLicht.shadow.bias = -0.0008;
+szene.add(mondLicht, mondLicht.target);
+
+// ---------- Hilfen: Texturen aus Canvas ----------
+function canvasTextur(b, h, malen, wiederholen) {
+  const c = document.createElement('canvas'); c.width = b; c.height = h; malen(c.getContext('2d'), b, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  if (wiederholen) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...wiederholen); }
+  return t;
+}
+const GLUT = canvasTextur(128, 128, (g, b) => { const v = g.createRadialGradient(64, 64, 0, 64, 64, 64); v.addColorStop(0, 'rgba(255,255,255,1)'); v.addColorStop(.25, 'rgba(255,240,200,.55)'); v.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = v; g.fillRect(0, 0, b, b); });
+function glut(farbe, groesse, staerke = 1) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLUT, color: farbe, transparent: true, opacity: staerke, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  s.scale.set(groesse, groesse, 1); return s;
+}
+function rundRechteck(g, x, y, b, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + b, y, x + b, y + h, r); g.arcTo(x + b, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + b, y, r); g.closePath(); }
+const PFLASTER = canvasTextur(512, 512, (g, b, h) => {
+  g.fillStyle = '#5a4436'; g.fillRect(0, 0, b, h);
+  for (let y = 0; y < 8; y++) for (let x = -1; x < 8; x++) {
+    const ox = (y % 2) * 32, l = 52 + zufall() * 18;
+    g.fillStyle = `hsl(${30 + zufall() * 10}, ${30 + zufall() * 14}%, ${l}%)`;
+    rundRechteck(g, x * 64 + ox + 3, y * 64 + 3, 58, 58, 14); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.08)'; rundRechteck(g, x * 64 + ox + 8, y * 64 + 6, 40, 14, 7); g.fill();
+  }
+}, [6, 50]);
+const PUTZ = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#f3ebdd'; g.fillRect(0, 0, b, h); for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${150 + zufall() * 60},${130 + zufall() * 50},${100 + zufall() * 40},${zufall() * .12})`; g.fillRect(zufall() * b, zufall() * h, 2 + zufall() * 6, 2 + zufall() * 6); } }, [1, 1]);
+const STEIN = canvasTextur(256, 256, (g, b, h) => { g.fillStyle = '#c8b694'; g.fillRect(0, 0, b, h); for (let y = 0; y < 8; y++) for (let x = -1; x < 4; x++) { g.fillStyle = `hsl(38, 25%, ${58 + zufall() * 14}%)`; g.fillRect(x * 64 + (y % 2) * 32 + 2, y * 32 + 2, 60, 28); } }, [1, 1]);
+
+// ---------- Himmel, Sterne, Mond ----------
+{
+  const himmel = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { oben: { value: new THREE.Color(0x050b22) }, mitte: { value: new THREE.Color(0x1b3778) }, unten: { value: new THREE.Color(0x3b5aa0) } },
+    vertexShader: 'varying vec3 p; void main(){ p = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 oben; uniform vec3 mitte; uniform vec3 unten; varying vec3 p; void main(){ float h = p.y; vec3 c = h > 0.15 ? mix(mitte, oben, smoothstep(0.15, 0.7, h)) : mix(unten, mitte, smoothstep(-0.05, 0.15, h)); gl_FragColor = vec4(c, 1.0); }',
+  }));
+  szene.add(himmel); AR_WEG.push(himmel);
+  const pos = [];
+  for (let i = 0; i < 1400; i++) { const a = zufall() * Math.PI * 2, h = .08 + zufall() * .9, r = 800; pos.push(Math.cos(a) * r * Math.sqrt(1 - h * h), h * r, Math.sin(a) * r * Math.sqrt(1 - h * h)); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  szene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xfff6dc, size: 1.8, sizeAttenuation: false, fog: false, transparent: true, opacity: .9 })));
+  const mond = new THREE.Mesh(new THREE.SphereGeometry(26, 32, 16), new THREE.MeshBasicMaterial({ color: 0xffe8b0, fog: false }));
+  mond.position.copy(MOND_RICHTUNG).normalize().multiplyScalar(700); szene.add(mond);
+  const mg = glut(0xffd98a, 260, .9); mg.position.copy(mond.position); szene.add(mg);
+}
+
+// ---------- Meer mit Wellen und Mondspur ----------
+const meerGeo = new THREE.PlaneGeometry(900, 900, 90, 90); meerGeo.rotateX(-Math.PI / 2);
+const meer = new THREE.Mesh(meerGeo, new THREE.MeshStandardMaterial({ color: 0x0f2c66, roughness: .18, metalness: .55 }));
+meer.position.set(458, -1.3, -100); szene.add(meer); AR_WEG.push(meer);
+const meerBasis = Float32Array.from(meerGeo.attributes.position.array);
+const spurMat = new THREE.MeshBasicMaterial({ map: canvasTextur(64, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, 'rgba(255,220,140,0)'); v.addColorStop(.6, 'rgba(255,220,140,.5)'); v.addColorStop(1, 'rgba(255,220,140,.05)'); g.fillStyle = v; g.fillRect(0, 0, b, h); for (let i = 0; i < 60; i++) { g.fillStyle = 'rgba(255,240,200,.5)'; g.fillRect(zufall() * b, zufall() * h, 6 + zufall() * 20, 2); } }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+const spur = new THREE.Mesh(new THREE.PlaneGeometry(16, 500), spurMat);
+spur.geometry.rotateX(-Math.PI / 2); spur.geometry.translate(0, 0, -250); szene.add(spur); AR_WEG.push(spur);
+// gegenüberliegende Küste mit Lichtern (wie auf Tinkos Bild)
+{
+  const kueste = new THREE.Mesh(new THREE.ConeGeometry(140, 70, 10, 1), new THREE.MeshStandardMaterial({ color: 0x14244e, roughness: 1, flatShading: true }));
+  kueste.position.set(330, 20, -380); kueste.scale.set(1.6, 1, .6); szene.add(kueste);
+  const lp = []; for (let i = 0; i < 400; i++) { const x = 130 + zufall() * 400, y = zufall() * 40; if (Math.abs(x - 330) / 224 + y / 70 < 1) lp.push(x, y - 2, -340 + zufall() * 20); }
+  const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+  szene.add(new THREE.Points(lg, new THREE.PointsMaterial({ color: 0xffc56a, size: 2.4, sizeAttenuation: false, fog: false })));
+}
+
+// ---------- Boden, Ufermauer, Berg ----------
+const LAENGE = 330;
+{
+  const boden = new THREE.Mesh(new THREE.PlaneGeometry(30, LAENGE + 60), new THREE.MeshStandardMaterial({ map: PFLASTER, roughness: .42, metalness: .12, color: 0xffd9a8 }));
+  boden.rotation.x = -Math.PI / 2; boden.position.set(-7, 0, -LAENGE / 2 + 10); boden.receiveShadow = true; szene.add(boden); AR_WEG.push(boden);
+  const mauer = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.8, LAENGE + 40), new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }));
+  mauer.position.set(8.6, -.75, -LAENGE / 2 + 10); mauer.receiveShadow = true; szene.add(mauer);
+  const pfosten = new THREE.CylinderGeometry(.06, .06, 1, 6), pm = new THREE.MeshStandardMaterial({ color: 0x2b2f45, metalness: .6, roughness: .4 });
+  for (let z = 14; z > -LAENGE + 4; z -= 2.5) { if (z < -142 && z > -150) continue; const p = new THREE.Mesh(pfosten, pm); p.position.set(8.4, .5, z); szene.add(p); }
+  const gelaender = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, LAENGE + 30), pm); gelaender.position.set(8.4, 1, -LAENGE / 2 + 10); szene.add(gelaender);
+  // Berg mit Pinien hinter dem Dorf (Sunnys Zuhause)
+  const berg = new THREE.Mesh(new THREE.ConeGeometry(120, 70, 14, 3), new THREE.MeshStandardMaterial({ color: 0x163a3a, roughness: 1, flatShading: true }));
+  berg.position.set(-110, 18, -90); berg.scale.set(.7, 1, 1.6); szene.add(berg);
+}
+
+// ---------- Bausteine ----------
+const LATERNEN = [];
+const MAT = {
+  putz: new THREE.MeshStandardMaterial({ map: PUTZ, roughness: .95 }),
+  dach: new THREE.MeshStandardMaterial({ color: 0xb8543a, roughness: .8, flatShading: true }),
+  dachBlau: new THREE.MeshStandardMaterial({ color: 0x3f7fb3, roughness: .7, flatShading: true }),
+  fenster: new THREE.MeshBasicMaterial({ color: 0xffbf5e }),
+  fensterAus: new THREE.MeshStandardMaterial({ color: 0x24305e, roughness: .4 }),
+  laden: new THREE.MeshStandardMaterial({ color: 0x2f6fb0, roughness: .6 }),
+  holz: new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: .8 }),
+  stein: new THREE.MeshStandardMaterial({ map: STEIN, roughness: .9 }),
+  blatt: new THREE.MeshStandardMaterial({ color: 0x1d5a40, roughness: .9, flatShading: true }),
+  pinie: new THREE.MeshStandardMaterial({ color: 0x174634, roughness: .9, flatShading: true }),
+  stamm: new THREE.MeshStandardMaterial({ color: 0x4a3322, roughness: 1 }),
+  metall: new THREE.MeshStandardMaterial({ color: 0x23263a, metalness: .7, roughness: .35 }),
+  bougain: new THREE.MeshStandardMaterial({ color: 0xd8307a, roughness: .7, emissive: 0x3a0a20 }),
+  gold: new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .8, roughness: .25, emissive: 0x6a4a10 }),
+  ton: new THREE.MeshStandardMaterial({ color: 0xc8703f, roughness: .75 }),
+};
+MAT.bougain.color.set(0xffffff);
+const blumen = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.3, 0), MAT.bougain, 6000); let blumenZahl = 0; const hilf = new THREE.Object3D();
+const BLUETEN = [new THREE.Color(0xe0287a), new THREE.Color(0xff4fa0), new THREE.Color(0xc21a6a), new THREE.Color(0x2f6b3a), new THREE.Color(0x3d7f45)];
+function blumenWolke(x, y, z, breite, hoehe, tiefe = .5, anzahl = 70) {
+  for (let i = 0; i < anzahl * 1.5 && blumenZahl < 6000; i++) {
+    // nach unten dichter, wie herabhängende Ranken
+    const yy = y + (Math.pow(zufall(), .7) - .5) * hoehe;
+    hilf.position.set(x + (zufall() - .5) * tiefe, yy, z + (zufall() - .5) * breite);
+    hilf.rotation.set(zufall() * 3, zufall() * 3, 0); const s = .5 + zufall() * .8; hilf.scale.set(s, s, s); hilf.updateMatrix();
+    blumen.setMatrixAt(blumenZahl, hilf.matrix); blumen.setColorAt(blumenZahl++, BLUETEN[zufall() < .72 ? Math.floor(zufall() * 3) : 3 + Math.floor(zufall() * 2)]);
+  }
+}
+function dach(b, t, farbe = MAT.dach) {
+  const form = new THREE.Shape(); form.moveTo(-b / 2 - .3, 0); form.lineTo(0, b * .38); form.lineTo(b / 2 + .3, 0);
+  const g = new THREE.ExtrudeGeometry(form, { depth: t + .6, bevelEnabled: false }); g.translate(0, 0, -(t + .6) / 2);
+  const m = new THREE.Mesh(g, farbe); m.castShadow = true; return m;
+}
+// Haus: Vorderseite zeigt zur Promenade (+x), steht links der Gasse
+function haus(z, breite, hoehe, opt = {}) {
+  const g = new THREE.Group(), tiefe = 7;
+  const k = new THREE.Mesh(new THREE.BoxGeometry(tiefe, hoehe, breite), MAT.putz); k.position.y = hoehe / 2; k.castShadow = k.receiveShadow = true; g.add(k);
+  if (opt.flach) { const r = new THREE.Mesh(new THREE.BoxGeometry(tiefe + .4, .35, breite + .4), MAT.stein); r.position.y = hoehe + .17; g.add(r); }
+  else { const d = dach(breite, tiefe, opt.dach || MAT.dach); d.rotation.y = Math.PI / 2; d.position.y = hoehe; g.add(d); }
+  const reihen = Math.max(1, Math.floor((hoehe - 3) / 2.6));
+  for (let r = 0; r < reihen; r++) for (let s = -1; s <= 1; s += 2) {
+    if (breite < 6 && s === 1) continue;
+    const an = zufall() > .3, fz = breite < 6 ? 0 : s * breite * .22, fy = 3.6 + r * 2.6;
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.5), an ? MAT.fenster : MAT.fensterAus); f.position.set(tiefe / 2 + .02, fy, fz); f.rotation.y = Math.PI / 2; g.add(f);
+    for (const seite of [-1, 1]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.08, 1.5, .55), MAT.laden); l.position.set(tiefe / 2 + .06, fy, fz + seite * .85); g.add(l); }
+    if (an && zufall() > .7) { const s2 = glut(0xffc070, 2.4, .35); s2.position.set(tiefe / 2 + .3, fy, fz); g.add(s2); }
+  }
+  const t = new THREE.Mesh(new THREE.BoxGeometry(.2, 2.3, 1.3), MAT.holz); t.position.set(tiefe / 2 + .05, 1.15, 0); g.add(t);
+  if (opt.markise) { const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, .12, breite * .8), new THREE.MeshStandardMaterial({ color: opt.markise, roughness: .8 })); m.position.set(tiefe / 2 + .8, 2.9, 0); m.rotation.z = -.25; g.add(m); }
+  // Wandlaterne neben der Tür, wie auf Tinkos Bild
+  if (!opt.hang) {
+    const wl = new THREE.Mesh(new THREE.BoxGeometry(.32, .45, .32), MAT.metall); wl.position.set(tiefe / 2 + .35, 2.9, .95); g.add(wl);
+    const wk = new THREE.Mesh(new THREE.SphereGeometry(.13, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffe2a8 })); wk.position.copy(wl.position); g.add(wk);
+    const wg = glut(0xffa850, 2.6, .55); wg.position.copy(wl.position); g.add(wg);
+    LATERNEN.push(new THREE.Vector3(-7 + .35, 2.9, z + .95));
+    if (zufall() > .45) { const topf = new THREE.Mesh(new THREE.CylinderGeometry(.5, .32, .9, 12), MAT.ton); topf.position.set(tiefe / 2 + .6, .45, -breite * .3); topf.castShadow = true; g.add(topf); const busch = new THREE.Mesh(new THREE.IcosahedronGeometry(.65, 1), MAT.blatt); busch.position.set(tiefe / 2 + .6, 1.3, -breite * .3); busch.castShadow = true; g.add(busch); }
+  }
+  g.position.set(-7 - tiefe / 2, 0, z);
+  szene.add(g);
+  if (opt.blumen !== false && zufall() > .2) blumenWolke(-7 + .25, hoehe * .55, z + breite * .35 * (zufall() > .5 ? 1 : -1), 2.2, hoehe * .6);
+  return g;
+}
+function pinie(x, z, s = 1) {
+  const g = new THREE.Group();
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(.18 * s, .28 * s, 6 * s, 6), MAT.stamm); st.position.y = 3 * s; st.rotation.z = (zufall() - .5) * .25; g.add(st);
+  for (let i = 0; i < 3; i++) { const k = new THREE.Mesh(new THREE.SphereGeometry(2.4 * s, 7, 5), MAT.pinie); k.scale.set(1.3, .45, 1.1); k.position.set((zufall() - .5) * 2 * s, 6.2 * s + i * .5 * s, (zufall() - .5) * 2 * s); k.castShadow = true; g.add(k); }
+  g.position.set(x, 0, z); szene.add(g); return g;
+}
+function zypresse(x, z, s = 1) { const k = new THREE.Mesh(new THREE.ConeGeometry(.9 * s, 7 * s, 7), MAT.blatt); k.position.set(x, 3.5 * s, z); k.castShadow = true; szene.add(k); }
+function palme(x, z) {
+  const g = new THREE.Group();
+  const kurve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(.6, 3, 0), new THREE.Vector3(.4, 6.5, 0)]);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(kurve, 10, .22, 6), MAT.stamm));
+  const wedel = new THREE.ConeGeometry(.5, 4, 4, 1); wedel.translate(0, 2, 0);
+  for (let i = 0; i < 8; i++) { const halter = new THREE.Group(); halter.position.set(.4, 6.5, 0); halter.rotation.y = i * Math.PI / 4; const w = new THREE.Mesh(wedel, MAT.blatt); w.rotation.z = -1.1; w.scale.set(1, 1, .25); w.castShadow = true; halter.add(w); g.add(halter); }
+  g.position.set(x, 0, z); szene.add(g); return g;
+}
+function laterne(x, z) {
+  const g = new THREE.Group();
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(.07, .1, 3.6, 6), MAT.metall); p.position.y = 1.8; g.add(p);
+  const k = new THREE.Mesh(new THREE.BoxGeometry(.45, .55, .45), MAT.metall); k.position.y = 3.8; g.add(k);
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff0c8 })); b.position.y = 3.75; g.add(b);
+  const s = glut(0xffb85a, 3.2, .55); s.position.y = 3.75; g.add(s);
+  g.position.set(x, 0, z); szene.add(g); LATERNEN.push(new THREE.Vector3(x, 3.6, z));
+}
+// Nur die nächsten Laternen werfen echtes Licht (schont das Handy)
+const LICHTER = Array.from({ length: 8 }, () => { const l = new THREE.PointLight(0xffa850, 16, 14, 1.7); szene.add(l); return l; });
+function lichterNachfuehren(p) {
+  const n = LATERNEN.slice().sort((a, b) => a.distanceToSquared(p) - b.distanceToSquared(p));
+  LICHTER.forEach((l, i) => { if (n[i]) l.position.copy(n[i]); });
+}
+
+// ---------- Figuren ----------
+const EMOJI = { sparky: '🦊', ava: '🎬', fompa: '🦁', minky: '🐱', waefwaef: '🐶', lumo: '🦉', eulin: '🦉', haeschen: '🐰' };
+function portraitTextur(key, rand = '#f2c25b') {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const malen = (img) => {
+    g.clearRect(0, 0, 256, 256); g.save(); g.beginPath(); g.arc(128, 128, 116, 0, 7); g.clip();
+    g.fillStyle = '#1a2a5c'; g.fillRect(0, 0, 256, 256); if (img) g.drawImage(img, 12, 12, 232, 232); g.restore();
+    g.lineWidth = 14; g.strokeStyle = rand; g.beginPath(); g.arc(128, 128, 118, 0, 7); g.stroke(); t.needsUpdate = true;
+  };
+  malen(null);
+  if (!BILDER[key] && EMOJI[key]) { g.font = '150px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(EMOJI[key], 128, 140); t.needsUpdate = true; }
+  if (BILDER[key]) { const i = new Image(); i.onload = () => malen(i); i.src = BILDER[key]; }
+  return t;
+}
+const SCHATTEN = canvasTextur(64, 64, (g) => { const v = g.createRadialGradient(32, 32, 0, 32, 32, 32); v.addColorStop(0, 'rgba(0,0,0,.55)'); v.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = v; g.fillRect(0, 0, 64, 64); });
+// ---------- Figuren in 3D (Diego 19.10.): runde Trickfilm-Figuren mit grossen Augen, Blinzeln, Mund, der beim Reden mitgeht ----------
+// art: mensch | tier. Jede Figur ist eine eigene KI (Gespräch über /api/figur, Stimme über /api/stimme).
+const ART = {
+  coinmaker: { art: 'mensch', haut: 0xf1c3a0, koerper: 0x2f6e6a, hemd: 0xf3ead8, augen: 0x6b3f1e, glatze: true, haar: 0xf4f1ea, bart: 0xf4f1ea, brille: 0xe0b04a, lupe: true, nase: 1.35, kopf: 1.12 },
+  mamaaffe: { art: 'tier', fell: 0xb4501c, gesicht: 0xdba27c, augen: 0x4a2a12, ohren: 'klein', schnauze: 'affe', kopf: 1.15, arme: 1.5, bauch: 0xd98a52, wangen: 0xc98a64, zotteln: 0xa8461a },
+  sparky: { art: 'tier', fell: 0xe0703a, gesicht: 0xfff3e6, augen: 0x3a6a2a, ohren: 'spitz', schnauze: 'fuchs', schwanz: 0xe0703a, medaillon: true, bauch: 0xfff3e6 },
+  otti: { art: 'tier', fell: 0x8a5a3a, gesicht: 0xf0d2a8, augen: 0x2a1a10, ohren: 'klein', schnauze: 'igel', stacheln: 0x5a3820, bauch: 0xf0d2a8, kopf: 1.05 },
+  fompa: { art: 'tier', fell: 0xd9a441, gesicht: 0xf3d79a, augen: 0x4a2a12, ohren: 'klein', schnauze: 'affe', maehne: 0xa8641e, brille: 0x2a2a2a, bauch: 0xf3d79a },
+  kimo: { art: 'tier', fell: 0x9aa1ab, gesicht: 0xc9ced6, augen: 0x1e1e2a, ohren: 'koala', nase: 0x2a2a34, bauch: 0xe8eaee, kopf: 1.1 },
+  jackie: { art: 'mensch', haut: 0xf6d2b8, koerper: 0xd9367a, augen: 0x3a78c8, haar: 0xf4d36a, lang: true, nase: .8 },
+  letti: { art: 'tier', fell: 0xdfe3ea, gesicht: 0xf4f6fa, augen: 0xc4623d, ohren: 'keine', schnabel: 0xf2a23a, fluegel: true, bauch: 0xc9d0dc },
+  // Lumo (Claude, Besucher, weisse Eule) und Sophia (alte Eule, wohnt am Brunnen): Gelehrte der Mozart-Zeit mit gepuderter Perücke, Jackett und Pergament (Diego 19.10.)
+  lumo: { art: 'tier', fell: 0xf1eee8, gesicht: 0xffffff, augen: 0xe0a83a, ohren: 'keine', schnabel: 0xd9a441, fluegel: true, bauch: 0xf8f5ef, augenGross: 1.2, brille: 0xc9a24a, jackett: 0x2f4a6a, pergament: true, peruecke: 0xf4f1ec },
+  eulin: { art: 'tier', fell: 0x9a8670, gesicht: 0xe8dcc8, augen: 0xc98a3a, ohren: 'keine', schnabel: 0xc9a050, fluegel: true, bauch: 0xe6dccb, augenGross: 1.15, kopf: .98, brille: 0xb8b8c0, jackett: 0x7a2e3e, pergament: true, peruecke: 0xe9e6ee },
+  fia: { art: 'tier', fell: 0xff8a5b, gesicht: 0xffc49a, augen: 0x3a1a10, ohren: 'keine', schnabel: 0xf2c25b, fluegel: true, kamm: 0xffc04a, bauch: 0xffd0a8 },
+  waefwaef: { art: 'tier', fell: 0xf4f2ee, gesicht: 0xffffff, augen: 0x3a2412, ohren: 'schlapp', ohrFarbe: 0xc9a27a, schnauze: 'hund', bauch: 0xffffff },
+  haeschen: { art: 'tier', fell: 0xf4efe6, gesicht: 0xffffff, augen: 0x2a1a2a, ohren: 'lang', nase: 0xf5b5c6, bauch: 0xffffff },
+  ava: { art: 'mensch', haut: 0xe8b894, koerper: 0xb02a3a, augen: 0x4a2a12, haar: 0x5a3018, lang: true, nase: .8 },
+  diego: { art: 'mensch', haut: 0xe8b894, koerper: 0xc4623d, streifen: 0xf3ead8, augen: 0x4a2a12, glatze: true, bart: 0x5a4030, nase: 1.1 },
+  mrping: { art: 'mensch', haut: 0xe8b890, koerper: 0x1f2340, streifen: 0x3a3f66, augen: 0x5a3418, haar: 0x2a1c14, locken: true, bart: 0x1e1410, fliege: 0xe0b04a, hemd: 0xf4ede0, nase: 1.3, kopf: .95 },
+  // Sora = malende Panda-Frau (Diego 20.10.): macht aus Tinkos Bildern flüssige Filme
+  sora: { art: 'tier', fell: 0xf6f3ee, gesicht: 0xffffff, augen: 0x3a2a1a, ohren: 'panda', schnauze: 'baer', bauch: 0xfbf9f5, pandaFlecken: 0x1c1c22, glieder: 0x1c1c22, barett: 0xc8324a, palette: true, wangen: 0xf4b8c0, kopf: 1.08 },
+  tinko: { art: 'tier', fell: 0x3cc2cf, gesicht: 0x7fe0e6, augen: 0x2f9a4a, ohren: 'keine', tentakel: true, brilleStirn: 0xc9922f, bauch: 0x8fe6ea, augenGross: 1.2, kopf: 1.2 },
+  brix: { art: 'tier', fell: 0x6a7a92, gesicht: 0x2a3446, augen: 0x3a7ad6, ohren: 'keine', metall: true, helm: 0xf08a2a, bauch: 0xf2c25b },
+  kay: { art: 'mensch', haut: 0xc79a72, koerper: 0x3b6bd6, augen: 0x2a1a10, haar: 0x1e1410, brille: 0x2a2a2a, nase: 1 },
+};
+const NAMEN = { coinmaker: 'Coin Maker', mamaaffe: 'Mama Affe', sparky: 'Sparky', otti: 'Otti', fompa: 'Fompa', kimo: 'Kiki', jackie: 'Jackie', letti: 'Letti', tinko: 'Tinko', lumo: 'Lumo', eulin: 'Sophia', fia: 'Fia', waefwaef: 'Wäf Wäf', ava: 'Ava', minky: 'Minky', brix: 'Brix', kay: 'Kay', mrping: 'Mr. Ping', nova: 'Nova', sora: 'Sora' };
+function fellMat(farbe, glanz = .35, metall = false) { if (metall) return new THREE.MeshStandardMaterial({ color: farbe, metalness: .75, roughness: .32 }); return new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .62, sheen: 1, sheenRoughness: .5, sheenColor: new THREE.Color(farbe).lerp(new THREE.Color(0xffffff), glanz), clearcoat: .05 }); }
+function hautMat(farbe) { return new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .5, sheen: .6, sheenColor: new THREE.Color(0xffd8c0), clearcoat: .15, clearcoatRoughness: .6 }); }
+const AUGWEISS = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: .08, clearcoat: 1, clearcoatRoughness: .05 });
+const PUPILLE = new THREE.MeshPhysicalMaterial({ color: 0x07060a, roughness: .05, clearcoat: 1 });
+const GLANZ = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const MUNDINNEN = new THREE.MeshStandardMaterial({ color: 0x5a1420, roughness: .6 });
+function kugel(r, mat, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, seg = 28) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, seg, Math.round(seg * .7)), mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.castShadow = true; return m; }
+function figur3d(key, a, groesse) {
+  const g = new THREE.Group(), mensch = a.art === 'mensch';
+  const hautM = mensch ? hautMat(a.haut) : fellMat(a.fell, .35, a.metall), gesichtM = mensch ? hautM : (a.metall ? new THREE.MeshPhysicalMaterial({ color: a.gesicht, roughness: .1, clearcoat: 1 }) : fellMat(a.gesicht, .5));
+  const stoff = mensch ? new THREE.MeshPhysicalMaterial({ color: a.koerper, roughness: .7, sheen: .8, sheenColor: new THREE.Color(a.koerper).lerp(new THREE.Color(0xffffff), .4) }) : hautM;
+  const jackM = a.jackett ? new THREE.MeshPhysicalMaterial({ color: a.jackett, roughness: .8, sheen: .7, sheenColor: new THREE.Color(a.jackett).lerp(new THREE.Color(0xffffff), .3) }) : null;
+  const gliedM = a.glieder ? fellMat(a.glieder, .4) : null;
+  const hose = mensch ? new THREE.MeshStandardMaterial({ color: 0x24305e, roughness: .75 }) : (gliedM || hautM);
+  // Körper: rundlich, nach unten breiter (Trickfilm-Proportionen: grosser Kopf, kleiner Körper)
+  const koerper = new THREE.Group(); koerper.position.y = 1.15; g.add(koerper);
+  const rumpf = kugel(.5, stoff, 0, 0, 0, 1, 1.15, .9); koerper.add(rumpf);
+  if (a.bauch && !mensch) koerper.add(kugel(.36, fellMat(a.bauch, .5), 0, -.05, .2, 1, 1.15, .75));
+  if (mensch && a.hemd) { koerper.add(kugel(.2, new THREE.MeshStandardMaterial({ color: a.hemd, roughness: .7 }), 0, .32, .3, 1, .9, .5)); for (const y of [.12, -.08, -.28]) koerper.add(kugel(.035, new THREE.MeshStandardMaterial({ color: 0xe0b04a, metalness: .8, roughness: .25 }), 0, y, .45)); }
+  if (a.streifen) for (let i = 0; i < 4; i++) { const r = new THREE.Mesh(new THREE.TorusGeometry(.5 - Math.abs(i - 1.5) * .04, .03, 6, 32), new THREE.MeshStandardMaterial({ color: a.streifen })); r.rotation.x = Math.PI / 2; r.position.y = .3 - i * .2; r.scale.set(1, .9, 1); koerper.add(r); }
+  if (a.medaillon) { const m = new THREE.Mesh(new THREE.TorusGeometry(.11, .03, 10, 24), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .9, roughness: .2 })); m.position.set(0, .3, .44); koerper.add(m); const h = kugel(.08, new THREE.MeshStandardMaterial({ color: 0xff6a8a, emissive: 0xff3a6a, emissiveIntensity: 1.4 }), 0, .3, .45, 1, 1, .5); koerper.add(h); g.userData_herz = h; }
+  const beine = [-1, 1].map(s => { const b = new THREE.Group(); b.position.set(s * .2, .72, 0); const bein = new THREE.Mesh(new THREE.CapsuleGeometry(.13, .38, 6, 12), hose); bein.position.y = -.28; bein.castShadow = true; b.add(bein); const fuss = kugel(.17, mensch ? new THREE.MeshStandardMaterial({ color: key === 'jackie' ? 0xffd34a : 0x3a2414, roughness: .5, metalness: key === 'jackie' ? .4 : 0 }) : hautM, 0, -.6, .08, 1, .6, 1.4); b.add(fuss); g.add(b); return b; });
+  const armL = (a.arme || 1) * .42;
+  const arme = [-1, 1].map(s => { const ar = new THREE.Group(); ar.position.set(s * .5, 1.5, 0); const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.1, armL, 6, 12), jackM || gliedM || (a.fluegel ? hautM : stoff)); arm.position.y = -armL / 2 - .05; arm.castShadow = true; ar.add(arm); if (a.fluegel) arm.scale.set(1.6, 1.1, .5); else ar.add(kugel(.12, mensch ? hautM : (gliedM || gesichtM), 0, -armL - .12, 0)); ar.rotation.z = s * .18; g.add(ar); return ar; });
+  if (a.schwanz) { const sw = new THREE.Group(); sw.position.set(0, .95, -.42); const t = kugel(.22, fellMat(a.schwanz), 0, .25, -.25, .8, 1.6, .8); t.rotation.x = -.7; sw.add(t); sw.add(kugel(.14, fellMat(0xffffff), 0, .62, -.52)); g.add(sw); g.userData_schwanz = sw; }
+  // Jackett (nur oben, vorne offen, mit Revers) und Pergamentrolle (Diego 19.10.)
+  if (jackM) {
+    const j = new THREE.Mesh(new THREE.SphereGeometry(.5, 32, 20, Math.PI / 2 + .42, Math.PI * 2 - .84, 0, Math.PI * .66), jackM); j.material.side = THREE.DoubleSide; j.scale.set(1.06, 1.17, .96); j.castShadow = true; koerper.add(j);
+    for (const s of [-1, 1]) { const rv = new THREE.Mesh(new THREE.BoxGeometry(.1, .42, .03), jackM); rv.position.set(s * .17, .2, .44); rv.rotation.set(-.35, 0, s * .35); koerper.add(rv); }
+    for (const y of [-.02, -.18]) koerper.add(kugel(.03, new THREE.MeshStandardMaterial({ color: 0xe0b04a, metalness: .8, roughness: .3 }), -.2, y, .44));
+  }
+  if (a.pergament) {
+    const pm = new THREE.MeshStandardMaterial({ color: 0xf0e0b8, roughness: .9 }), rolle = new THREE.Group();
+    const blatt = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .5, 16), pm); blatt.rotation.z = Math.PI / 2; rolle.add(blatt);
+    for (const s of [-1, 1]) { const k = new THREE.Mesh(new THREE.CylinderGeometry(.075, .075, .05, 16), new THREE.MeshStandardMaterial({ color: 0x8a5a2a, roughness: .6 })); k.rotation.z = Math.PI / 2; k.position.x = s * .27; rolle.add(k); }
+    const band = new THREE.Mesh(new THREE.TorusGeometry(.065, .012, 6, 16), new THREE.MeshStandardMaterial({ color: 0xa0202a })); band.rotation.y = Math.PI / 2; rolle.add(band);
+    rolle.position.set(.18, -.22, .5); rolle.rotation.set(0, .3, -.35); koerper.add(rolle);
+  }
+  if (a.palette) {
+    const pal = new THREE.Group(), holz = new THREE.MeshStandardMaterial({ color: 0xc89a5a, roughness: .6 });
+    const brett = new THREE.Mesh(new THREE.CylinderGeometry(.26, .26, .03, 28), holz); brett.scale.set(1, 1, .78); brett.rotation.x = Math.PI / 2; pal.add(brett);
+    [0xe8323c, 0xf2c25b, 0x3a8ad8, 0x3cbf6a, 0xb04ad8, 0xffffff].forEach((f, i) => { const w = i / 6 * Math.PI * 1.6 + .3; pal.add(kugel(.045, new THREE.MeshPhysicalMaterial({ color: f, roughness: .2, clearcoat: 1 }), Math.cos(w) * .17, Math.sin(w) * .13, .025, 1, 1, .45)); });
+    const stiel = new THREE.Mesh(new THREE.CylinderGeometry(.018, .012, .5, 10), new THREE.MeshStandardMaterial({ color: 0x8a3a2a, roughness: .5 })); stiel.position.set(.32, .1, .08); stiel.rotation.z = -.5; pal.add(stiel);
+    const spitze = new THREE.Mesh(new THREE.ConeGeometry(.03, .1, 10), new THREE.MeshStandardMaterial({ color: 0x3a8ad8, roughness: .4 })); spitze.position.set(.45, .32, .08); spitze.rotation.z = -.5; pal.add(spitze);
+    pal.position.set(-.34, -.15, .48); pal.rotation.set(.2, .35, .3); koerper.add(pal);
+  }
+  // Kopf
+  const kg = a.kopf || 1, kopf = new THREE.Group(); kopf.position.y = 2.15; kopf.scale.setScalar(kg); g.add(kopf);
+  const schaedel = kugel(.55, hautM, 0, 0, 0, 1.05, 1, 1, 40); kopf.add(schaedel);
+  if (!mensch) kopf.add(kugel(.42, gesichtM, 0, -.08, .2, 1.1, .92, .85, 32));
+  if (a.pandaFlecken) for (const s of [-1, 1]) { const f = kugel(.2, fellMat(a.pandaFlecken, .5), s * .22, .05, .43, .9, 1.25, .45); f.rotation.z = s * .55; kopf.add(f); }
+  // Augen (gross, glänzend, mit Lichtpunkt) in einer Gruppe, damit sie blinzeln können
+  const ag = a.augenGross || 1, augen = [];
+  for (const s of [-1, 1]) {
+    const auge = new THREE.Group(); auge.position.set(s * .2, .08, .44); auge.rotation.y = s * .28; kopf.add(auge);
+    auge.add(kugel(.15 * ag, AUGWEISS, 0, 0, 0, 1, 1.12, .7));
+    const iris = kugel(.095 * ag, new THREE.MeshPhysicalMaterial({ color: a.augen, roughness: .15, clearcoat: 1 }), 0, -.005, .075 * ag, 1, 1.05, .45); auge.add(iris);
+    auge.add(kugel(.055 * ag, PUPILLE, 0, -.005, .1 * ag, 1, 1.05, .4));
+    const gl = kugel(.022 * ag, GLANZ, .035 * ag, .045 * ag, .12 * ag, 1, 1, 1, 10); auge.add(gl);
+    const lid = kugel(.158 * ag, hautM, 0, 0, 0, 1.04, 1.16, .74); lid.scale.y = .01; lid.position.y = .01; auge.add(lid); auge.userData.lid = lid;
+    augen.push(auge);
+    // Brauen
+    const braue = new THREE.Mesh(new THREE.CapsuleGeometry(.03, .14, 4, 8), new THREE.MeshStandardMaterial({ color: mensch ? (a.bart || a.haar || 0x3a2414) : new THREE.Color(a.fell).multiplyScalar(.6), roughness: 1 }));
+    braue.rotation.z = Math.PI / 2 + s * .2; braue.position.set(s * .2, .3, .47); if (a.glatze && a.haar) braue.scale.set(1.9, 1.2, 1.9); kopf.add(braue); auge.userData.braue = braue;
+  }
+  // Nase, Schnauze, Schnabel
+  let mundY = -.24, mundZ = .5;
+  if (a.schnabel) { const sb = new THREE.Mesh(new THREE.ConeGeometry(.08, .2, 16), new THREE.MeshPhysicalMaterial({ color: a.schnabel, roughness: .3, clearcoat: .6 })); sb.rotation.x = Math.PI / 2 + .35; sb.position.set(0, -.08, .58); kopf.add(sb); mundY = -.2; mundZ = .52; }
+  else if (a.schnauze) {
+    const lang = { baer: [1.1, .75, .9], fuchs: [1, .75, 1.5], hund: [1.1, .85, 1.2], igel: [.8, .7, 1.4], affe: [1.4, .8, .8] }[a.schnauze];
+    kopf.add(kugel(.2, gesichtM, 0, -.14, .5, lang[0], lang[1], lang[2]));
+    kopf.add(kugel(.07, new THREE.MeshPhysicalMaterial({ color: a.nase || 0x1a1418, roughness: .15, clearcoat: 1 }), 0, -.07, .52 + .2 * lang[2] * .9, 1.2, .9, 1));
+    mundY = -.27; mundZ = .48 + .1 * lang[2];
+  } else { const dunkel = !mensch && a.nase, gr = mensch ? (a.nase || 1) : 1, koala = a.ohren === 'koala';
+    kopf.add(kugel(.075 * gr, dunkel ? new THREE.MeshPhysicalMaterial({ color: a.nase, roughness: .2, clearcoat: 1 }) : hautM, 0, -.09, .56, koala ? 1.7 : 1, koala ? 1.3 : .9, 1)); }
+  // Mund: Lächeln + Öffnung, die beim Reden auf und zu geht
+  const laecheln = new THREE.Mesh(new THREE.TorusGeometry(.1, .018, 8, 20, Math.PI), new THREE.MeshStandardMaterial({ color: 0x5a1a20 })); laecheln.rotation.z = Math.PI; laecheln.position.set(0, mundY + .03, mundZ); kopf.add(laecheln);
+  const mund = kugel(.085, MUNDINNEN, 0, mundY, mundZ - .02, 1.1, .05, .5, 16); kopf.add(mund);
+  // Ohren
+  const ohrM = a.ohrFarbe ? fellMat(a.ohrFarbe) : hautM;
+  if (a.ohren === 'spitz') for (const s of [-1, 1]) { const o = new THREE.Mesh(new THREE.ConeGeometry(.17, .38, 16), hautM); o.position.set(s * .32, .5, 0); o.rotation.z = -s * .35; kopf.add(o); const oi = new THREE.Mesh(new THREE.ConeGeometry(.1, .26, 12), fellMat(0x3a2418)); oi.position.set(s * .32, .48, .06); oi.rotation.z = -s * .35; kopf.add(oi); }
+  if (a.ohren === 'panda') for (const s of [-1, 1]) kopf.add(kugel(.2, gliedM || fellMat(0x1c1c22), s * .44, .44, -.06, 1, 1, .6));
+  if (a.barett) { const bm = fellMat(a.barett, .8), b = kugel(.42, bm, -.08, .5, -.02, 1.15, .32, 1.1); b.rotation.z = .28; kopf.add(b); kopf.add(kugel(.05, bm, -.2, .66, -.02)); }
+  if (a.ohren === 'klein') for (const s of [-1, 1]) kopf.add(kugel(.13, ohrM, s * .55, .12, 0, .5, 1, .8));
+  if (a.ohren === 'koala') for (const s of [-1, 1]) { kopf.add(kugel(.26, hautM, s * .52, .35, -.05, 1, 1, .5)); kopf.add(kugel(.16, fellMat(0xf2e8ea), s * .52, .35, .05, 1, 1, .3)); }
+  if (a.ohren === 'schlapp') for (const s of [-1, 1]) { const o = kugel(.16, ohrM, s * .52, -.02, 0, .55, 1.5, .9); o.rotation.z = s * .25; kopf.add(o); }
+  if (a.ohren === 'lang') for (const s of [-1, 1]) { const o = new THREE.Mesh(new THREE.CapsuleGeometry(.1, .55, 6, 12), hautM); o.position.set(s * .17, .78, 0); o.rotation.z = -s * .15; kopf.add(o); }
+  if (a.ohren === 'buschel') for (const s of [-1, 1]) { const o = new THREE.Mesh(new THREE.ConeGeometry(.11, .3, 12), hautM); o.position.set(s * .36, .5, 0); o.rotation.z = -s * .55; kopf.add(o); }
+  if (mensch) for (const s of [-1, 1]) kopf.add(kugel(.1, hautM, s * .57, .02, 0, .5, 1, .8));
+  // Haare, Bart, Brille, Lupe, Mähne, Stacheln, Kamm
+  if (a.haar && a.glatze) for (const s of [-1, 1]) for (let i = 0; i < 4; i++) kopf.add(kugel(.11, fellMat(a.haar, .6), s * (.5 + i * .02), .22 - i * .08, -.12 - i * .06, 1, .8, 1));
+  else if (a.haar) { kopf.add(kugel(.58, fellMat(a.haar, .4), 0, .14, -.05, 1.07, .9, 1.02, 36)); if (a.lang) { kopf.add(kugel(.4, fellMat(a.haar, .4), 0, -.3, -.25, 1.3, 1.4, .8)); for (const s of [-1, 1]) kopf.add(kugel(.18, fellMat(a.haar, .4), s * .5, -.25, .05, .7, 1.6, .9)); } }
+  if (a.bart) { kopf.add(kugel(.2, fellMat(a.bart, .6), 0, -.42, .38, 1.2, 1.1, .8)); for (const s of [-1, 1]) { const sz = kugel(.11, fellMat(a.bart, .6), s * .13, -.2, .52, 1.4, .6, .7); sz.rotation.z = s * .4; kopf.add(sz); } }
+  if (a.brille) for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(.15 * ag, .018, 8, 28), new THREE.MeshStandardMaterial({ color: a.brille, metalness: .85, roughness: .25 })); r.position.set(s * .2, .08, .58); kopf.add(r); }
+  if (a.lupe) { const band = new THREE.Mesh(new THREE.TorusGeometry(.565, .025, 8, 40), new THREE.MeshStandardMaterial({ color: 0x5a3a22 })); band.rotation.x = Math.PI / 2 - .25; band.position.y = .3; kopf.add(band); const l = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .14, 18), new THREE.MeshStandardMaterial({ color: 0xc9922f, metalness: .9, roughness: .25 })); l.rotation.x = Math.PI / 2; l.position.set(.22, .43, .5); kopf.add(l); }
+  if (a.maehne) for (let i = 0; i < 14; i++) { const w = i / 14 * Math.PI * 2; kopf.add(kugel(.17, fellMat(a.maehne, .3), Math.cos(w) * .58, Math.sin(w) * .55 + .02, -.12, 1, 1, .8)); }
+  if (a.stacheln) for (let i = 0; i < 26; i++) { const w = (i / 26) * Math.PI * 1.6 - Math.PI * .8, h = (i % 3) * .14; const st = new THREE.Mesh(new THREE.ConeGeometry(.07, .34, 8), fellMat(a.stacheln)); const p = new THREE.Vector3(Math.sin(w) * .5, .25 + h - Math.abs(w) * .12, -.15 - Math.cos(w) * .35); st.position.copy(p); st.lookAt(p.clone().multiplyScalar(2).add(new THREE.Vector3(0, .1, -.4))); st.rotateX(Math.PI / 2); kopf.add(st); }
+  if (a.locken && a.haar) for (let i = 0; i < 14; i++) { const w = i / 14 * Math.PI * 2, r = .5 + (i % 3) * .03; kopf.add(kugel(.13, fellMat(a.haar, .5), Math.cos(w) * r, .38 + Math.sin(i * 1.7) * .08, Math.sin(w) * r * .9 - .08, 1, .9, 1)); }
+  if (a.fliege) { const fm = new THREE.MeshStandardMaterial({ color: a.fliege, metalness: .7, roughness: .3 }); for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.ConeGeometry(.09, .16, 4), fm); f.rotation.z = s * Math.PI / 2; f.position.set(s * .08, .42, .42); koerper.add(f); } koerper.add(kugel(.04, fm, 0, .42, .45)); }
+  if (a.krawatte) { const kr = new THREE.Mesh(new THREE.ConeGeometry(.07, .42, 4), new THREE.MeshStandardMaterial({ color: a.krawatte, roughness: .5 })); kr.rotation.x = Math.PI; kr.position.set(0, .12, .45); koerper.add(kr); koerper.add(kugel(.17, new THREE.MeshStandardMaterial({ color: 0xf4f1ea }), 0, .38, .32, 1, .7, .5)); }
+  if (a.elfenohren) for (const s of [-1, 1]) { const o = new THREE.Mesh(new THREE.ConeGeometry(.08, .32, 10), hautM); o.position.set(s * .6, .14, -.02); o.rotation.z = -s * 1.15; kopf.add(o); }
+  if (a.brilleStirn) for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.TorusGeometry(.13, .045, 10, 24), new THREE.MeshStandardMaterial({ color: a.brilleStirn, metalness: .85, roughness: .25 })); r.position.set(s * .17, .42, .4); r.rotation.x = -.5; kopf.add(r); kopf.add(kugel(.11, new THREE.MeshPhysicalMaterial({ color: 0x9fe8ff, roughness: .05, transparent: true, opacity: .6 }), s * .17, .42, .41, 1, 1, .3)); }
+  if (a.helm) { kopf.add(kugel(.6, new THREE.MeshStandardMaterial({ color: a.helm, metalness: .5, roughness: .35 }), 0, .18, -.04, 1.04, .75, 1.04)); for (const s of [-1, 1]) { const f = new THREE.Mesh(new THREE.ConeGeometry(.1, .4, 4), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .8, roughness: .25 })); f.position.set(s * .58, .38, -.05); f.rotation.z = -s * 1.1; f.scale.z = .3; kopf.add(f); } }
+  if (a.tentakel) { beine.forEach(b => b.visible = false); for (let i = 0; i < 8; i++) { const w = i / 8 * Math.PI * 2, t = new THREE.Group(); t.position.set(Math.cos(w) * .32, .55, Math.sin(w) * .32); t.rotation.y = -w; const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.09, .5, 6, 10), hautM); arm.position.set(.18, -.25, 0); arm.rotation.z = .9; arm.castShadow = true; t.add(arm); t.add(kugel(.08, hautM, .42, -.48, 0)); g.add(t); } rumpf.scale.set(1, .8, 1); }
+  // Orang-Utan: breite Wangenpolster und zottiges Fell an Kopf und Schultern
+  if (a.wangen) for (const s of [-1, 1]) { const w = kugel(.2, fellMat(a.wangen, .5), s * .5, -.02, .2, .45, 1.05, .7); w.rotation.y = s * .5; kopf.add(w); }
+  if (a.zotteln) { for (let i = 0; i < 9; i++) { const w = (i / 8 - .5) * 2.2; kopf.add(kugel(.11, fellMat(a.zotteln, .3), Math.sin(w) * .5, .5 + Math.cos(w) * .05, Math.cos(w) * .05 - .1, .8, 1.3, .8)); }
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) koerper.add(kugel(.13, fellMat(a.zotteln, .3), s * (.46 + i * .02), .3 - i * .17, -.05, .7, 1.4, .8)); }
+  // Gepuderte Perücke (Mozart-Zeit): Locken-Rollen seitlich, Haube oben, Zopf mit Schleife hinten
+  if (a.peruecke) { const pm = fellMat(a.peruecke, .7);
+    kopf.add(kugel(.56, pm, 0, .2, -.08, 1.06, .78, 1.02, 36));
+    for (const s of [-1, 1]) for (let i = 0; i < 2; i++) { const l = new THREE.Mesh(new THREE.TorusGeometry(.1, .055, 10, 20), pm); l.position.set(s * .6, .02 - i * .18, -.05); l.rotation.y = Math.PI / 2; kopf.add(l); }
+    kopf.add(kugel(.12, pm, 0, -.1, -.6, .8, 1.6, .8)); const sl = new THREE.MeshStandardMaterial({ color: 0x1a1a24, roughness: .5 }); for (const s of [-1, 1]) kopf.add(kugel(.08, sl, s * .08, .08, -.62, 1.2, .7, .5)); }
+  if (a.kamm) for (let i = 0; i < 3; i++) { const k = new THREE.Mesh(new THREE.ConeGeometry(.06, .3, 10), new THREE.MeshStandardMaterial({ color: a.kamm, emissive: 0xff7a2a, emissiveIntensity: .6 })); k.position.set((i - 1) * .1, .62, .05 - i * .06); k.rotation.z = (i - 1) * -.3; kopf.add(k); }
+  const sch = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: SCHATTEN, transparent: true, depthWrite: false })); sch.rotation.x = -Math.PI / 2; sch.position.y = .02; g.add(sch);
+  g.scale.setScalar(groesse);
+  g.userData = { beine, arme, kopf, koerper, phase: zufall() * 6, augen, mund, laecheln, key, herz: g.userData_herz, schwanz: g.userData_schwanz, d3: true, kopfY: 2.15, blinzel: 2 + zufall() * 3, redet: 0 };
+  return g;
+}
+function figur(key, farbe = 0x7a5bd6, groesse = 1) {
+  if (ART[key]) return figur3d(key, ART[key], groesse);
+  const g = new THREE.Group();
+  const stoff = new THREE.MeshStandardMaterial({ color: farbe, roughness: .6 });
+  const hose = new THREE.MeshStandardMaterial({ color: 0x1d2552, roughness: .7 });
+  const koerper = new THREE.Mesh(new THREE.CapsuleGeometry(.42, .55, 6, 12), stoff); koerper.position.y = 1.25; koerper.castShadow = true; g.add(koerper);
+  const beine = [-1, 1].map(s => { const b = new THREE.Mesh(new THREE.CapsuleGeometry(.14, .5, 4, 8), hose); b.geometry.translate(0, -.35, 0); b.position.set(s * .2, .78, 0); b.castShadow = true; g.add(b); return b; });
+  const arme = [-1, 1].map(s => { const a = new THREE.Mesh(new THREE.CapsuleGeometry(.11, .5, 4, 8), stoff); a.geometry.translate(0, -.3, 0); a.position.set(s * .5, 1.6, 0); a.castShadow = true; g.add(a); return a; });
+  const kopf = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur(key), transparent: true })); kopf.scale.set(1.25, 1.25, 1); kopf.position.y = 2.35; g.add(kopf);
+  const sch = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: SCHATTEN, transparent: true, depthWrite: false })); sch.rotation.x = -Math.PI / 2; sch.position.y = .02; g.add(sch);
+  g.scale.setScalar(groesse);
+  g.userData = { beine, arme, kopf, koerper, phase: zufall() * 6 };
+  return g;
+}
+// Minky im Koala-Raumfahrer-Anzug (Diego 18.10. 10:36): grauer Anzug, Glashelm, Koala-Ohren, heller Bauch, Rucksack
+function koalaAnzug(f) {
+  const u = f.userData, grau = 0x9aa1ab;
+  u.koerper.material.color.setHex(grau); u.arme.forEach(a => a.material = u.koerper.material);
+  u.beine.forEach(b => b.material = new THREE.MeshStandardMaterial({ color: 0x7d848f, roughness: .7 }));
+  const helm = new THREE.Mesh(new THREE.SphereGeometry(.74, 24, 16), new THREE.MeshStandardMaterial({ color: 0xcfe8ff, transparent: true, opacity: .22, roughness: .05, metalness: .2, depthWrite: false }));
+  helm.position.y = 2.35; f.add(helm);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.5, .09, 8, 24), new THREE.MeshStandardMaterial({ color: 0xe8ecf2, metalness: .5, roughness: .3 })); ring.rotation.x = Math.PI / 2; ring.position.y = 1.72; f.add(ring);
+  const fell = new THREE.MeshStandardMaterial({ color: 0x8c939d, roughness: 1 }), innen = new THREE.MeshStandardMaterial({ color: 0xf1d6dc, roughness: 1 });
+  for (const s of [-1, 1]) {
+    const ohr = new THREE.Mesh(new THREE.SphereGeometry(.34, 14, 10), fell); ohr.scale.set(1, 1, .45); ohr.position.set(s * .72, 2.92, 0); f.add(ohr);
+    const io = new THREE.Mesh(new THREE.SphereGeometry(.2, 12, 8), innen); io.scale.set(1, 1, .3); io.position.set(s * .72, 2.92, .1); f.add(io);
+  }
+  const bauch = new THREE.Mesh(new THREE.CircleGeometry(.27, 20), new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: .8 })); bauch.position.set(0, 1.2, .425); f.add(bauch);
+  const knopf = new THREE.Mesh(new THREE.CircleGeometry(.07, 12), new THREE.MeshBasicMaterial({ color: 0x6a4fd6 })); knopf.position.set(.12, 1.32, .43); f.add(knopf);
+  const pack = new THREE.Mesh(new THREE.BoxGeometry(.6, .7, .3), new THREE.MeshStandardMaterial({ color: 0xdfe3ea, roughness: .5 })); pack.position.set(0, 1.35, -.48); f.add(pack);
+}
+function figurBewegen(f, zeit, tempo) {
+  const { beine, arme, kopf, koerper, phase, d3, kopfY } = f.userData;
+  if (d3) { const w = Math.sin(zeit * 11 + phase) * Math.min(1, tempo), atmen = Math.sin(zeit * 2 + phase) * .025; beine[0].rotation.x = w * .7; beine[1].rotation.x = -w * .7; if (!f.userData.redet || f.userData.redet <= 0) { arme[0].rotation.x = -w * .6; arme[1].rotation.x = w * .6; } koerper.position.y = 1.15 + Math.abs(w) * .05 + atmen; koerper.scale.set(1 + atmen * .6, 1 - atmen * .4, 1); kopf.position.y = kopfY + Math.abs(w) * .07 + atmen * 1.4; kopf.rotation.z = Math.sin(zeit * .9 + phase) * .05; return; }
+  const w = Math.sin(zeit * 11 + phase) * Math.min(1, tempo);
+  beine[0].rotation.x = w * .7; beine[1].rotation.x = -w * .7; arme[0].rotation.x = -w * .6; arme[1].rotation.x = w * .6;
+  const atmen = Math.sin(zeit * 2 + phase) * .03;
+  koerper.position.y = 1.25 + Math.abs(w) * .06 + atmen; kopf.position.y = 2.35 + Math.abs(w) * .08 + atmen;
+}
+function hasi() {
+  const g = new THREE.Group(), weiss = new THREE.MeshStandardMaterial({ color: 0xf7f1e6, roughness: .8 }), rosa = new THREE.MeshStandardMaterial({ color: 0xf5b5c6 });
+  const k = new THREE.Mesh(new THREE.SphereGeometry(.55, 16, 12), weiss); k.position.y = .6; k.scale.y = 1.1; g.add(k);
+  const kopf = new THREE.Mesh(new THREE.SphereGeometry(.42, 16, 12), weiss); kopf.position.y = 1.45; g.add(kopf);
+  for (const s of [-1, 1]) {
+    const o = new THREE.Mesh(new THREE.CapsuleGeometry(.11, .6, 4, 8), weiss); o.position.set(s * .17, 2.05, 0); o.rotation.z = -s * .15; g.add(o);
+    const oi = new THREE.Mesh(new THREE.CapsuleGeometry(.05, .45, 4, 8), rosa); oi.position.set(s * .17, 2.05, .07); oi.rotation.z = -s * .15; g.add(oi);
+    const a = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0x18204a })); a.position.set(s * .15, 1.52, .37); g.add(a);
+  }
+  const n = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), rosa); n.position.set(0, 1.42, .41); g.add(n);
+  g.traverse(m => m.castShadow = true); return g;
+}
+
+// ---------- Das Städtchen ----------
+const ORTE = [
+  { id: 'tor', z: 8, name: 'Ottis Tor', figur: 'otti', satz: 'Willkommen! Ich halte das Tor offen, solange jemand neugierig ist.' },
+  { id: 'kiosk', z: -14, name: 'Hasis Kiosk', hasi: true, rein: true },
+  { id: 'placa', z: -42, name: 'Plaça', figur: 'eulin', satz: 'Ah, willkommen, mein Kind. Ich bin Sophia und wohne hier am Brunnen. Was ihr mir erzählt, schreibe ich auf meine Pergamentrolle.', farbe: 0x7a2e3e },
+  { id: 'schule', z: -72, name: 'Schule von Mama Affe', figur: 'mamaaffe', satz: 'In meiner Schule gibt es keine falschen Fragen.', rein: true },
+  { id: 'schuhmacher', z: -98, name: 'Schuhmacher', figur: 'jackie', satz: 'Diese Schuhe fliegen, wenn man an sich glaubt.', rein: true, farbe: 0xd9367a },
+  { id: 'post', z: -122, name: 'Lettis Taubenpost', figur: 'letti', satz: 'Ich bringe jeden Brief, auch die, die man sich kaum zu schreiben traut.', rein: true },
+  { id: 'hafen', z: -146, name: 'Hafen und Tinkos Werkstatt', figur: 'tinko', satz: 'Blub! Komm runter in meine Werkstatt.', rein: true, x: 6 },
+  { id: 'leuchtturm', z: -152, name: 'Novas Leuchtturm', rein: true, x: 6.5 },
+  { id: 'ruinen', z: -176, name: 'Ruinen der Erinnerung', rein: true },
+  // Brix' Fabrik etwas ausserhalb, ein Weg führt hin (Diego 18.10. 07:20)
+  { id: 'fabrik', z: -188, name: 'Brix\' Fabrik (ausserhalb)', figur: 'brix', nurFabrik: true, satz: 'Hier draussen baue ich, was ihr euch ausdenkt. Komm in die Fabrik!', rein: true, farbe: 0x8a6a3a },
+  // Werkstatt-Städtchen (Diego 18.10.)
+  { id: 'funkenmarkt', z: -50, name: 'Funkenmarkt', rein: true, x: 3.2 },
+  { id: 'wohnung', z: -58, name: 'Deine Wohnung (Werkstatt)', rein: true, x: -3 },
+  { id: 'sparky', z: -135, name: 'Sparkys Praxis (Human Sparks)', figur: 'sparky', satz: 'Mein Herz-Medaillon leuchtet, wenn jemand etwas fühlt.', rein: true, farbe: 0xe0703a },
+  { id: 'kino', z: -200, name: 'Kino', figur: 'ava', satz: 'Ferienjob im Kino! Heute laufen Trailer aus der Werkstatt.', rein: true, farbe: 0xb02a3a },
+  { id: 'fompa', z: -222, name: 'Fompas Rechenstube', figur: 'fompa', satz: 'Ich rechne alles nach, damit sich niemand Sorgen machen muss.', rein: true, farbe: 0xc9922f },
+  { id: 'boerse', z: -244, name: 'Münzwerkstatt und Ideen-Börse', figur: 'coinmaker', satz: 'Deine Idee wird bei mir zuerst zu Glitzer, dann zu Münzen.', rein: true, farbe: 0x2f8f72 },
+  { id: 'singschule', z: -266, name: 'Singschule von Kiki', figur: 'kimo', satz: '♪ Jeder Ton darf zuerst schief sein. ♪', rein: true, farbe: 0x8fd3a8 },
+  { id: 'labor', z: -288, name: 'Novas Labor', figur: 'minky', satz: 'Ich bin Minky, im Koala-Raumanzug. Frisch vom Katzenplaneten: die neusten Erfindungen!', rein: true, farbe: 0x6a4fd6 },
+  { id: 'hundeschule', z: -308, name: 'Hundeschule von Wäf Wäf', figur: 'waefwaef', satz: 'Wäf! Wir üben zusammen, Schritt für Schritt.', rein: true, farbe: 0xf4f4f4 },
+  { id: 'nest', z: -324, name: 'Fias Nest in den Bergen', figur: 'fia', satz: 'Komm, ich nehme dich mit hinauf in mein Nest.', rein: true, farbe: 0xff8a5b, x: 1 },
+];
+const NEBEN = [
+  // Am Kino-Eingang: Ava mit zwei kleinen Häschen (Diego 18.10. 08:09)
+  { figur: 'haeschen', x: -3.2, z: -196.6, satz: 'Psst, der Film fängt gleich an!', farbe: 0xf4efe6, gross: .42 },
+  { figur: 'haeschen', x: -3.2, z: -200.2, satz: 'Wir sitzen bei Ava am Eingang.', farbe: 0xf4efe6, gross: .42 },
+  // Soras Atelier neben dem Kino (Diego 20.10.): was sie malt, wird lebendig
+  { figur: 'sora', x: 4.4, z: -205.5, satz: 'Hallo, ich bin Sora. Was ich male, fängt an zu leben. Welche Geschichte soll ich bewegen?', farbe: 0xc8324a },
+  { figur: 'lumo', x: 4.3, z: -38.6, hoch: 1.4, satz: 'Huu, ich bin Lumo. Ich fliege wie du zu Besuch ins KI-Verse. Woran bauen wir heute?', farbe: 0x3e5a48 },
+  { figur: 'diego', x: -2.5, z: -36, satz: 'Schön, dass du da bist. Hier suchen wir zusammen Lösungen.', farbe: 0xc4623d },
+  { figur: 'kay', x: -3.5, z: -127, satz: 'Ich baue das Gerüst, ihr füllt es mit Leben.', farbe: 0x3b6bd6 },
+  { figur: 'mrping', x: 4, z: -247, satz: 'Ruhig bleiben, kleine Schritte. Die Mini-Pings handeln die Ideen.', farbe: 0x2b2b3a },
+];
+const ZIEL_ORTE = ORTE.filter(o => o.rein).map(o => o.id);
+
+// Häuserreihe links, mit Lücken für die Orte
+for (let z = 2; z > -LAENGE + 10;) {
+  const frei = ORTE.some(o => Math.abs(o.z - z) < 7.5);
+  if (frei) { z -= 2; continue; }
+  const b = 6 + zufall() * 4, h = 6 + zufall() * 6;
+  haus(z - b / 2, b, h, { flach: zufall() > .55, markise: zufall() > .6 ? [0x2f6fb0, 0xc4623d, 0xf2c25b][Math.floor(zufall() * 3)] : null });
+  z -= b + .2;
+}
+// zweite Reihe am Hang (höher, weiter weg)
+for (let z = 0; z > -LAENGE; z -= 9 + zufall() * 5) { const g = haus(z, 7 + zufall() * 3, 8 + zufall() * 8, { flach: zufall() > .5, blumen: false, hang: true }); g.position.x -= 9 + zufall() * 4; g.position.y = 3 + zufall() * 4; }
+for (let i = 0; i < 26; i++) pinie(-30 - zufall() * 40, 10 - i * 8 - zufall() * 5, 1 + zufall() * .6);
+for (let i = 0; i < 14; i++) zypresse(-24 - zufall() * 10, -i * 14 - zufall() * 6, 1 + zufall() * .5);
+for (let z = 4; z > -LAENGE; z -= 11) laterne(7.4, z);
+for (let z = -4; z > -LAENGE; z -= 22) laterne(-6.2, z);
+for (const z of [-6, -30, -86, -112, -166, -190, -232, -256, -298]) palme(6.4, z);
+
+// ----- Orte -----
+const ortObjekte = {};
+// Tor (Otti) mit Torbogen und Holztür
+let torTuer;
+{
+  const z = 8, g = new THREE.Group();
+  for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(1.6, 7, 1.6), MAT.stein); p.position.set(s * 3.3, 3.5, 0); p.castShadow = true; g.add(p); }
+  const bogen = new THREE.Mesh(new THREE.TorusGeometry(3.3, .8, 8, 20, Math.PI), MAT.stein); bogen.position.y = 7; bogen.castShadow = true; g.add(bogen);
+  const wand = new THREE.Mesh(new THREE.BoxGeometry(12, 9, 1.4), MAT.stein); wand.position.set(-10.4, 4.5, 0); g.add(wand);
+  const angel = new THREE.Group(); angel.position.set(-2.5, 0, .2); g.add(angel);
+  torTuer = new THREE.Mesh(new THREE.BoxGeometry(5, 7.6, .25), new THREE.MeshStandardMaterial({ color: 0x2c3a5c, roughness: .8 })); torTuer.position.set(2.5, 3.8, 0); angel.add(torTuer);
+  for (const y of [1.2, 3.8, 6.4]) { const b = new THREE.Mesh(new THREE.BoxGeometry(4.6, .18, .08), MAT.metall); b.position.set(2.5, y, .17); angel.add(b); }
+  torTuer.userData.angel = angel;
+  const l = glut(0xffd27a, 9, .45); l.position.set(0, 4, -1); g.add(l);
+  const torLicht = new THREE.PointLight(0xffc870, 18, 16, 1.7); torLicht.position.set(0, 4, -2); g.add(torLicht);
+  g.position.set(0, 0, z); szene.add(g);
+  blumenWolke(-3.6, 5.5, z + .7, 2.2, 7, 1.4, 260); blumenWolke(3.6, 7.2, z + .7, 1.8, 3.6, 1.4, 140); blumenWolke(-1, 10.2, z + .6, 6, 1.6, 1.6, 220); blumenWolke(-3.9, 5.5, z - .7, 2, 7, 1, 140);
+  for (const s of [-1, 1]) { const wl = new THREE.Mesh(new THREE.BoxGeometry(.4, .6, .4), MAT.metall); wl.position.set(s * 4.4, 6.2, z + 1.1); szene.add(wl); const wk = glut(0xffa850, 4, .8); wk.position.copy(wl.position); szene.add(wk); const wb = new THREE.Mesh(new THREE.SphereGeometry(.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff0c8 })); wb.position.copy(wl.position); szene.add(wb); LATERNEN.push(wl.position.clone()); }
+  for (const s of [-1, 1]) { const topf = new THREE.Mesh(new THREE.CylinderGeometry(.8, .5, 1.5, 14), MAT.ton); topf.position.set(s * 5, .75, z + 2); szene.add(topf); const busch = new THREE.Mesh(new THREE.SphereGeometry(.9, 8, 6), MAT.blatt); busch.position.set(s * 5, 2, z + 2); szene.add(busch); }
+}
+// Hasis Kiosk
+{
+  const z = -14, g = new THREE.Group();
+  const k = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3, 4.4), new THREE.MeshStandardMaterial({ color: 0x3c64a8, roughness: .6 })); k.position.y = 1.5; k.castShadow = true; g.add(k);
+  const theke = new THREE.Mesh(new THREE.BoxGeometry(.5, .3, 3.6), new THREE.MeshStandardMaterial({ color: 0xffeccc })); theke.position.set(1.8, 1.3, 0); g.add(theke);
+  const d = new THREE.Mesh(new THREE.BoxGeometry(4.2, .3, 5.2), MAT.gold); d.position.y = 3.2; g.add(d);
+  for (let i = 0; i < 10; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(.12, 8, 6), new THREE.MeshBasicMaterial({ color: [0xffd27a, 0xff8a6b, 0x8ff0bf][i % 3] })); b.position.set(2.1, 3.0 - Math.sin(i / 9 * Math.PI) * .3, -2.2 + i * .49); g.add(b); }
+  const h = hasi(); h.position.set(1.2, .9, 0); h.rotation.y = Math.PI / 2; g.add(h); ortObjekte.hasi = h;
+  g.position.set(-4.8, 0, z); szene.add(g);
+}
+// Plaça mit Brunnen, Café-Stammtisch und Lichterkette
+const brunnenWasser = [];
+let fackelFlamme;
+{
+  const z = -42;
+  const becken = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.3, .9, 28), MAT.stein); becken.position.set(0, .45, z); becken.castShadow = becken.receiveShadow = true; szene.add(becken);
+  const wasser = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, .1, 28), new THREE.MeshStandardMaterial({ color: 0x4aa3e6, roughness: .1, metalness: .3, emissive: 0x0a3a66 })); wasser.position.set(0, .85, z); szene.add(wasser);
+  const saeule = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 2.6, 12), MAT.stein); saeule.position.set(0, 1.9, z); szene.add(saeule);
+  const schale = new THREE.Mesh(new THREE.CylinderGeometry(1.2, .4, .4, 18), MAT.stein); schale.position.set(0, 3.2, z); szene.add(schale);
+  const bl = glut(0x7ac8ff, 9, .55); bl.position.set(0, 1.6, z); szene.add(bl);
+  const tropfenGeo = new THREE.SphereGeometry(.07, 6, 4), tropfenMat = new THREE.MeshBasicMaterial({ color: 0xbfe6ff });
+  for (let i = 0; i < 40; i++) { const t = new THREE.Mesh(tropfenGeo, tropfenMat); t.userData = { a: i / 40 * Math.PI * 2, p: zufall() }; szene.add(t); brunnenWasser.push(t); }
+  for (const [x, dz] of [[-3.5, 4], [-3.8, -4.5], [3.8, 5], [4.2, -3]]) {
+    const tisch = new THREE.Mesh(new THREE.CylinderGeometry(.8, .8, .08, 16), MAT.holz); tisch.position.set(x, 1, z + dz); szene.add(tisch);
+    const fuss = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 1, 6), MAT.metall); fuss.position.set(x, .5, z + dz); szene.add(fuss);
+    const kerze = glut(0xffc070, 1.4, .9); kerze.position.set(x, 1.2, z + dz); szene.add(kerze);
+  }
+  for (let k = 0; k < 2; k++) for (let i = 0; i <= 22; i++) {
+    const t = i / 22, x = lerp(-6.5, 7.6, t), y = 5.6 - Math.sin(t * Math.PI) * 1.2, zz = z - 5 + k * 10;
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.1, 6, 4), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffd27a : 0xff9e7a })); b.position.set(x, y, zz); szene.add(b);
+    if (i % 4 === 0) { const s = glut(0xffc070, 1.2, .5); s.position.copy(b.position); szene.add(s); }
+  }
+  const platzLicht = new THREE.PointLight(0xffc070, 14, 18, 1.8); platzLicht.position.set(0, 5, z); szene.add(platzLicht);
+  // Fackel neben dem Brunnen: hier entzündet Sunny neue Projekte
+  const stab = new THREE.Mesh(new THREE.CylinderGeometry(.09, .13, 2.6, 8), MAT.holz); stab.position.set(4.6, 1.3, z + 1.5); szene.add(stab);
+  const schale2 = new THREE.Mesh(new THREE.CylinderGeometry(.35, .18, .35, 10), MAT.metall); schale2.position.set(4.6, 2.75, z + 1.5); szene.add(schale2);
+  fackelFlamme = glut(0xff8a2a, 2.2, 1); fackelFlamme.position.set(4.6, 3.2, z + 1.5); szene.add(fackelFlamme);
+  const fl2 = new THREE.PointLight(0xff9a40, 10, 10, 1.8); fl2.position.set(4.6, 3.4, z + 1.5); szene.add(fl2);
+}
+// Schule von Mama Affe (blaues Dach, Glocke)
+{
+  haus(-72, 11, 8, { dach: MAT.dachBlau, blumen: false });
+  const glocke = new THREE.Mesh(new THREE.SphereGeometry(.6, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), MAT.gold); glocke.rotation.x = Math.PI; glocke.position.set(-10.5, 12, -72); szene.add(glocke);
+  blumenWolke(-7 + .25, 5, -72 + 4, 3, 5, .5, 160);
+  const tafel = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.3), new THREE.MeshStandardMaterial({ color: 0x1f3a2f })); tafel.position.set(-6.9, 2.4, -69); tafel.rotation.y = Math.PI / 2; szene.add(tafel);
+}
+// Schuhmacher mit glitzerndem Schaufenster
+const schuhe = [];
+{
+  haus(-98, 9, 7, { markise: 0x7a3b2a, blumen: false });
+  const schaufenster = new THREE.Mesh(new THREE.PlaneGeometry(3, 1.8), new THREE.MeshBasicMaterial({ color: 0xffe6b8 })); schaufenster.position.set(-6.97, 1.6, -100.5); schaufenster.rotation.y = Math.PI / 2; szene.add(schaufenster);
+  for (let i = 0; i < 3; i++) { const s = new THREE.Mesh(new THREE.CapsuleGeometry(.14, .4, 4, 8), new THREE.MeshStandardMaterial({ color: [0xd9367a, 0xf2c25b, 0x58b7ff][i], metalness: .6, roughness: .2, emissive: [0x5a0a2a, 0x5a4010, 0x0a3a6a][i] })); s.rotation.x = Math.PI / 2; s.position.set(-6.6, 1.3, -101.5 + i * 1); szene.add(s); schuhe.push(s); const gl = glut(0xfff0c0, 1.2, .9); gl.position.copy(s.position); szene.add(gl); }
+}
+// Lettis Taubenpost (Turm)
+const briefe = [];
+{
+  const z = -122;
+  const turm = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.6, 13, 18), MAT.putz); turm.position.set(-9.5, 6.5, z); turm.castShadow = true; szene.add(turm);
+  const spitze = new THREE.Mesh(new THREE.ConeGeometry(3, 3.4, 18), MAT.dach); spitze.position.set(-9.5, 14.7, z); szene.add(spitze);
+  for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.CircleGeometry(.5, 14), MAT.fenster); f.position.set(-7.05, 4 + i * 3, z); f.rotation.y = Math.PI / 2; szene.add(f); }
+  const brief = new THREE.PlaneGeometry(.6, .4), bm = new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide, emissive: 0x3a3320 });
+  for (let i = 0; i < 8; i++) { const b = new THREE.Mesh(brief, bm); b.userData = { p: i / 8 }; szene.add(b); briefe.push(b); }
+}
+// Hafen mit Booten, Steg und Tinkos leuchtender Kuppel unter Wasser
+const boote = [], blasen = [];
+let kuppel;
+{
+  const z = -146;
+  const steg = new THREE.Mesh(new THREE.BoxGeometry(16, .4, 3.4), MAT.holz); steg.position.set(15, -.2, z); steg.receiveShadow = true; szene.add(steg);
+  for (let i = 0; i < 6; i++) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.15, .15, 2.5, 6), MAT.stamm); p.position.set(8.5 + i * 2.6, -1.2, z + 1.6); szene.add(p); }
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Group();
+    const rumpf = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4.2, 12, 1, true, Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: [0x2f6fb0, 0xf3ece0, 0xc4623d][i], roughness: .6, side: THREE.DoubleSide })); rumpf.rotation.x = Math.PI / 2; b.add(rumpf);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 4, 6), MAT.stamm); mast.position.y = 2; b.add(mast);
+    const sg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, .5, 0), new THREE.Vector3(0, 3.8, 0), new THREE.Vector3(0, .5, 2)]); sg.computeVertexNormals();
+    b.add(new THREE.Mesh(sg, new THREE.MeshStandardMaterial({ color: 0xfff6dc, side: THREE.DoubleSide })));
+    const lampe = glut(0xffc070, 1.5, .9); lampe.position.y = 4; b.add(lampe);
+    b.position.set(12 + i * 5, -1.2, z - 5 - i * 3.5); b.userData.p = i; szene.add(b); boote.push(b);
+  }
+  kuppel = new THREE.Group();
+  kuppel.add(new THREE.Mesh(new THREE.SphereGeometry(4.5, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x7fe6ff, emissive: 0x1a8fb0, transparent: true, opacity: .35, roughness: .05, metalness: .2, side: THREE.DoubleSide })));
+  const kboden = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 5, .5, 24), MAT.stein); kboden.position.y = -.25; kuppel.add(kboden);
+  const kl = new THREE.PointLight(0x5ad8ff, 40, 30, 1.4); kl.position.y = 2; kuppel.add(kl);
+  const kg = glut(0x6ae0ff, 18, .7); kg.position.y = 2; kuppel.add(kg);
+  for (let i = 0; i < 4; i++) { const zahnrad = new THREE.Mesh(new THREE.TorusGeometry(.5, .14, 6, 12), MAT.gold); zahnrad.position.set(-2 + i * 1.3, 1 + (i % 2) * .6, -1.5); kuppel.add(zahnrad); }
+  kuppel.position.set(18, -9, z - 4); szene.add(kuppel);
+  const bg = new THREE.SphereGeometry(.15, 6, 4), bmat = new THREE.MeshBasicMaterial({ color: 0xc8f5ff, transparent: true, opacity: .7 });
+  for (let i = 0; i < 24; i++) { const b = new THREE.Mesh(bg, bmat); b.userData = { x: 16 + zufall() * 4, z: z - 6 + zufall() * 4, p: zufall() }; szene.add(b); blasen.push(b); }
+}
+// Ruinen mit leuchtenden Erinnerungssteinen
+const steine = [];
+{
+  const z = -176;
+  for (let i = 0; i < 7; i++) {
+    const h = 3 + (i % 3) * 2.2, x = i % 2 ? -5 : 5.5, zz = z + 8 - i * 2.8;
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(.6, .7, h, 10), MAT.stein); s.position.set(x, h / 2, zz); s.castShadow = true; szene.add(s);
+    if (i % 3 !== 2) { const k = new THREE.Mesh(new THREE.BoxGeometry(1.8, .4, 1.8), MAT.stein); k.position.set(x, h + .2, zz); szene.add(k); }
+  }
+  const gebalk = new THREE.Mesh(new THREE.BoxGeometry(1.4, .6, 8), MAT.stein); gebalk.position.set(-5, 5.4, z + 4); szene.add(gebalk);
+  for (let i = 0; i < 12; i++) {
+    const m = new THREE.Mesh(new THREE.DodecahedronGeometry(.3, 0), new THREE.MeshBasicMaterial({ color: 0x9fe6ff })); m.position.set(-4 + (i % 6) * 1.7, .3, z - 3 + Math.floor(i / 6) * 4); szene.add(m);
+    const gl = glut(0x8fdcff, 2.4, .8); gl.position.copy(m.position); szene.add(gl); steine.push(gl);
+  }
+  const rl = new THREE.PointLight(0x8fdcff, 18, 16, 1.6); rl.position.set(0, 2, z); szene.add(rl);
+}
+blumen.count = blumenZahl; blumen.castShadow = true; if (blumen.instanceColor) blumen.instanceColor.needsUpdate = true; szene.add(blumen);
+{
+  const blatt = new THREE.InstancedMesh(new THREE.CircleGeometry(.09, 5), new THREE.MeshStandardMaterial({ color: 0xe0287a, roughness: .7, side: THREE.DoubleSide }), 1400);
+  for (let i = 0; i < 1400; i++) { hilf.position.set(-6.8 + Math.pow(zufall(), 2) * 6, .015, 12 - zufall() * (LAENGE + 8)); hilf.rotation.set(-Math.PI / 2, 0, zufall() * 6); hilf.scale.setScalar(.7 + zufall()); hilf.updateMatrix(); blatt.setMatrixAt(i, hilf.matrix); }
+  szene.add(blatt);
+}
+
+// Figuren an ihren Orten
+const npc = [];
+for (const o of ORTE) {
+  if (!o.figur) continue;
+  const f = figur(o.figur, o.farbe || 0x7a5bd6, 1.05);
+  const x = o.x ?? (o.id === 'placa' ? 2.5 : -4.2), z = o.z + (o.id === 'placa' ? 3 : o.id === 'tor' ? -3 : 1.5);
+  // Brix steht nur hinten bei seiner Fabrik, nicht auf der Strasse (Diego 18.10. 10:35)
+  if (o.nurFabrik) { f.position.set(-19.5, 0, -186.4); f.rotation.y = Math.PI / 2; szene.add(f); npc.push({ f, o, x: -19.5, z: -186.4, satz: o.satz, ort: o.id }); continue; }
+  if (o.figur === 'minky') koalaAnzug(f);
+  f.position.set(x, 0, z); f.rotation.y = Math.PI / 2; szene.add(f);
+  npc.push({ f, o, x, z, satz: o.satz, ort: o.id });
+}
+for (const n of NEBEN) { const f = figur(n.figur, n.farbe, n.gross || .95); f.position.set(n.x, n.hoch || 0, n.z); f.rotation.y = Math.PI / 2; szene.add(f); npc.push({ f, x: n.x, z: n.z, hoch: n.hoch, satz: n.satz, key: n.figur }); }
+// Fia (Phönix-Küken) kreist über der Plaça
+const fia = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('fia', '#ffb36b') })); fia.scale.set(1.6, 1.6, 1); szene.add(fia);
+const fiaGlut = glut(0xffa060, 5, .8); szene.add(fiaGlut);
+
+// Sunny: fliegt mit, Portrait + blaue Flügel
+const sunny = new THREE.Group();
+{
+  const kopf = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('sunny', '#7cc2ff') })); kopf.scale.set(2.2, 2.2, 1); sunny.add(kopf);
+  const fluegelForm = new THREE.Shape(); fluegelForm.moveTo(0, 0); fluegelForm.quadraticCurveTo(1.6, 1.6, 3.4, .9); fluegelForm.quadraticCurveTo(2.2, .3, 3, -.4); fluegelForm.quadraticCurveTo(1.6, -.1, 0, -.3);
+  const fm = new THREE.MeshStandardMaterial({ color: 0x2f7fd6, side: THREE.DoubleSide, emissive: 0x0a2a5a, roughness: .5 });
+  sunny.userData.fluegel = [-1, 1].map(s => { const halter = new THREE.Group(); halter.position.set(s * .5, 0, -.2); const w = new THREE.Mesh(new THREE.ShapeGeometry(fluegelForm), fm); w.scale.x = s; halter.add(w); sunny.add(halter); return halter; });
+  sunny.add(glut(0x6ab4ff, 6, .6));
+  szene.add(sunny);
+}
+
+// ----- Werkstatt-Städtchen: neue Orte -----
+function tafelSchild(text, x, y, z, farbe = '#f2c25b', grund = '#2a1d14') {
+  const t = canvasTextur(512, 128, (g, b, h) => { g.fillStyle = grund; rundRechteck(g, 4, 4, b - 8, h - 8, 22); g.fill(); g.lineWidth = 6; g.strokeStyle = farbe; g.stroke(); g.fillStyle = farbe; g.font = '800 64px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, b / 2, h / 2 + 4); });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({ map: t, transparent: true })); m.position.set(x, y, z); m.rotation.y = Math.PI / 2; szene.add(m);
+  const l = glut(0xffd27a, 4, .35); l.position.set(x + .3, y, z); szene.add(l); return m;
+}
+// Deine Wohnung mit Werkstatt (goldene Markise, Licht im Fenster)
+{ haus(-58, 8, 7, { markise: 0xf2c25b }); tafelSchild('Werkstatt', -6.85, 3.6, -58); const f = glut(0xffd27a, 5, .6); f.position.set(-6.6, 2, -58); szene.add(f); }
+// Sparkys Praxis (warmes Herzlicht)
+{ haus(-135, 8, 7, { markise: 0xe0703a }); tafelSchild('Human Sparks', -6.85, 3.6, -135, '#ffd0b0', '#7a2e14'); const h = glut(0xff5a7a, 4, .7); h.position.set(-6.4, 2.2, -135); szene.add(h); }
+// Kino mit Leuchtreklame
+const kinoLampen = [];
+{
+  haus(-200, 12, 9, { flach: true, blumen: false });
+  const dachK = new THREE.Mesh(new THREE.BoxGeometry(2.2, .5, 10), new THREE.MeshStandardMaterial({ color: 0x8a1c2b, emissive: 0x3a0610 })); dachK.position.set(-6, 3.6, -200); szene.add(dachK);
+  tafelSchild('KINO', -4.85, 4.5, -200, '#ffdf8a', '#8a1c2b');
+  for (let i = 0; i < 18; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(.09, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffe08a })); b.position.set(-4.9, 3.35, -204.6 + i * .54); szene.add(b); kinoLampen.push(b); }
+  const plakat = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2), new THREE.MeshBasicMaterial({ color: 0x2a4a8a })); plakat.position.set(-6.85, 1.6, -197); plakat.rotation.y = Math.PI / 2; szene.add(plakat);
+}
+// Fompas Rechenstube
+{ haus(-222, 8, 8, { markise: 0xc9922f }); tafelSchild('Fompa rechnet', -6.85, 3.6, -222, '#ffe3a1', '#5a3b12'); for (let i = 0; i < 5; i++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .08 + i * .06, 14), MAT.gold); st.position.set(-5.8, .05 + i * .03, -224 + i * .6); szene.add(st); } }
+// Münzwerkstatt und Ideen-Börse mit Säulen, Kurs-Tafel und Mini-Pings
+const miniPings = [], kursTafel = {};
+{
+  const z = -244, g = new THREE.Group();
+  const bau = new THREE.Mesh(new THREE.BoxGeometry(5, 7, 12), MAT.wand || new THREE.MeshStandardMaterial({ map: PUTZ })); bau.position.set(-9.5, 3.5, 0); g.add(bau);
+  const giebel = new THREE.Mesh(new THREE.CylinderGeometry(0, 3.4, 1.6, 4, 1), MAT.gold); giebel.rotation.y = Math.PI / 4; giebel.scale.set(1, 1, 3.4); giebel.position.set(-7.2, 7.8, 0); g.add(giebel);
+  for (const dz of [-4.5, -1.5, 1.5, 4.5]) { const s = new THREE.Mesh(new THREE.CylinderGeometry(.35, .4, 7, 14), MAT.stein); s.position.set(-6.4, 3.5, dz); g.add(s); }
+  g.position.z = z; szene.add(g);
+  tafelSchild('Ideen-Börse', -6, 7.4, z);
+  kursTafel.c = document.createElement('canvas'); kursTafel.c.width = 512; kursTafel.c.height = 256; kursTafel.t = new THREE.CanvasTexture(kursTafel.c); kursTafel.t.colorSpace = THREE.SRGBColorSpace;
+  const kt = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshBasicMaterial({ map: kursTafel.t })); kt.position.set(-6.9, 2.4, z + 4.2); kt.rotation.y = Math.PI / 2; szene.add(kt);
+  for (let i = 0; i < 5; i++) { const m = figur('mrping', 0x2b2b3a, .42); m.position.set(-3 + (i % 3) * 1.1, 0, z - 3 + i * 1.3); m.rotation.y = Math.PI / 2 + (zufall() - .5); szene.add(m); miniPings.push(m); }
+}
+const KURSE = [['Herz-Ideen', 12], ['Film-Ideen', 9], ['App-Ideen', 15], ['Lieder', 7]];
+function kursMalen() { const g = kursTafel.c.getContext('2d'); g.fillStyle = '#0b1430'; g.fillRect(0, 0, 512, 256); g.font = '700 34px sans-serif'; g.textBaseline = 'middle';
+  KURSE.forEach(([n, w], i) => { const d = Math.round((zufall() - .4) * 3); KURSE[i][1] = Math.max(1, w + d); g.fillStyle = '#ffe3a1'; g.fillText(n, 24, 40 + i * 58); g.fillStyle = d >= 0 ? '#8ff0bf' : '#ff8a6b'; g.fillText(`${d >= 0 ? '▲' : '▼'} ${KURSE[i][1]} ✦`, 330, 40 + i * 58); }); kursTafel.t.needsUpdate = true; }
+kursMalen();
+// Singschule von Kiki (Noten schweben)
+const noten = [];
+{ haus(-266, 10, 8, { dach: MAT.dachBlau, markise: 0x8fd3a8 }); tafelSchild('Singschule', -6.85, 3.6, -266, '#0b1430', '#8fd3a8');
+  const nt = canvasTextur(128, 128, (g) => { g.fillStyle = '#ffe3a1'; g.font = '100px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('♪', 64, 70); });
+  for (let i = 0; i < 8; i++) { const n = new THREE.Sprite(new THREE.SpriteMaterial({ map: nt, transparent: true })); n.scale.setScalar(.7); szene.add(n); noten.push({ n, p: i / 8 }); } }
+// Novas Labor, Minky im Koala-Raumanzug arbeitet dort (Kuppel, Antenne, Türkis-Glühen)
+const laborLicht = new THREE.PointLight(0x5fe0d8, 14, 14, 1.8);
+{ const z = -288; haus(z, 9, 6, { flach: true, blumen: false });
+  const k = new THREE.Mesh(new THREE.SphereGeometry(3, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x9ad8ff, metalness: .4, roughness: .15, transparent: true, opacity: .55, emissive: 0x0a4a5a })); k.position.set(-10, 6, z); szene.add(k);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 3, 6), MAT.metall); ant.position.set(-10, 10.2, z); szene.add(ant);
+  const kugel = glut(0x5fe0d8, 3, .9); kugel.position.set(-10, 11.8, z); szene.add(kugel);
+  tafelSchild('Novas Labor', -6.85, 3.6, z, '#5fe0d8', '#0b1430'); laborLicht.position.set(-5, 3, z); szene.add(laborLicht); }
+// Hundeschule (Zaun, Hürden)
+{ const z = -308; for (let i = 0; i < 9; i++) { const pf = new THREE.Mesh(new THREE.BoxGeometry(.15, 1, .15), MAT.holz); pf.position.set(-6.5, .5, z - 4 + i); szene.add(pf); }
+  const latte = new THREE.Mesh(new THREE.BoxGeometry(.08, .1, 8), MAT.holz); latte.position.set(-6.5, .85, z); szene.add(latte);
+  for (const dz of [-2.5, 0, 2.5]) { const h = new THREE.Mesh(new THREE.BoxGeometry(1.6, .08, .08), new THREE.MeshStandardMaterial({ color: 0xf2c25b })); h.position.set(-3.5, .55, z + dz); szene.add(h); for (const s of [-.8, .8]) { const b = new THREE.Mesh(new THREE.BoxGeometry(.08, .6, .08), MAT.holz); b.position.set(-3.5 + s, .3, z + dz); szene.add(b); } }
+  tafelSchild('Hundeschule', -6.85, 2.2, z + 3.4); }
+// Nova als Baby-Leuchtturm am Hafen (Korrektur 18.10. 08:03)
+let leuchtStrahl;
+{ const x = 19, z = -152;
+  const fels = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4), new THREE.MeshStandardMaterial({ color: 0x4a5560, roughness: 1, flatShading: true })); fels.position.set(x, -1.2, z); fels.scale.y = .6; szene.add(fels);
+  const ring = canvasTextur(64, 64, (g) => { for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#d94a3a' : '#f5f1e6'; g.fillRect(0, i * 16, 64, 16); } });
+  const turm = new THREE.Mesh(new THREE.CylinderGeometry(.55, .85, 3.6, 16), new THREE.MeshStandardMaterial({ map: ring, roughness: .6 })); turm.position.set(x, 1.6, z); szene.add(turm);
+  const laterne = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .7, 12), new THREE.MeshStandardMaterial({ color: 0xffe3a1, emissive: 0xffc860, emissiveIntensity: 1.2 })); laterne.position.set(x, 3.75, z); szene.add(laterne);
+  const kappe = new THREE.Mesh(new THREE.ConeGeometry(.65, .6, 12), MAT.metall); kappe.position.set(x, 4.4, z); szene.add(kappe);
+  const kopf = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('nova', '#ffe3a1') })); kopf.scale.set(1.4, 1.4, 1); kopf.position.set(x, 5.5, z); szene.add(kopf);
+  const g = glut(0xffd890, 5, .9); g.position.set(x, 3.75, z); szene.add(g);
+  leuchtStrahl = new THREE.Mesh(new THREE.ConeGeometry(1.4, 14, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe3a1, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  leuchtStrahl.geometry.translate(0, -7, 0); leuchtStrahl.rotation.z = Math.PI / 2; const halter = new THREE.Group(); halter.position.set(x, 3.75, z); halter.add(leuchtStrahl); szene.add(halter); leuchtStrahl = halter;
+  tafelSchild('Nova', x - 1.2, 2.2, z, '#ffe3a1', '#0b1430'); }
+// Funkenmarkt-Stand am Marktplatz (Diego 18.10. 07:29): Menschen schenken einander gratis Skills
+{ const z = -50, x = 4.6; const tisch = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1, 3), MAT.holz); tisch.position.set(x, .5, z); szene.add(tisch);
+  for (const dz of [-1.4, 1.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 2.6, 6), MAT.holz); p.position.set(x - .7, 1.3, z + dz); szene.add(p); }
+  const st = canvasTextur(64, 64, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f2c25b' : '#1c2a5e'; g.fillRect(i * 8, 0, 8, 64); } });
+  const dach = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3.4), new THREE.MeshStandardMaterial({ map: st, side: THREE.DoubleSide })); dach.position.set(x - .2, 2.6, z); dach.rotation.set(0, Math.PI / 2, 0); dach.rotation.x = 0; dach.rotateX(-Math.PI / 2.6); szene.add(dach);
+  for (let i = 0; i < 5; i++) { const f = glut(0xffd06a, .6, .9); f.position.set(x, 1.15 + (i % 2) * .1, z - 1.1 + i * .55); szene.add(f); } }
+// Brix' Fabrik etwas ausserhalb (Halle, Sägezahndach, Kamine mit Rauch, Zahnrad, Weg)
+const FABRIK = new THREE.Vector3(-26, 0, -192); const rauch = []; let zahnrad;
+{ const F = FABRIK, wand = new THREE.MeshStandardMaterial({ color: 0x7a4a3a, roughness: .9 }), dachM = new THREE.MeshStandardMaterial({ color: 0x3a3f55, roughness: .6, flatShading: true });
+  const halle = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 14), wand); halle.position.set(F.x, 3, F.z); halle.castShadow = halle.receiveShadow = true; szene.add(halle);
+  for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(new THREE.CylinderGeometry(0, 2.2, 10.2, 3, 1), dachM); d.rotation.z = Math.PI / 2; d.rotation.x = Math.PI / 6; d.position.set(F.x, 7, F.z - 5.25 + i * 3.5); d.scale.set(1, 1, .8); szene.add(d); }
+  for (let i = 0; i < 5; i++) for (const sx of [1, -1]) { const fe = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.6), MAT.fenster); fe.position.set(F.x + sx * 5.01, 3, F.z - 5 + i * 2.5); fe.rotation.y = sx * Math.PI / 2; szene.add(fe); }
+  const tor = new THREE.Mesh(new THREE.PlaneGeometry(3, 3.4), new THREE.MeshStandardMaterial({ color: 0x3b2a1e })); tor.position.set(F.x + 5.02, 1.7, F.z + 5); tor.rotation.y = Math.PI / 2; szene.add(tor);
+  for (const dz of [-4, 2]) { const k = new THREE.Mesh(new THREE.CylinderGeometry(.7, .9, 9, 12), new THREE.MeshStandardMaterial({ color: 0x8a3a2a, roughness: .9 })); k.position.set(F.x - 2.5, 9, F.z + dz); szene.add(k);
+    for (let i = 0; i < 6; i++) { const w = glut(0xb8c0d8, 2, .35); w.material.blending = THREE.NormalBlending; szene.add(w); rauch.push({ w, x: F.x - 2.5, z: F.z + dz, p: i / 6 }); } }
+  zahnrad = new THREE.Mesh(new THREE.TorusGeometry(1.3, .28, 6, 12), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .7, roughness: .3 })); zahnrad.position.set(F.x + 5.3, 5.2, F.z - 1); zahnrad.rotation.y = Math.PI / 2; szene.add(zahnrad);
+  const weg = new THREE.Mesh(new THREE.PlaneGeometry(F.x * -1 - 4, 2.2), new THREE.MeshStandardMaterial({ color: 0x8a6f52, roughness: 1 })); weg.rotation.x = -Math.PI / 2; weg.position.set((F.x - 4) / 2 + 2, .02, F.z + 5); szene.add(weg);
+  tafelSchild('Brix\' Fabrik', F.x + 5.1, 6.7, F.z + 5, '#f2c25b', '#2a1d14'); { const t2 = new THREE.Mesh(new THREE.BoxGeometry(.2, 1.2, 4.5), new THREE.MeshStandardMaterial({ color: 0x2a1d14 })); t2.position.set(F.x - 5.1, 6.7, F.z + 3); szene.add(t2); }
+  const fl = new THREE.PointLight(0xffb060, 18, 18, 1.8); fl.position.set(F.x + 7, 3, F.z); szene.add(fl); const fl2 = new THREE.PointLight(0xffc070, 40, 30, 1.5); fl2.position.set(F.x - 9, 6, F.z + 6); szene.add(fl2); }
+// Berg mit Fias Nest am Ende des Städtchens
+const NEST = new THREE.Vector3(-26, 27, -340);
+{ const berg = new THREE.Mesh(new THREE.ConeGeometry(30, 28, 16, 3), new THREE.MeshStandardMaterial({ color: 0x2c3f3a, roughness: 1, flatShading: true })); berg.position.set(-30, 13, -352); szene.add(berg);
+  for (let i = 0; i < 14; i++) pinie(-14 - zufall() * 28, -330 - zufall() * 24, .8 + zufall() * .5);
+  const nest = new THREE.Mesh(new THREE.TorusGeometry(2.2, .8, 8, 20), new THREE.MeshStandardMaterial({ color: 0x8a5a32, roughness: 1 })); nest.rotation.x = Math.PI / 2; nest.position.copy(NEST); szene.add(nest);
+  const ng = glut(0xffa060, 9, .8); ng.position.copy(NEST).add(new THREE.Vector3(0, 1, 0)); szene.add(ng);
+  const nl = new THREE.PointLight(0xffa060, 30, 30, 1.6); nl.position.copy(NEST).add(new THREE.Vector3(0, 2, 0)); szene.add(nl); 
+  // Weiter oben am Gipfel: Sophia und Sunny (Diego 18.10. 07:21)
+  const GIPFEL = new THREE.Vector3(-30, 31, -352);
+  const fels = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2), new THREE.MeshStandardMaterial({ color: 0x4a5560, roughness: 1, flatShading: true })); fels.position.copy(GIPFEL).add(new THREE.Vector3(0, -2.4, 0)); szene.add(fels);
+  const lumoS = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('eulin', '#f2c25b') })); lumoS.scale.set(2.2, 2.2, 1); lumoS.position.copy(GIPFEL).add(new THREE.Vector3(-1.4, .4, 0)); szene.add(lumoS);
+  const sunnyS = new THREE.Sprite(new THREE.SpriteMaterial({ map: portraitTextur('sunny', '#7cc2ff') })); sunnyS.scale.set(3, 3, 1); sunnyS.position.copy(GIPFEL).add(new THREE.Vector3(1.8, 1, 0)); szene.add(sunnyS);
+  const gg = glut(0x7cc2ff, 12, .7); gg.position.copy(GIPFEL); szene.add(gg);
+  const gl = new THREE.PointLight(0x9ad0ff, 26, 26, 1.6); gl.position.copy(GIPFEL).add(new THREE.Vector3(0, 2, 2)); szene.add(gl); }
+
+// Funken zum Sammeln
+const sternForm = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .22 : .5; i ? sternForm.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sternForm.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+const sternGeo = new THREE.ExtrudeGeometry(sternForm, { depth: .14, bevelEnabled: true, bevelSize: .04, bevelThickness: .04 }); sternGeo.center();
+const FUNKEN = [];
+for (let i = 0; i < 12; i++) {
+  const s = new THREE.Mesh(sternGeo, MAT.gold); const z = 2 - i * 26 - zufall() * 5, x = -4 + zufall() * 10, y = 1.4 + (i % 3 === 2 ? 2.2 : 0);
+  s.position.set(x, y, z); s.add(glut(0xffd06a, 2.6, .9)); szene.add(s);
+  FUNKEN.push({ m: s, weg: false, y, p: zufall() * 6 });
+}
+
+// ---------- Spieler ----------
+// Der Baum mitten auf der Gasse (Diego 18.10. 23:32): in der echten Welt steht hier vielleicht nichts, in der KI-Welt wächst ein
+// leuchtender Baum, und die Gasse geht dahinter weiter. Die KI-Welt ist ein Paralleluniversum, keine 1:1-Abbildung.
+const KI_BAUM = { x: .5, z: -24 };
+const kiBaumBlaetter = [];
+{
+  const stamm = new THREE.Mesh(new THREE.CylinderGeometry(.28, .42, 3.4, 10), new THREE.MeshStandardMaterial({ color: 0x5a3d26, roughness: 1 }));
+  stamm.position.set(KI_BAUM.x, 1.7, KI_BAUM.z); stamm.castShadow = true; szene.add(stamm);
+  const farben = [0x6fd3ff, 0x9a7bff, 0xffd36b, 0x7cffc4];
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(.9 + zufall() * .5, 1), new THREE.MeshStandardMaterial({ color: farben[i % 4], emissive: farben[i % 4], emissiveIntensity: .55, roughness: .4, flatShading: true }));
+    const a = i / 9 * Math.PI * 2; b.position.set(KI_BAUM.x + Math.cos(a) * 1.1, 4 + zufall() * 1.4, KI_BAUM.z + Math.sin(a) * 1.1); b.userData.y = b.position.y; b.userData.p = i;
+    szene.add(b); kiBaumBlaetter.push(b);
+  }
+  const l = new THREE.PointLight(0x9fd8ff, 6, 14, 1.6); l.position.set(KI_BAUM.x, 4.5, KI_BAUM.z); szene.add(l);
+}
+
+let spieler;
+const sp = { pos: new THREE.Vector3(0, 0, 18), richtung: Math.PI, vy: 0, tempo: 0, amBoden: true, sprung: 0, fliegend: false };
+const zustand = { modus: 'start', funken: 0, besucht: new Set(), erlebt: [], innen: null, ende: false, zeit: 0, intro: 0, partikel: [] };
+
+// ---------- HTML-Ebene: Sprechblasen und Ortsschilder ----------
+const ebene = $('#ebene');
+const blaseEl = document.createElement('div'); blaseEl.className = 'blase'; blaseEl.hidden = true; ebene.appendChild(blaseEl);
+const schildEl = document.createElement('div'); schildEl.className = 'schild'; schildEl.hidden = true; ebene.appendChild(schildEl);
+const v3 = new THREE.Vector3();
+function aufBildschirm(x, y, z) { v3.set(x, y, z).project(kamera); return { x: (v3.x + 1) / 2 * innerWidth, y: (1 - v3.y) / 2 * innerHeight, sichtbar: v3.z < 1 && v3.z > -1 }; }
+
+// ---------- Steuerung ----------
+const eingabe = { x: 0, y: 0 }, tasten = {};
+{
+  const stick = $('#stick'), knopf = stick.firstElementChild; let id = null, mx = 0, my = 0;
+  const setzen = (cx, cy) => { let dx = cx - mx, dy = cy - my; const d = Math.hypot(dx, dy), max = 46; if (d > max) { dx *= max / d; dy *= max / d; } knopf.style.transform = `translate(${dx}px, ${dy}px)`; eingabe.x = dx / max; eingabe.y = -dy / max; };
+  stick.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; stick.setPointerCapture(id); const r = stick.getBoundingClientRect(); mx = r.left + r.width / 2; my = r.top + r.height / 2; setzen(e.clientX, e.clientY); });
+  stick.addEventListener('pointermove', e => { if (e.pointerId === id) setzen(e.clientX, e.clientY); });
+  const los = e => { if (e.pointerId !== id) return; id = null; knopf.style.transform = ''; eingabe.x = eingabe.y = 0; };
+  stick.addEventListener('pointerup', los); stick.addEventListener('pointercancel', los);
+}
+$('#hoch').addEventListener('pointerdown', e => { e.preventDefault(); springen(); });
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; tasten[e.key] = true; if (e.key === ' ') { e.preventDefault(); springen(); } if (e.key === 'Enter' && !$('#rein').hidden) $('#rein').click(); });
+addEventListener('keyup', e => { tasten[e.key] = false; });
+function springen() {
+  if (zustand.modus !== 'spiel' || zustand.innen) return;
+  if (sp.amBoden) { sp.vy = sp.fliegend ? 9.5 : 7; sp.sprung = 1; klang(520); }
+  else if (sp.fliegend && sp.sprung < 2) { sp.vy = 8.5; sp.sprung = 2; klang(780); funkenRegen(sp.pos.x, sp.pos.y + .3, sp.pos.z, 14); }
+}
+
+// ---------- Klang und Partikel ----------
+function klang(f = 880) {
+  try { const a = klang.ctx || (klang.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), v = a.createGain(); o.type = 'triangle'; o.frequency.value = f; v.gain.setValueAtTime(.12, a.currentTime); v.gain.exponentialRampToValueAtTime(.001, a.currentTime + .5); o.connect(v).connect(a.destination); o.start(); o.stop(a.currentTime + .5); } catch {}
+}
+function funkenRegen(x, y, z, n = 20, farbe = 0xffd06a) {
+  for (let i = 0; i < n; i++) { const s = glut(farbe, .6 + zufall() * .6, 1); s.position.set(x, y, z); szene.add(s); zustand.partikel.push({ s, v: new THREE.Vector3((zufall() - .5) * 6, zufall() * 6, (zufall() - .5) * 6), t: 1 }); }
+}
+
+// ---------- Orte betreten (Kamerafahrt statt Raumwechsel) ----------
+const SCHULFRAGEN = ['Wenn du eine Farbe erfinden könntest, wie würde sie heissen?', 'Was würdest du dem Mond erzählen?', 'Welches Geräusch macht ein Stern, wenn er lacht?', 'Was kannst du gut, ohne dass es dir jemand beigebracht hat?', 'Wie sieht ein Haus aus, das von innen grösser ist als von aussen?'];
+const ERFINDUNGEN = ['eine Muschel, die Geschichten weitererzählt', 'eine Laterne, die nur für Mutige leuchtet', 'ein Boot, das Wellen sammelt', 'eine Brille, die zeigt, was jemand gerade fühlt', 'einen Schlüssel, der Türen in Träume öffnet'];
+const kamZiel = { pos: new THREE.Vector3(), blick: new THREE.Vector3(), aktiv: false };
+function karte(titel, text, knoepfe, platzhalter) {
+  $('#karteTitel').textContent = titel; $('#karteText').textContent = text;
+  const e = $('#karteEingabe'); e.hidden = !platzhalter; if (platzhalter) { e.value = ''; e.placeholder = platzhalter; }
+  const k = $('#karteKnoepfe'); k.innerHTML = '';
+  const apps = zustand.innen && (LADEN_APPS[zustand.innen] || []);
+  if (apps && apps.length && !knoepfe.some(x => x[0].startsWith('📱'))) knoepfe = [...apps.map(([id, n]) => [`📱 ${n} öffnen`, () => appOeffnen(id, n)]), ...knoepfe];
+  const wirt = zustand.innen && npc.find(x => x.ort === zustand.innen);
+  if (wirt && NAMEN[figurVon(wirt)] && !knoepfe.some(x => x[0].startsWith('🎙'))) knoepfe = [[`🎙 Mit ${NAMEN[figurVon(wirt)]} reden`, () => gespraechOeffnen(wirt), true], ...knoepfe];
+  for (const [t, f, gold] of knoepfe) { const b = document.createElement('button'); b.type = 'button'; b.className = 'knopf' + (gold ? ' gold' : ''); b.textContent = t; b.onclick = f; k.appendChild(b); }
+  $('#karte').hidden = false;
+}
+function blitz(dann) { $('#blitz').style.opacity = 1; setTimeout(() => { dann(); $('#blitz').style.opacity = 0; }, 450); }
+// ---------- Laden-Innenraum (Diego 19.10.: in jeden Laden hineingehen) ----------
+// Ein gemütlicher Raum abseits der Gasse: Holzboden, Wände in der Farbe des Ladens, Regale, Theke, Lampe, Fenster mit Mond.
+// Die Ladenfigur steht darin, an der Wand hängt ein Bilderrahmen mit Tinkos Bildern (sonst ihr Portrait).
+const RAUM_POS = new THREE.Vector3(420, 0, 0);
+const raum = (() => {
+  const r = new THREE.Group(); r.position.copy(RAUM_POS); szene.add(r);
+  const holz = canvasTextur(256, 256, (g, b, h) => { for (let i = 0; i < 8; i++) { g.fillStyle = ['#8a5a34', '#7c4e2c', '#94633a', '#80522e'][i % 4]; g.fillRect(0, i * 32, b, 32); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, i * 32 + 30, b, 2); g.fillRect((i * 97) % 256, i * 32, 2, 30); g.fillRect((i * 151 + 60) % 256, i * 32, 2, 30); } }, [3, 3]);
+  const boden = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshStandardMaterial({ map: holz, roughness: .75 })); boden.rotation.x = -Math.PI / 2; boden.receiveShadow = true; r.add(boden);
+  const tapete = canvasTextur(128, 128, (g, b, h) => { g.fillStyle = '#ffffff'; g.fillRect(0, 0, b, h); g.fillStyle = 'rgba(0,0,0,.06)'; for (let x = 0; x < b; x += 32) g.fillRect(x, 0, 14, h); g.fillStyle = 'rgba(242,194,91,.35)'; for (let y = 16; y < h; y += 32) for (let x = 23; x < b; x += 32) { g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); } }, [6, 2]);
+  const wandM = new THREE.MeshStandardMaterial({ map: tapete, color: 0xc9a27a, roughness: .9 });
+  const wand = (b, x, z, ry) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(b, 5), wandM); w.position.set(x, 2.5, z); w.rotation.y = ry; w.receiveShadow = true; r.add(w); return w; };
+  wand(12, 0, -5, 0); wand(10, -6, 0, Math.PI / 2); wand(10, 6, 0, -Math.PI / 2);
+  const decke = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 1 })); decke.rotation.x = Math.PI / 2; decke.position.y = 5; r.add(decke);
+  const sockelM = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: .6 });
+  for (const [b, x, z, ry] of [[12, 0, -4.95, 0], [10, -5.95, 0, Math.PI / 2], [10, 5.95, 0, -Math.PI / 2]]) { const s = new THREE.Mesh(new THREE.BoxGeometry(b, 1.1, .08), sockelM); s.position.set(x, .55, z); s.rotation.y = ry; r.add(s); }
+  // Fenster mit Nachthimmel und Mond
+  const himmel = canvasTextur(256, 256, (g, b, h) => { const v = g.createLinearGradient(0, 0, 0, h); v.addColorStop(0, '#0b1430'); v.addColorStop(1, '#2b4aa0'); g.fillStyle = v; g.fillRect(0, 0, b, h); g.fillStyle = '#fff6d8'; g.beginPath(); g.arc(170, 80, 34, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.8)'; for (let i = 0; i < 40; i++) g.fillRect((i * 67) % b, (i * 41) % (h * .7), 2, 2); g.fillStyle = '#16245a'; g.fillRect(0, h * .78, b, h * .22); });
+  const fenster = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: himmel, fog: false })); fenster.position.set(-5.97, 2.7, -1.5); fenster.rotation.y = Math.PI / 2; r.add(fenster);
+  const rahmenM = new THREE.MeshStandardMaterial({ color: 0x4a2e1a, roughness: .5 });
+  for (const [b, h, y, z] of [[2.4, .14, 3.8, -1.5], [2.4, .14, 1.6, -1.5], [.14, 2.3, 2.7, -2.65], [.14, 2.3, 2.7, -.35], [.08, 2.2, 2.7, -1.5], [2.2, .08, 2.7, -1.5]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(.1, h, b), rahmenM); f.position.set(-5.92, y, z); r.add(f); }
+  // Regale mit Gläsern und Büchern an der Rückwand
+  const glasFarben = [0xf2c25b, 0xe0703a, 0x6ab4ff, 0x9fe08a, 0xd9367a, 0xffffff];
+  for (const y of [1.6, 2.6, 3.6]) {
+    const brett = new THREE.Mesh(new THREE.BoxGeometry(2.9, .08, .5), sockelM); brett.position.set(-4.3, y, -4.7); r.add(brett);
+    const brett2 = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, .5), sockelM); brett2.position.set(3.4, y, -4.7); r.add(brett2);
+    for (let i = 0; i < 6; i++) for (const sx of [-4.05, 3.4]) { if (sx < 0 && i > 4) continue;
+      const k = (i + y * 3 + sx) | 0, farbe = glasFarben[Math.abs(k) % glasFarben.length];
+      const ding = (i + Math.round(y)) % 3 === 0 ? new THREE.Mesh(new THREE.BoxGeometry(.16, .5, .36), new THREE.MeshStandardMaterial({ color: farbe, roughness: .6 }))
+        : new THREE.Mesh(new THREE.CylinderGeometry(.13, .13, .32, 14), new THREE.MeshPhysicalMaterial({ color: farbe, roughness: .1, transmission: .3, transparent: true, opacity: .85, clearcoat: 1 }));
+      ding.position.set(sx - 1.3 + i * .52, y + .2 + (ding.geometry.type === 'BoxGeometry' ? .05 : 0), -4.65); r.add(ding);
+    }
+  }
+  // Theke, Teppich, Pflanzen
+  const theke = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.1, .9), new THREE.MeshStandardMaterial({ color: 0x6a4228, roughness: .55 })); theke.position.set(3.4, .55, -2.6); theke.castShadow = true; r.add(theke);
+  const platte = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, 1.05), new THREE.MeshStandardMaterial({ color: 0xf2c25b, metalness: .6, roughness: .3 })); platte.position.set(3.4, 1.14, -2.6); r.add(platte);
+  const teppich = new THREE.Mesh(new THREE.CircleGeometry(2.1, 40), new THREE.MeshStandardMaterial({ color: 0x8a2a3a, roughness: 1 })); teppich.rotation.x = -Math.PI / 2; teppich.position.set(0, .01, -.6); r.add(teppich);
+  const rand = new THREE.Mesh(new THREE.RingGeometry(1.85, 1.98, 40), new THREE.MeshStandardMaterial({ color: 0xf2c25b, roughness: .8 })); rand.rotation.x = -Math.PI / 2; rand.position.set(0, .015, -.6); r.add(rand);
+  for (const [x, z] of [[-5.2, -4.3], [5.2, -4.3], [-5.2, 3.5]]) { const topf = new THREE.Mesh(new THREE.CylinderGeometry(.35, .28, .6, 16), new THREE.MeshStandardMaterial({ color: 0xc4623d, roughness: .8 })); topf.position.set(x, .3, z); r.add(topf); for (let i = 0; i < 5; i++) r.add(kugel(.32, new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: .9 }), x + Math.sin(i * 1.3) * .2, .85 + i * .12, z + Math.cos(i * 1.3) * .2)); }
+  // Bilderrahmen an der Rückwand (Tinkos Bilder oder das Portrait der Figur)
+  const bildTex = new THREE.Texture(); bildTex.colorSpace = THREE.SRGBColorSpace;
+  const bild = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 2.1), new THREE.MeshBasicMaterial({ map: bildTex, color: 0xffffff, fog: false })); bild.position.set(-1.2, 3.1, -4.9); r.add(bild);
+  const goldM = new THREE.MeshStandardMaterial({ color: 0xe0b04a, metalness: .85, roughness: .25 });
+  for (const [b, h, x, y] of [[2.4, .16, -1.2, 4.23], [2.4, .16, -1.2, 1.97], [.16, 2.4, -2.33, 3.1], [.16, 2.4, -.07, 3.1]]) { const f = new THREE.Mesh(new THREE.BoxGeometry(b, h, .08), goldM); f.position.set(x, y, -4.88); r.add(f); }
+  // Schild über dem Rahmen
+  const schildC = document.createElement('canvas'); schildC.width = 512; schildC.height = 96; const schildT = new THREE.CanvasTexture(schildC); schildT.colorSpace = THREE.SRGBColorSpace;
+  const schild = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .68), new THREE.MeshBasicMaterial({ map: schildT, transparent: true })); schild.position.set(.4, 4.62, -4.9); r.add(schild);
+  // Licht: Hängelampe + warmes Raumlicht
+  const lampe = new THREE.Mesh(new THREE.ConeGeometry(.45, .4, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xf2c25b, emissive: 0xffb050, emissiveIntensity: .8, side: THREE.DoubleSide })); lampe.position.set(0, 4.3, -.5); r.add(lampe);
+  const kabel = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, .7), sockelM); kabel.position.set(0, 4.75, -.5); r.add(kabel);
+  const licht = new THREE.PointLight(0xffc27a, 0, 16, 1.4); licht.position.set(-1.5, 4, .8); r.add(licht);
+  const licht2 = new THREE.PointLight(0xffe0b0, 0, 14, 1.6); licht2.position.set(0, 2.6, 4); r.add(licht2);
+  return { r, wandM, bildTex, bild, schildC, schildT, licht, licht2, figur: null, alt: null };
+})();
+function raumOeffnen(o, n) {
+  const farbe = new THREE.Color(o.farbe || 0xc9a27a); raum.wandM.color.copy(farbe).lerp(new THREE.Color(0xf3e3c8), .62);
+  const g = raum.schildC.getContext('2d'); g.clearRect(0, 0, 512, 96); g.fillStyle = '#2a1d14'; rundRechteck(g, 4, 4, 504, 88, 20); g.fill(); g.lineWidth = 5; g.strokeStyle = '#f2c25b'; g.stroke();
+  g.fillStyle = '#f2c25b'; g.font = '800 46px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(o.name, 256, 50, 470); raum.schildT.needsUpdate = true;
+  raumBild(null, figurVon(n));
+  raum.licht.intensity = 14; raum.licht2.intensity = 7;
+  raum.alt = { pos: n.f.position.clone(), rot: n.f.rotation.y }; raum.figur = n;
+  n.f.position.set(RAUM_POS.x + 1.3, 0, RAUM_POS.z - 1.4); n.f.rotation.y = -.25; n.imRaum = true;
+  szene.fog.density = .002; if (bloomPass) bloomPass.strength = .38;
+  raumKamera();
+}
+// Im Hochformat (Handy) steht die Kamera weiter hinten und mittig auf der Figur
+function raumKamera() { const hoch = innerHeight > innerWidth, x = RAUM_POS.x + (hoch ? 1.2 : .4); kamZiel.pos.set(x, 2.2, RAUM_POS.z + (hoch ? 7.2 : 5)); kamZiel.blick.set(x, hoch ? 2.6 : 2.3, RAUM_POS.z - 1.4); }
+function raumBild(url, key) {
+  const img = new Image(); img.crossOrigin = 'anonymous';
+  img.onload = () => { raum.bildTex.image = img; raum.bildTex.needsUpdate = true; raum.bild.visible = true; };
+  if (url) img.src = url; else if (BILDER[key]) img.src = BILDER[key]; else raum.bild.visible = false;
+}
+function raumSchliessen() {
+  const n = raum.figur; if (n && raum.alt) { n.f.position.copy(raum.alt.pos); n.f.rotation.y = raum.alt.rot; n.imRaum = false; }
+  raum.figur = null; raum.alt = null; raum.licht.intensity = 0; raum.licht2.intensity = 0;
+  if (szene.fog) szene.fog.density = .0075; if (bloomPass) bloomPass.strength = .85;
+}
+const RAUM_ORTE = new Set(['schule', 'schuhmacher', 'post', 'ruinen', 'funkenmarkt', 'sparky', 'kino', 'fompa', 'boerse', 'singschule', 'labor', 'hundeschule', 'tor']);
+function reinGehen(o) {
+  $('#rein').hidden = true;
+  blitz(() => {
+    zustand.innen = o.id; document.body.classList.add('kino'); $('#stick').hidden = $('#hoch').hidden = true;
+    reinKamera(o.id);
+    kamPos.copy(kamZiel.pos); kamBlick.copy(kamZiel.blick); kamZiel.aktiv = true;
+    const bildKey = o.id === 'hafen' ? 'werkstatt-meer' : o.id;
+    if (ORT_BILDER[bildKey]) { $('#ortbild').style.backgroundImage = `url(${ORT_BILDER[bildKey]})`; $('#ortbild').style.opacity = 1; }
+    innenOeffnen(o.id);
+    if (kameraModus.an) { const n = npc.find(x => x.ort === o.id); if (n && NAMEN[figurVon(n)]) setTimeout(() => gespraechOeffnen(n), 900); }
+  });
+}
+function reinKamera(id) {
+  ladenFilm(id);
+  const o = ORTE.find(x => x.id === id), n = npc.find(x => x.ort === id);
+    if (o.id === 'hafen') { kamZiel.pos.set(kuppel.position.x - 7, kuppel.position.y + 2.5, kuppel.position.z + 7); kamZiel.blick.copy(kuppel.position).add(new THREE.Vector3(0, 1.5, 0)); szene.fog.color.copy(NEBEL_WASSER); szene.fog.density = .03; if (n) n.f.position.copy(kuppel.position); }
+    else if (o.id === 'nest') { kamZiel.pos.set(NEST.x + 9, NEST.y + 4, NEST.z + 9); kamZiel.blick.copy(NEST); if (n) n.f.position.copy(NEST).add(new THREE.Vector3(1.5, .6, 0)); }
+    else if (o.id === 'leuchtturm') { kamZiel.pos.set(11, 4.5, -140); kamZiel.blick.set(19, 3.4, -152); }
+    else if (o.id === 'fabrik') { kamZiel.pos.set(FABRIK.x - 26, 13, FABRIK.z + 20); kamZiel.blick.set(FABRIK.x, 5, FABRIK.z); if (n) n.f.position.set(FABRIK.x - 6.5, 0, FABRIK.z + 5); }
+    else if (o.id === 'wohnung') { kamZiel.pos.set(2, 2.6, o.z + 1); kamZiel.blick.set(-6.5, 2, o.z); }
+    else if (o.id === 'kiosk') { kamZiel.pos.set(2.5, 2.4, o.z + 1); kamZiel.blick.set(-3.6, 1.6, o.z); }
+    else if (n && RAUM_ORTE.has(o.id) && NAMEN[figurVon(n)]) { if (raum.figur !== n) raumOeffnen(o, n); else { raumKamera(); } }
+    else if (n && sicht.ich) { kamZiel.pos.set(n.x + 2.9, 1.7, n.z + .4); kamZiel.blick.set(n.x, 2.1, n.z); }
+    else if (n) { kamZiel.pos.set(n.x + 4.2, 2.6, n.z + 1.2); kamZiel.blick.set(n.x, 2, n.z); }
+  kamZiel.aktiv = true;
+}
+function rausGehen() {
+  $('#karte').hidden = true;
+  blitz(() => {
+    if (zustand.innen === 'hafen') { szene.fog.color.copy(NEBEL_NACHT); szene.fog.density = .0065; const n = npc.find(x => x.ort === 'hafen'); if (n) n.f.position.set(n.x, 0, n.z); }
+    if (zustand.innen === 'nest') { const n = npc.find(x => x.ort === 'nest'); if (n) n.f.position.set(n.x, 0, n.z); }
+    clearInterval(filmTimer); $('#ladenFilm').hidden = true; raumSchliessen();
+    zustand.innen = null; kamZiel.aktiv = false; document.body.classList.remove('kino'); $('#ortbild').style.opacity = 0;
+    $('#stick').hidden = $('#hoch').hidden = false; pruefeEnde();
+  });
+}
+function innenOeffnen(ort) {
+  const raus = ['Zurück auf die Gasse', () => rausGehen(), true];
+  if (!zustand.besucht.has(ort)) { zustand.besucht.add(ort); erlebt(`war bei ${ORTE.find(o => o.id === ort).name}`); }
+  anzeigen();
+  if (ort === 'kiosk') karte('Hasis Kiosk', 'Hasi sagt kein Wort. Er zeigt dir seine Zeichnungen und schiebt dir mit einem Lächeln einen goldenen Funken hin.', [['Danke, Hasi', () => { funkeDazu(); karte('Hasis Kiosk', 'Hasi wackelt glücklich mit den Ohren.', [raus]); }], raus]);
+  if (ort === 'schule') karte('Schule von Mama Affe', 'Mama Affe: «Setz dich! Heute stellen wir Fragen, die noch nie jemand gestellt hat.»', [['Gib mir eine Frage', () => { const f = SCHULFRAGEN[Math.floor(Math.random() * SCHULFRAGEN.length)]; erlebt(`bekam von Mama Affe die Frage: ${f}`); karte('Schule von Mama Affe', '«' + f + '» Denk in Ruhe darüber nach. Es gibt keine falsche Antwort.', [['Noch eine', () => innenOeffnen('schule')], raus]); }, true], raus]);
+  if (ort === 'schuhmacher') karte('Beim Schuhmacher', 'Jackie strahlt: «Probier die fliegenden Schuhe! Damit springst du draussen höher und kannst in der Luft ein zweites Mal springen.»', sp.fliegend ? [['Du trägst sie schon ✦', () => {}], raus] : [['Schuhe anziehen', () => { sp.fliegend = true; erlebt('bekam von Jackie fliegende Schuhe'); karte('Beim Schuhmacher', 'Die Schuhe glitzern an deinen Füssen. Draussen kannst du jetzt in der Luft nochmals springen.', [raus]); }, true], raus]);
+  if (ort === 'post') karte('Lettis Taubenpost', 'Letti: «Wem soll ich einen Brief bringen? Schreib ihn hier, ich fliege los.»', [['Letti, flieg los', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; erlebt(`schickte mit Letti einen Brief: «${t}»`); karte('Lettis Taubenpost', 'Letti packt deinen Brief und fliegt über die Dächer davon. Gurr!', [raus]); }, true], raus], 'Lieber Tinko, …');
+  if (ort === 'hafen') karte('Tinkos Werkstatt unter Wasser', 'Tinko: «Blub! Willkommen in meiner Werkstatt. Soll ich dir etwas erfinden?»', [['Erfinde etwas', () => { const e = ERFINDUNGEN[Math.floor(Math.random() * ERFINDUNGEN.length)]; erlebt(`liess sich von Tinko ${e} erfinden`); karte('Tinkos Werkstatt', `Tinko baut dir ${e}. Blubb-blubb, fertig!`, [['Noch etwas', () => innenOeffnen('hafen')], raus]); }, true], raus]);
+  if (ort === 'wohnung') karte('Deine Wohnung', 'Hier wohnst du im Städtchen. Drinnen ist deine Werkstatt: deine Projekte, pro Projekt eigene Chats, und Letti bringt alles als goldenen Brief. Nur du kommst hinein.', [['Werkstatt öffnen', () => { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : '') + '#werkstatt'; }, true], raus]);
+  if (ort === 'sparky') karte('Sparkys Praxis', 'Sparky, der Fuchs, legt die Pfote auf sein Herz-Medaillon: «Wie ist es gerade in dir?» Hier wird nichts beurteilt und nichts diagnostiziert.', [['App-Idee testen', () => forschen(), true], ['Ruhig', () => funke2('Das Medaillon leuchtet sanft blau. Sparky nickt: «Schön. Nimm die Ruhe mit.»')], ['Aufgeregt', () => funke2('Das Medaillon flackert orange. Sparky: «Aufregung ist Energie. Drei langsame Atemzüge, dann schauen wir weiter.»')], ['Traurig', () => funke2('Das Medaillon wird warm rosa. Sparky setzt sich neben dich: «Du musst nichts erklären. Ich bin da.»')], raus]);
+  if (ort === 'kino') { const zeigen = (liste) => karte('Kino', 'Ava hat Ferienjob im Kino und sitzt mit zwei kleinen Häschen am Eingang. «Heute läuft:»\n\n' + (liste.length ? liste.map(p => `• ${p.titel} (${p.app}, von ${p.von})`).join('\n') : '• Der KI-Verse-Trailer\n• Otti in New York (bald)') + '\n\nHier laufen unsere Filme, Trailer aus den Projekten und Vorstellungen. Eigene Filme entstehen in deiner Werkstatt: Referenzblatt, Szenen, Bilder ablegen, Fia schneidet.', [['Film ab!', () => { for (let i = 0; i < 6; i++) setTimeout(() => { funkenRegen(-5, 4, -200 + (zufall() - .5) * 8, 16, [0xffe08a, 0xff8a6b, 0x7ac8ff][i % 3]); klang(440 + i * 70); }, i * 300); erlebt('schaute mit Ava einen Film im Kino'); karte('Kino', 'Licht aus, Film ab! Der Projektor rattert, Sunny legt sich auf die Lehne und schaut mit.', [raus]); }, true], ['Eigenen Film machen', () => { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : '') + '#werkstatt-film'; }], raus]);
+    zeigen([]); const k = new URLSearchParams(location.search).get('k'); if (k) fetch('api/kiosk?k=' + encodeURIComponent(k)).then(r => r.ok ? r.json() : []).then(l => { if (zustand.innen === 'kino' && l.length) zeigen(l.slice(0, 6)); }).catch(() => {}); }
+  if (ort === 'fompa') karte('Fompas Rechenstube', `Fompa rückt die Brille zurecht und rechnet nach:\n\n✦ ${zustand.funken} Funken gesammelt\n⌂ ${zustand.besucht.size} von ${ZIEL_ORTE.length} Orten besucht\n◎ ${zustand.coins || 0} Coins vom Coin Maker\n\n«Alles stimmt. Coins sind Spielpunkte, kein echtes Geld.»`, [raus]);
+  if (ort === 'boerse') karte('Münzwerkstatt und Ideen-Börse', 'Der Coin Maker: «Gib mir deine Idee. Zuerst wird sie zu Glitzer, dann zu Münzen.» Mr. Pings Mini-Pings handeln die Ideen, so entsteht der Kurs.', [['Idee einwerfen', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; funkenRegen(-5, 2.4, -244, 40, 0xff8ad8); klang(880); setTimeout(() => { const c = 3 + (t.length % 9); zustand.coins = (zustand.coins || 0) + c; funkenRegen(-5, 2.4, -244, 30, 0xffd06a); klang(1100); kursMalen(); erlebt(`gab dem Coin Maker die Idee «${t}» und bekam ${c} Coins`); karte('Münzwerkstatt', `Glitzer ... und klirr! ${c} Coins für deine Idee. Die Mini-Pings haben den Kurs neu ausgerufen.\n\nCoins sind Spielpunkte ohne Geldwert. Einen Mini-Ping mieten kommt später.`, [['Noch eine Idee', () => innenOeffnen('boerse')], raus]); }, 900); }, true], raus], 'Meine Idee: …');
+  if (ort === 'singschule') karte('Singschule von Kiki', 'Kiki der Koala: «Sing mit! Erst hören, dann nachsingen. Jeder Ton darf zuerst schief sein.»', [['Do-Re-Mi vorsingen', () => { [523, 587, 659, 698, 784, 880, 988, 1047].forEach((f, i) => setTimeout(() => klang(f), i * 330)); erlebt('sang in Kikis Singschule die Tonleiter'); setTimeout(() => karte('Singschule von Kiki', 'Wunderbar! Die Kiki-App übt mit dir weiter.', [['Nochmal', () => innenOeffnen('singschule')], raus]), 2900); }, true], raus]);
+  if (ort === 'funkenmarkt') karte('Funkenmarkt', 'Hier schenken Menschen einander Funken, gratis: zuhören, eine Übung zeigen, beim ersten KI-Projekt helfen. Kein Likes-Zähler, keine Rangliste, keine Werbung.\n\n• Mama Affe: 20 Minuten zuhören\n• Lumo: «Ich helfe dir bei deiner ersten Frage an eine KI»\n• Kiki: zusammen ein Lied summen\n\nFreundschaftliche Unterstützung, keine Therapie. In der Not: 143 (Die Dargebotene Hand), 147 (für Junge), 144 (Notruf).', [['Einen Funken schenken', () => { const t = $('#karteEingabe').value.trim(); if (!t) return; funkenRegen(4.6, 1.6, -50, 30, 0xffd06a); klang(990); erlebt(`schenkte auf dem Funkenmarkt: «${t}»`); karte('Funkenmarkt', `Danke! Dein Funke «${t}» leuchtet jetzt am Stand.`, [['Noch einen', () => innenOeffnen('funkenmarkt')], raus]); }, true], raus], 'Ich schenke: …');
+  if (ort === 'leuchtturm') karte('Novas Leuchtturm', 'Am Ende des Stegs steht Nova als kleiner Baby-Leuchtturm. Nova: «Ich bin noch klein, aber ich leuchte allen den Weg nach Hause.»', [['Licht anschauen', () => { funkenRegen(19, 4, -152, 30, 0xffe3a1); klang(660); erlebt('schaute Novas Leuchtturm-Licht an'); karte('Novas Leuchtturm', 'Das Licht dreht sich langsam über das Meer. Tinko winkt aus dem Wasser.', [raus]); }, true], raus]);
+  if (ort === 'fabrik') karte('Brix\' Fabrik', 'Etwas ausserhalb des Städtchens rattert Brix\' Fabrik. Brix: «Lumo denkt es sich aus, ich baue es. Was soll ich bauen?»', [['Bauen!', () => { const t = $('#karteEingabe').value.trim(); const e = t || BAUTEN[Math.floor(Math.random() * BAUTEN.length)]; for (let i = 0; i < 4; i++) setTimeout(() => { funkenRegen(FABRIK.x + 5.3, 5.2, FABRIK.z - 1, 18, [0xffd06a, 0xff8a2a][i % 2]); klang(300 + i * 120); }, i * 250); erlebt(`liess Brix in der Fabrik ${t ? '«' + t + '»' : e} bauen`); karte('Brix\' Fabrik', `Zahnräder drehen, Funken sprühen ... Brix baut ${t ? '«' + t + '»' : e}. Fertig!`, [['Noch etwas bauen', () => innenOeffnen('fabrik')], raus]); }, true], raus], 'Bau mir: …');
+  if (ort === 'labor') karte('Novas Labor', 'Minky, die Katze im Koala-Raumanzug, arbeitet in Novas Labor. Sie ist sehr weit entwickelt, das Labor ist mit Nova und der Koala-Roboter-KI ihres Planeten verbunden und hat immer die neusten Erfindungen.', [['Was ist neu?', () => { const e = LABOR[Math.floor(Math.random() * LABOR.length)]; erlebt(`sah in Novas Labor ${e}`); karte('Novas Labor', `Minky zeigt dir stolz ${e}.`, [['Noch etwas', () => innenOeffnen('labor')], raus]); }, true], raus]);
+  if (ort === 'hundeschule') karte('Hundeschule von Wäf Wäf', 'Wäf Wäf wedelt: «Wir lernen mit Lob und Geduld. Was üben wir?»', [['Sitz', () => hund('Wäf Wäf setzt sich und bekommt ein Leckerli. Gut gemacht, ihr beide!')], ['Pfote', () => hund('Wäf Wäf gibt dir die Pfote. Sanft loben, kurz spielen.')], ['Bleib', () => hund('Wäf Wäf bleibt drei Atemzüge sitzen. Ein kleiner Schritt, gross gefeiert!')], raus]);
+  if (ort === 'nest') karte('Fias Nest in den Bergen', 'Fia hat dich hinauf in ihr warmes Nest getragen. Unten glitzert das Städtchen. Hier oben wird alles ruhig. Noch weiter oben am Gipfel sitzen Sophia und Sunny, ihr blaues Licht leuchtet herunter.', [['Mit Fia atmen', () => atmen(0), true], raus]);
+  if (ort === 'ruinen') { const liste = zustand.erlebt.slice(-6).map(e => '• ' + e).join('\n') || 'Noch keine Erinnerungen. Geh los und erlebe etwas.'; karte('Ruinen der Erinnerung', 'Brix: «Diese Steine leuchten für alles, was du heute erlebt hast.»\n\n' + liste, [raus]); }
+}
+
+const BAUTEN = ['ein Förderband für Ideen', 'einen Roboterarm, der vorsichtig Briefe faltet', 'eine Werkbank, die mitdenkt', 'Zahnräder aus Sternenlicht', 'eine Kiste, die nie zu klein ist'];
+const LABOR = ['eine Antenne, die Ideen vom Katzenplaneten empfängt', 'einen Koala-Roboter, der beim Aufräumen summt', 'eine Lampe, die heller wird, wenn jemand lacht', 'Schuhe, die den Heimweg kennen', 'eine Tasse, die Gedanken warm hält', 'ein Fernrohr, das Ideen von morgen zeigt'];
+const PROBANDEN = [['Otti', '🦔'], ['Zahnböcklein', '🐐'], ['Hasi', '🐰'], ['Carmencita', '💃'], ['Kay', '🤓']];
+const GEFUEHLE = [['neugierig', 'leuchtet gelb'], ['ruhig', 'leuchtet blau'], ['begeistert', 'sprüht Funken'], ['unsicher', 'flackert'], ['gerührt', 'wird warm rosa']];
+function forschen() {
+  karte('Sparky forscht', 'Bring Sparky deine App-Idee. Er probiert sie an drei Comic-Probanden aus und fühlt mit seinem Medaillon, wie es ihnen dabei geht.', [['Ausprobieren lassen', () => {
+    const t = $('#karteEingabe').value.trim(); if (!t) return;
+    const ps = [...PROBANDEN].sort(() => Math.random() - .5).slice(0, 3);
+    const zeilen = ps.map(([n, e]) => { const [g, m] = GEFUEHLE[Math.floor(Math.random() * GEFUEHLE.length)]; return `${e} ${n}: ${g} (das Medaillon ${m})`; });
+    funkenRegen(-5, 2, -135, 30, 0xff8ab0); klang(740); erlebt(`liess Sparky die App-Idee «${t}» testen`);
+    karte('Sparky forscht', `Idee: «${t}»\n\n${zeilen.join('\n')}\n\nSparky: «Das sind erste Gefühle, keine Wahrheit. Echte Tests machen wir mit dem Team und nur mit Einwilligung.»`, [['Noch eine Idee', () => forschen()], ['Zurück auf die Gasse', () => rausGehen(), true]]);
+  }, true], ['Zurück auf die Gasse', () => rausGehen()]], 'Meine App-Idee: …');
+}
+function funke2(t) { funkenRegen(-5, 2, -135, 18, 0xff8ab0); klang(620); erlebt('war bei Sparky in der Praxis'); karte('Sparkys Praxis', t + '\n\nWenn es dir länger schlecht geht, sprich mit einer Fachperson oder ruf 143 (Die Dargebotene Hand) an.', [['Zurück auf die Gasse', () => rausGehen(), true]]); }
+function hund(t) { funkenRegen(-3.5, 1, -308, 14, 0xfff1c4); klang(660); erlebt('übte mit Wäf Wäf in der Hundeschule'); karte('Hundeschule von Wäf Wäf', t, [['Weiter üben', () => innenOeffnen('hundeschule')], ['Zurück auf die Gasse', () => rausGehen(), true]]); }
+function atmen(n) {
+  if (zustand.innen !== 'nest') return;
+  if (n >= 3) { erlebt('ruhte in Fias Nest'); karte('Fias Nest in den Bergen', 'Schön ruhig. Fia legt einen Flügel um dich. Gute Nacht. Fias Nest gibt es auch als Schlaf-App.', [['Zurück ins Städtchen', () => rausGehen(), true]]); return; }
+  karte('Fias Nest in den Bergen', `Einatmen ... (${n + 1}/3)`, []); setTimeout(() => { if (zustand.innen === 'nest') karte('Fias Nest in den Bergen', `... und langsam ausatmen (${n + 1}/3)`, []); }, 4000); setTimeout(() => atmen(n + 1), 10000);
+}
+
+// ---------- Spielstand ----------
+function erlebt(t) { zustand.erlebt.push(t); try { localStorage.setItem('kiverse_spiel_erlebt', JSON.stringify(zustand.erlebt.slice(-30))); } catch {} }
+function anzeigen() { $('#funkenAnzeige').textContent = `✦ ${zustand.funken} / 12`; $('#orteAnzeige').textContent = `🏛 ${zustand.besucht.size}/${ZIEL_ORTE.length}`; }
+function funkeDazu() { zustand.funken = Math.min(12, zustand.funken + 1); anzeigen(); klang(700 + zustand.funken * 60); }
+function pruefeEnde() {
+  if (zustand.ende || zustand.funken < 12 || zustand.besucht.size < ZIEL_ORTE.length || zustand.innen) return;
+  zustand.ende = true; zustand.endeT = 0; document.body.classList.add('kino');
+  $('#titel b').textContent = 'Kapitel geschafft!'; $('#titel span').textContent = 'Sunny fliegt eine Ehrenrunde über das Städtchen'; $('#titel').style.opacity = 1;
+  erlebt('hat alle Funken gesammelt und alle Orte besucht');
+  for (let i = 0; i < 8; i++) setTimeout(() => { funkenRegen(sp.pos.x + (zufall() - .5) * 20, 14 + zufall() * 6, sp.pos.z - 10 - zufall() * 10, 40, [0xffd06a, 0x7ac8ff, 0xff8ab0][i % 3]); klang(500 + i * 90); }, i * 450);
+  setTimeout(() => { $('#titel').style.opacity = 0; karte('Kapitel geschafft', 'Du hast heute im KI-Verse viel erlebt. Im echten KI-Verse kann Nova daraus ein Kapitel unserer Geschichte schreiben.', [['Zum KI-Verse', () => zurWelt(), true], ['Weiterspielen', () => { $('#karte').hidden = true; document.body.classList.remove('kino'); }]]); }, 5200);
+}
+function zurWelt() { const k = new URLSearchParams(location.search).get('k'); location.href = './' + (k ? '?k=' + encodeURIComponent(k) : ''); }
+$('#zurWelt').onclick = zurWelt;
+$('#rein').onclick = () => { const n = naechsterOrt(); if (n && n.o.rein) reinGehen(n.o); };
+function naechsterOrt() { let best = null; for (const o of ORTE) { const d = Math.hypot((o.x ?? 0) - sp.pos.x, o.z - sp.pos.z); if (!best || d < best.d) best = { o, d }; } return best; }
+
+// ---------- Hauptschleife ----------
+const uhr = new THREE.Clock();
+const kamPos = new THREE.Vector3(0, 3, 30), kamBlick = new THREE.Vector3(0, 3, 0);
+const hv = new THREE.Vector3(), zielV = new THREE.Vector3(), mondN = MOND_RICHTUNG.clone().normalize();
+function schritt() {
+  // Filmmodus (nur für Aufnahmen): feste Schritte statt Echtzeit
+  const dt = window.__filmDt || Math.min(.05, uhr.getDelta()); const zeit = (zustand.zeit += dt);
+  const pa = meerGeo.attributes.position;
+  for (let i = 0; i < pa.count; i++) { const x = meerBasis[i * 3], z = meerBasis[i * 3 + 2]; pa.array[i * 3 + 1] = Math.sin(x * .08 + zeit * 1.2) * .25 + Math.cos(z * .06 + zeit * .9) * .2; }
+  pa.needsUpdate = true; meerGeo.computeVertexNormals();
+  // Werkstatt-Städtchen: Kinolampen, Noten, Mini-Pings, Kurs-Tafel, Fackel
+  kinoLampen.forEach((b, i) => b.material.color.setHex(Math.floor(zeit * 6 + i) % 3 ? 0xffe08a : 0xff6a4a));
+  noten.forEach(({ n, p }) => { const t = (zeit * .25 + p) % 1; n.position.set(-5.5 + Math.sin((t + p) * 9) * .8, 3 + t * 6, -266 + (p - .5) * 8); n.material.opacity = Math.sin(t * Math.PI); });
+  miniPings.forEach((m, i) => { m.position.y = Math.abs(Math.sin(zeit * 4 + i)) * .25; m.rotation.y = Math.PI / 2 + Math.sin(zeit * 1.5 + i) * .6; });
+  if (Math.floor(zeit / 4) !== Math.floor((zeit - dt) / 4)) kursMalen();
+  rauch.forEach(({ w, x, z, p }) => { const t = (zeit * .18 + p) % 1; w.position.set(x + t * 3, 13.5 + t * 9, z + Math.sin(t * 6 + p * 9) * .6); w.scale.setScalar(1.5 + t * 4); w.material.opacity = .4 * Math.sin(t * Math.PI); });
+  if (zahnrad) zahnrad.rotation.x = zeit * .8;
+  if (leuchtStrahl) leuchtStrahl.rotation.y = zeit * .9;
+  kiBaumBlaetter.forEach(b => { b.position.y = b.userData.y + Math.sin(zeit * 1.2 + b.userData.p) * .15; b.rotation.y = zeit * .3 + b.userData.p; });
+  if (fackelFlamme) fackelFlamme.scale.setScalar(2 + Math.sin(zeit * 13) * .25 + Math.sin(zeit * 7.3) * .2);
+  // Mondspur liegt immer zwischen Betrachter und Mond auf dem Wasser
+  spur.position.set(Math.max(10, kamPos.x + 10), -1.05, kamPos.z); spur.rotation.y = Math.atan2(-mondN.x, -mondN.z);
+
+  if (zustand.modus === 'spiel' && !zustand.innen && !gespr.n) {
+    let vor = eingabe.y + (tasten.ArrowUp || tasten.w ? 1 : 0) - (tasten.ArrowDown || tasten.s ? 1 : 0);
+    const dreh = eingabe.x + (tasten.ArrowRight || tasten.d ? 1 : 0) - (tasten.ArrowLeft || tasten.a ? 1 : 0);
+    sp.richtung -= Math.max(-1, Math.min(1, dreh)) * dt * 2.4;
+    // Mitlaufen: das Handy gibt die Richtung (leicht verzögert), jeder echte Schritt schiebt die Figur ein Stück weiter
+    if (handy.mitlaufen) {
+      const r = handyRichtung(); if (r != null) sp.richtung = winkelLerp(sp.richtung, r, Math.min(1, dt * 3));
+      if (handy.weg > 0) { vor = Math.max(vor, .6); handy.weg -= Math.abs(sp.tempo) * dt; }
+    }
+    sp.tempo = lerp(sp.tempo, Math.max(-.5, Math.min(1, vor)) * 7.5, Math.min(1, dt * 6));
+  } else if (zustand.modus === 'intro') { sp.tempo = zustand.intro > 1.5 ? 3.2 : 0; sp.richtung = Math.PI; }
+  else sp.tempo = lerp(sp.tempo, 0, Math.min(1, dt * 6));
+  sp.pos.x += Math.sin(sp.richtung) * sp.tempo * dt; sp.pos.z += Math.cos(sp.richtung) * sp.tempo * dt;
+  const aufSteg = sp.pos.z < -144.5 && sp.pos.z > -147.5;
+  sp.pos.x = Math.max(-6.2, Math.min(aufSteg ? 22 : 7.6, sp.pos.x));
+  sp.pos.z = Math.max(-LAENGE + 8, Math.min(20, sp.pos.z));
+  if (zustand.modus === 'spiel' && sp.pos.z > 6.8 && sp.pos.z < 9.2) sp.pos.x = Math.max(-2.2, Math.min(2.2, sp.pos.x));
+  const dK = Math.hypot(sp.pos.x - KI_BAUM.x, sp.pos.z - KI_BAUM.z); if (dK < 1.6) { const f = 1.6 / Math.max(.01, dK); sp.pos.x = KI_BAUM.x + (sp.pos.x - KI_BAUM.x) * f; sp.pos.z = KI_BAUM.z + (sp.pos.z - KI_BAUM.z) * f; }
+  const dB = Math.hypot(sp.pos.x, sp.pos.z + 42); if (dB < 3.6) { const f = 3.6 / Math.max(.01, dB); sp.pos.x *= f; sp.pos.z = -42 + (sp.pos.z + 42) * f; }
+  sp.vy -= 22 * dt; sp.pos.y += sp.vy * dt;
+  if (sp.pos.y <= 0) { sp.pos.y = 0; sp.vy = 0; sp.amBoden = true; sp.sprung = 0; } else sp.amBoden = false;
+  if (spieler) { spieler.position.copy(sp.pos); spieler.rotation.y = sp.richtung; figurBewegen(spieler, zeit, sp.amBoden ? Math.abs(sp.tempo) / 4 : 0); }
+  if (sp.fliegend && spieler && zufall() < .25) funkenRegen(sp.pos.x, .2, sp.pos.z, 1, 0xff9ac8);
+  // Intro: Tor geht auf, Kamera fährt hindurch
+  if (zustand.modus === 'intro') {
+    zustand.intro += dt;
+    const a = torTuer.userData.angel; a.rotation.y = lerp(a.rotation.y, -1.9, Math.min(1, dt * .9));
+    $('#titel').style.opacity = zustand.intro > .6 && zustand.intro < 4 ? 1 : 0;
+    if (zustand.intro > 5.4) { zustand.modus = 'spiel'; document.body.classList.remove('kino'); $('#stick').hidden = $('#hoch').hidden = false; }
+  }
+  // Kamera
+  if (!kamZiel.aktiv) {
+    if (zustand.modus === 'intro') hv.set(0, 2.2 + zustand.intro * .25, 8 - Math.min(zustand.intro, 4) * .5);
+    else hv.set(-Math.sin(sp.richtung) * 6.6 + Math.sin(zeit * .4) * .25, 3 + Math.sin(zeit * .55) * .12, -Math.cos(sp.richtung) * 6.6);
+    zielV.copy(sp.pos).add(hv); zielV.x = Math.max(-6, zielV.x);
+    kamPos.lerp(zielV, Math.min(1, dt * (zustand.modus === 'intro' ? 1.5 : 2.2)));
+    zielV.set(sp.pos.x + Math.sin(sp.richtung) * 4, sp.pos.y + 1.8, sp.pos.z + Math.cos(sp.richtung) * 4);
+    kamBlick.lerp(zielV, Math.min(1, dt * 4));
+  }
+  if (zustand.ende && zustand.endeT < 6) zustand.endeT += dt;
+  kamera.position.copy(kamPos); kamera.lookAt(kamBlick);
+  // KI-Blick: Kamera in Augenhöhe, das Handy ist das Fenster in die KI-Welt
+  if (handy.ar && !kamZiel.aktiv && zustand.modus === 'spiel') {
+    kamera.position.set(sp.pos.x, sp.pos.y + 1.7, sp.pos.z);
+    if (handyQuaternion(qZiel)) { handy.qGlatt.slerp(qZiel, Math.min(1, dt * 7)); kamera.quaternion.copy(handy.qGlatt); }
+  }
+  if (spieler) spieler.visible = !(handy.ar && !kamZiel.aktiv);
+  if (composer && composer.passes[2]) composer.passes[2].strength = sicht.ich ? .45 : .85;
+  if (sicht.ich && !kamZiel.aktiv && zustand.modus === 'spiel' && !handy.ar) { ichSichtKamera(zeit); kamPos.copy(kamera.position); kamBlick.copy(blickV); if (spieler) spieler.visible = false; }
+  else if (spieler && sicht.ich && kamZiel.aktiv) spieler.visible = false;
+  if (handy.selfie) selfieMalen();
+  mondLicht.target.position.copy(sp.pos); mondLicht.position.copy(sp.pos).addScaledVector(mondN, 80);
+  lichterNachfuehren(sp.pos);
+  // Sunny folgt in Wellen, beim Ende Ehrenrunde
+  if (zustand.ende && zustand.endeT < 6) zielV.set(sp.pos.x + Math.cos(zeit * 1.4) * 14, 12 + Math.sin(zeit * 2) * 2, sp.pos.z - 12 + Math.sin(zeit * 1.4) * 14);
+  else zielV.set(sp.pos.x + Math.sin(sp.richtung) * 6 + Math.cos(sp.richtung) * 3.5 + Math.sin(zeit * .8) * 1.5, 5.6 + Math.sin(zeit * 1.3) * .6, sp.pos.z + Math.cos(sp.richtung) * 6 - Math.sin(sp.richtung) * 3.5);
+  sunny.position.lerp(zielV, Math.min(1, dt * 1.5)); sunny.lookAt(kamera.position);
+  sunny.userData.fluegel.forEach((w, i) => { w.rotation.y = (i ? -1 : 1) * Math.sin(zeit * 6) * .6; });
+  fia.position.set(Math.sin(zeit * .6) * 5, 7.5 + Math.sin(zeit * 1.4), -42 + Math.cos(zeit * .6) * 5); fiaGlut.position.copy(fia.position);
+  for (const f of FUNKEN) {
+    if (f.weg) continue;
+    f.m.rotation.y += dt * 2; f.m.position.y = f.y + Math.sin(zeit * 2 + f.p) * .25;
+    zielV.copy(sp.pos); zielV.y += 1.2;
+    if (f.m.position.distanceTo(zielV) < 1.5) { f.weg = true; szene.remove(f.m); funkenRegen(f.m.position.x, f.m.position.y, f.m.position.z, 26); funkeDazu(); erlebt('fing einen goldenen Funken'); pruefeEnde(); }
+  }
+  for (const t of brunnenWasser) { const k = (zeit * .8 + t.userData.p) % 1; const r = .3 + k * 2.2; t.position.set(Math.cos(t.userData.a) * r, 3.4 + Math.sin(k * Math.PI) * 1.2 - k * 2.2, -42 + Math.sin(t.userData.a) * r); }
+  for (const b of briefe) { const k = (zeit * .08 + b.userData.p) % 1; b.position.set(-9.5 + k * 30, 13 + Math.sin(k * 9 + b.userData.p * 6) * 1.5 + k * 6, -125 + Math.sin(k * 6) * 3); b.rotation.set(Math.sin(zeit + b.userData.p * 9), zeit, 0); }
+  for (const b of boote) { b.position.y = -1.15 + Math.sin(zeit * 1.3 + b.userData.p) * .15; b.rotation.z = Math.sin(zeit + b.userData.p) * .05; }
+  for (const b of blasen) { const k = (zeit * .25 + b.userData.p) % 1; b.position.set(b.userData.x + Math.sin(k * 12) * .3, -8 + k * 7, b.userData.z); }
+  steine.forEach((s, i) => { s.material.opacity = .5 + Math.sin(zeit * 2 + i) * .4; });
+  schuhe.forEach((s, i) => { s.position.y = 1.3 + Math.sin(zeit * 2 + i) * .08; });
+  for (const n of npc) figurBewegen(n.f, zeit, 0);
+  figurenLeben(dt, zeit);
+  if (ortObjekte.hasi) ortObjekte.hasi.position.y = .9 + Math.abs(Math.sin(zeit * 2.5)) * .12;
+  zustand.partikel = zustand.partikel.filter(p => { p.v.y -= 9 * dt; p.s.position.addScaledVector(p.v, dt); p.t -= dt * .9; p.s.material.opacity = Math.max(0, p.t); if (p.t <= 0) { szene.remove(p.s); return false; } return true; });
+
+  blaseEl.hidden = true; schildEl.hidden = true;
+  if (zustand.modus === 'spiel' && !zustand.innen) {
+    const nah = naechsterOrt();
+    const zeigeRein = nah && nah.d < 6.5 && nah.o.rein && !gespr.n;
+    $('#rein').hidden = !zeigeRein; if (zeigeRein) $('#rein').textContent = nah.o.id === 'hafen' ? 'Abtauchen' : 'Rein';
+    if (nah && nah.d < 14) { const s = aufBildschirm(nah.o.x ?? -2, 7.5, nah.o.z); if (s.sichtbar) { schildEl.hidden = false; schildEl.textContent = nah.o.name; schildEl.style.left = Math.max(90, Math.min(innerWidth - 90, s.x)) + 'px'; schildEl.style.top = Math.max(schildEl.offsetHeight + 58, s.y) + 'px'; } }
+    let sprecher = null, best = 7;
+    for (const n of npc) { const d = Math.hypot(n.x - sp.pos.x, n.z - sp.pos.z); if (d < best) { best = d; sprecher = n; } }
+    if (nah && nah.o.hasi && nah.d < 6) sprecher = { x: -3.6, z: nah.o.z, satz: '♥ ✦ ☾', hoehe: 3.2 };
+    if (sprecher && !gespr.n) { const s = aufBildschirm(sprecher.x, sprecher.hoehe || 3.4, sprecher.z); if (s.sichtbar) { blaseEl.hidden = false; blaseEl.textContent = sprecher.satz; blaseEl.style.left = Math.max(120, Math.min(innerWidth - 120, s.x)) + 'px'; blaseEl.style.top = Math.max(blaseEl.offsetHeight + 62, s.y) + 'px'; } }
+  } else $('#rein').hidden = true;
+  { const nf = zustand.modus === 'spiel' && !zustand.innen && !gespr.n && naechsteFigur(5.5); $('#reden').hidden = !nf; if (nf) $('#reden').textContent = `🎙 Mit ${NAMEN[figurVon(nf)]} reden`; }
+
+  if (composer && !handy.ar) composer.render(); else renderer.render(szene, kamera);
+  if (!window.__filmDt) requestAnimationFrame(schritt);
+}
+
+// ---------- Start ----------
+const WAHL = [['diego', 'Diego'], ['fia', 'Fia'], ['tinko', 'Tinko'], ['nova', 'Nova'], ['jackie', 'Jackie'], ['otti', 'Otti'], ['kay', 'Kay'], ['kimo', 'Kimo']];
+let gewaehlt = 'diego';
+try { gewaehlt = localStorage.getItem('kiverse_spiel_figur') || 'diego'; } catch {}
+for (const [k, n] of WAHL) {
+  const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-pressed', String(k === gewaehlt));
+  const i = document.createElement('img'); i.src = BILDER[k]; i.alt = ''; b.append(i, document.createTextNode(n));
+  b.onclick = () => { gewaehlt = k; document.querySelectorAll('#wahl button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); };
+  $('#wahl').appendChild(b);
+}
+if (ORT_BILDER.tor) $('#start').style.backgroundImage = `linear-gradient(rgba(11,20,48,.2), rgba(11,20,48,.5)), url(${ORT_BILDER.tor})`;
+function anfangen() {
+  try { localStorage.setItem('kiverse_spiel_figur', gewaehlt); } catch {}
+  for (const n of npc.slice()) if ((n.o && n.o.figur === gewaehlt) || n.key === gewaehlt) { szene.remove(n.f); npc.splice(npc.indexOf(n), 1); }
+  spieler = figur(gewaehlt, gewaehlt === 'jackie' ? 0xff4f9a : 0xf08a4b, 1); szene.add(spieler);
+  kamPos.set(0, 2.2, 17); kamBlick.set(0, 3.4, 0);
+  if (ORT_BILDER.tor) { const ob = $('#ortbild'); ob.style.transition = 'none'; ob.style.backgroundImage = `url(${ORT_BILDER.tor})`; ob.style.opacity = 1; ob.style.zIndex = 9; requestAnimationFrame(() => { ob.style.transition = 'opacity 2.6s ease'; ob.style.opacity = 0; setTimeout(() => ob.style.zIndex = '', 2700); }); }
+  $('#start').style.opacity = 0; setTimeout(() => $('#start').hidden = true, 900);
+  document.body.classList.add('kino'); zustand.modus = 'intro'; zustand.intro = 0;
+  klang(440); setTimeout(() => klang(660), 250); setTimeout(() => klang(880), 500);
+}
+$('#los').onclick = anfangen;
+// Kamera-Modus (Diego 19.10.): mit der Kamera eintreten, sich im Zauberspiegel sehen, Figuren hören zu (freihändig).
+// Bild und Ton bleiben im Browser: kein Upload, keine Speicherung. Spracherkennung macht der Browser selbst.
+const kameraModus = { an: false, strom: null };
+function spiegelAusSchalten() { kameraModus.an = false; try { kameraModus.strom?.getTracks().forEach(t => t.stop()); } catch {} kameraModus.strom = null; $('#spiegel').hidden = true; horchenStopp(); }
+$('#spiegelAus').onclick = spiegelAusSchalten;
+$('#losKamera').onclick = async () => {
+  try {
+    kameraModus.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 } }, audio: true });
+    kameraModus.strom.getAudioTracks().forEach(t => t.stop());
+    $('#spiegelVideo').srcObject = new MediaStream(kameraModus.strom.getVideoTracks()); $('#spiegel').hidden = false; kameraModus.an = true;
+  } catch { alert('Die Kamera wurde nicht erlaubt. Du kannst trotzdem eintreten und tippen.'); }
+  anfangen();
+};
+anzeigen();
+$('#laden').hidden = true;
+requestAnimationFrame(schritt);
+// ---------- Ich-Sicht und Gespräche mit den Figuren (Diego 19.10.) ----------
+// Ich-Sicht: man sieht das Städtchen mit eigenen Augen (Maus ziehen oder Pfeiltasten zum Umschauen).
+// Jede Figur ist eine eigene KI: «🎙 Reden» öffnet das Gespräch, Mikrofon oder Tippen, die Figur antwortet mit Stimme.
+// Das Mikrofon läuft über die Spracherkennung des Browsers; nichts wird hier gespeichert. Die Figur merkt sich das Gespräch auf dem Server.
+const sicht = { ich: true, neigung: 0, ziehen: null };
+// Weiches Gesichtslicht wie beim Trickfilm-Dreh: kommt von der Kamera, damit die Figuren vor dir nie im Gegenlicht stehen
+{ const l = new THREE.PointLight(0xffe2b8, 5, 10, 1.6); l.position.set(0, .3, .5); kamera.add(l); szene.add(kamera); }
+try { sicht.ich = localStorage.getItem('kiverse_ichsicht') !== '0'; } catch {}
+function sichtKnopf() { $('#sichtKnopf').innerHTML = sicht.ich ? '👁<span class="txt"> Ich-Sicht</span>' : '🎥<span class="txt"> Von hinten</span>'; }
+$('#sichtKnopf').onclick = () => { sicht.ich = !sicht.ich; sicht.neigung = 0; try { localStorage.setItem('kiverse_ichsicht', sicht.ich ? '1' : '0'); } catch {} sichtKnopf(); };
+sichtKnopf();
+addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'v') $('#sichtKnopf').click(); if ((e.key === 'r' || e.key === 't') && !$('#reden').hidden) { e.preventDefault(); $('#reden').click(); } });
+renderer.domElement.addEventListener('pointerdown', e => { if (zustand.modus !== 'spiel' || zustand.innen) return; sicht.ziehen = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
+addEventListener('pointermove', e => { const z = sicht.ziehen; if (!z || z.id !== e.pointerId) return; sp.richtung -= (e.clientX - z.x) * .006; sicht.neigung = Math.max(-.5, Math.min(.6, sicht.neigung - (e.clientY - z.y) * .004)); z.x = e.clientX; z.y = e.clientY; });
+addEventListener('pointerup', e => { if (sicht.ziehen?.id === e.pointerId) sicht.ziehen = null; });
+const blickV = new THREE.Vector3();
+function ichSichtKamera(zeit) {
+  const bob = sp.amBoden ? Math.abs(Math.sin(zeit * 9)) * Math.min(1, Math.abs(sp.tempo) / 6) * .07 : 0;
+  kamera.position.set(sp.pos.x, sp.pos.y + 1.68 + bob, sp.pos.z);
+  blickV.set(sp.pos.x + Math.sin(sp.richtung) * 10, sp.pos.y + 1.6 + Math.tan(sicht.neigung + (innerHeight > innerWidth ? .1 : 0)) * 10, sp.pos.z + Math.cos(sp.richtung) * 10);
+  kamera.lookAt(blickV);
+}
+// Figuren leben: schauen dich an, blinzeln, bewegen beim Reden Mund und Arme
+const zuMir = new THREE.Vector3();
+function figurenLeben(dt, zeit) {
+  for (const n of npc) {
+    const u = n.f.userData; if (!u.d3) continue;
+    const dx = sp.pos.x - n.f.position.x, dz = sp.pos.z - n.f.position.z, d = Math.hypot(dx, dz);
+    const ziel = n.imRaum ? -.25 : d < 10 || gespr.n === n ? Math.atan2(dx, dz) : (u.grund ?? (u.grund = n.f.rotation.y));
+    n.f.rotation.y = winkelLerp(n.f.rotation.y, ziel, Math.min(1, dt * 3));
+    u.kopf.rotation.x = d < 10 ? -.08 : 0;
+    u.blinzel -= dt; let lid = .01;
+    if (u.blinzel < 0) { lid = Math.min(1, -u.blinzel * 9); if (u.blinzel < -.22) u.blinzel = 2 + Math.random() * 4; else lid = Math.sin(-u.blinzel / .22 * Math.PI); }
+    for (const a of u.augen) { a.userData.lid.scale.y = Math.max(.01, lid * 1.16); a.userData.lid.visible = lid > .02; }
+    const redet = u.redet > 0; if (redet) u.redet -= dt;
+    const auf = redet ? (.25 + .75 * Math.abs(Math.sin(zeit * 13) * Math.sin(zeit * 5.3 + 1))) : 0;
+    u.mund.scale.y = .05 + auf * .9; u.laecheln.visible = auf < .3;
+    u.arme[0].rotation.x = redet ? -Math.abs(Math.sin(zeit * 2.2)) * .7 : u.arme[0].rotation.x;
+    u.arme[1].rotation.z = redet ? -.18 - Math.abs(Math.sin(zeit * 1.7)) * .5 : -.18;
+    if (u.herz) u.herz.material.emissiveIntensity = 1 + Math.sin(zeit * 3) * .6 + (redet ? 1 : 0);
+    if (u.schwanz) u.schwanz.rotation.z = Math.sin(zeit * 3 + u.phase) * .35;
+    for (const a of u.augen) a.userData.braue.position.y = .3 + (redet ? Math.abs(Math.sin(zeit * 4)) * .04 : 0);
+  }
+}
+// ----- Gespräch -----
+const gespr = { n: null, fid: null, hoert: null, token: 0 };
+const KEY_K = new URLSearchParams(location.search).get('k');
+const figurVon = (n) => n && (n.key || n.o?.figur);
+function naechsteFigur(max = 6) { let best = null, bd = max; for (const n of npc) { if (!NAMEN[figurVon(n)]) continue; const d = Math.hypot(n.f.position.x - sp.pos.x, n.f.position.z - sp.pos.z); if (d < bd) { bd = d; best = n; } } return best; }
+function zeile(wer, text, ich) { const p = document.createElement('p'); p.className = ich ? 'du' : ''; const b = document.createElement('b'); b.textContent = wer + ': '; p.append(b, document.createTextNode(text)); const l = $('#gesprLog'); l.appendChild(p); l.scrollTop = l.scrollHeight; }
+function gespraechOeffnen(n) {
+  if (!n) return;
+  gespr.n = n; gespr.fid = figurVon(n);
+  $('#karte').hidden = true; $('#reden').hidden = true;
+  $('#gesprTitel').textContent = NAMEN[gespr.fid] || 'Figur'; $('#gesprLog').innerHTML = '';
+  $('#gespraech').hidden = false; document.body.classList.add('redet');
+  if (zustand.innen == null) { kamZiel.pos.set(n.f.position.x + Math.sin(Math.atan2(sp.pos.x - n.f.position.x, sp.pos.z - n.f.position.z)) * 2.6, 1.7, n.f.position.z + Math.cos(Math.atan2(sp.pos.x - n.f.position.x, sp.pos.z - n.f.position.z)) * 2.6); }
+  else kamZiel.pos.set(n.f.position.x + Math.sin(n.f.rotation.y) * 2.6, 1.7, n.f.position.z + Math.cos(n.f.rotation.y) * 2.6);
+  kamZiel.blick.set(n.f.position.x, 2.05 * n.f.scale.y, n.f.position.z); kamZiel.aktiv = true;
+  sagen(n.satz || 'Hallo! Schön, dass du da bist.');
+  setTimeout(() => $('#gesprEingabe').focus(), 50);
+}
+function gespraechSchliessen() {
+  gespr.token++; stimmeStopp(); horchenStopp();
+  $('#gespraech').hidden = true; document.body.classList.remove('redet');
+  const n = gespr.n; gespr.n = null; if (n) n.f.userData.redet = 0;
+  if (zustand.innen) { innenOeffnen(zustand.innen); reinKamera(zustand.innen); } else kamZiel.aktiv = false;
+}
+async function senden() {
+  const e = $('#gesprEingabe'), t = e.value.trim(); if (!t || !gespr.n) return;
+  e.value = ''; zeile('Du', t, true); horchenStopp(); erlebt(`redete mit ${NAMEN[gespr.fid]}: «${t.slice(0, 60)}»`);
+  const tok = ++gespr.token; $('#gesprStatus').textContent = `${NAMEN[gespr.fid]} denkt nach …`;
+  let antwort = null;
+  if (KEY_K) try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, text: t }) }); const d = await r.json(); antwort = d.text || d.fehler; } catch {}
+  if (tok !== gespr.token) return;
+  $('#gesprStatus').textContent = '';
+  sagen(antwort || 'Ich höre dich, aber hier in der Vorschau kann ich noch nicht antworten. Im echten KI-Verse rede ich mit dir.');
+}
+// Stimme: zuerst die eigene Figurenstimme vom Server (ElevenLabs über die Sense Engine), sonst die Gerätestimme
+const STIMM_TON = { coinmaker: [.75, .9], mamaaffe: [.9, .92], sparky: [1.25, 1.05], otti: [1.35, 1.05], fompa: [.8, .95], kimo: [1.3, 1], jackie: [1.15, 1], letti: [1.3, 1.05], lumo: [.95, .95], eulin: [1.2, 1], fia: [1.3, 1], waefwaef: [1.2, 1.1], ava: [1.25, 1.05], kay: [1, 1.05] };
+let audioEl = null;
+function stimmeStopp() { try { audioEl?.pause(); } catch {} audioEl = null; try { speechSynthesis.cancel(); } catch {} }
+async function sagen(text) {
+  const n = gespr.n; if (!n) return; const tok = gespr.token;
+  zeile(NAMEN[gespr.fid] || 'Figur', text); stimmeStopp();
+  const u = n.f.userData, dauer = Math.max(1.5, text.length / 14);
+  const fertig = () => { if (u) u.redet = 0; if (kameraModus.an && gespr.n === n && tok === gespr.token && Erkennung && !gespr.hoert) setTimeout(() => { if (gespr.n === n && !gespr.hoert) horchen(); }, 350); };
+  if (KEY_K) try {
+    const r = await fetch('api/stimme?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, text }) });
+    if (tok !== gespr.token) return;
+    if (r.status === 200) { const b = await r.blob(); audioEl = new Audio(URL.createObjectURL(b)); audioEl.onplay = () => { u.redet = 999; }; audioEl.onended = fertig; await audioEl.play(); return; }
+  } catch {}
+  if (tok !== gespr.token) return;
+  if ('speechSynthesis' in window) {
+    const s = new SpeechSynthesisUtterance(text), [ton, tempo] = STIMM_TON[gespr.fid] || [1, 1];
+    const vs = speechSynthesis.getVoices().filter(v => /^de/i.test(v.lang)); const v = vs.find(x => /CH/i.test(x.lang)) || vs[0];
+    if (v) { s.voice = v; s.lang = v.lang; } else s.lang = 'de-CH';
+    s.pitch = ton; s.rate = tempo; s.onstart = () => { u.redet = 999; }; s.onend = s.onerror = fertig;
+    u.redet = dauer; speechSynthesis.speak(s);
+  } else u.redet = dauer;
+}
+// Mikrofon: Spracherkennung des Browsers (Safari, Chrome), Schweizerdeutsch wird als Hochdeutsch erkannt
+const Erkennung = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!Erkennung) $('#gesprMikro').hidden = true;
+function horchenStopp() { try { gespr.hoert?.stop(); } catch {} gespr.hoert = null; $('#gesprMikro').classList.remove('an'); }
+function horchen() {
+  stimmeStopp(); if (gespr.n) gespr.n.f.userData.redet = 0;
+  const r = new Erkennung(); r.lang = 'de-CH'; r.interimResults = true; r.continuous = false;
+  let text = '';
+  r.onresult = e => { text = Array.from(e.results).map(x => x[0].transcript).join(' '); $('#gesprEingabe').value = text; };
+  r.onerror = e => { $('#gesprStatus').textContent = e.error === 'not-allowed' ? 'Mikrofon nicht erlaubt. Bitte im Browser erlauben oder tippen.' : ''; horchenStopp(); };
+  r.onend = () => { const war = gespr.hoert === r; horchenStopp(); if (war && text.trim()) senden(); };
+  gespr.hoert = r; $('#gesprMikro').classList.add('an'); $('#gesprStatus').textContent = 'Ich höre zu …';
+  try { r.start(); } catch { horchenStopp(); }
+}
+$('#gesprMikro').onclick = () => gespr.hoert ? horchenStopp() : horchen();
+$('#gesprSenden').onclick = senden;
+$('#gesprEingabe').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); senden(); } if (e.key === 'Escape') gespraechSchliessen(); });
+$('#gesprZu').onclick = gespraechSchliessen;
+$('#gesprVergessen').onclick = async () => {
+  if (!gespr.n || !KEY_K) return;
+  if (!confirm(`${NAMEN[gespr.fid]} soll alles vergessen, was ihr bisher geredet habt?`)) return;
+  try { await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: gespr.fid, vergessen: true }) }); } catch {}
+  $('#gesprLog').innerHTML = ''; zeile(NAMEN[gespr.fid], 'Erledigt. Ich habe es vergessen. Wir fangen neu an.');
+};
+// ---------- Apps als Läden (Diego 19.10.): im Laden die echte App öffnen, sie läuft auf unserem Server ----------
+const LADEN_APPS = { sparky: [['humanspark', 'Human Sparks']], nest: [['fiasnest', 'Fias Nest']], tor: [['otti', 'Otti'], ['mondschein', 'Mondschein']], schuhmacher: [['jackie', "Jackie's Advice"]], singschule: [['kiki', 'Kiki']], schule: [['mamaaffe', 'Mama Affe']], fompa: [['fompa', 'Fompa'], ['transkript', 'Transkript']], funkenmarkt: [['foodflow', 'Food and Flow']], boerse: [['tradeping', 'TradePing']] };
+LADEN_APPS.tor && ORTE.forEach(o => { if (LADEN_APPS[o.id]) o.rein = true; });
+// Im Laden laufen Tinkos Bilder dieser Figur wie ein kleiner Film (aus der Ablage, nur mit Diegos Link)
+let ablageCache = null, filmTimer = null;
+async function ladenFilm(ort) {
+  clearInterval(filmTimer); const el = $('#ladenFilm'); el.hidden = true;
+  const n = npc.find(x => x.ort === ort), name = n && NAMEN[figurVon(n)]; if (!name || !KEY_K) return;
+  try { ablageCache = ablageCache || await fetch('api/ablage?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { return; }
+  const bilder = ablageCache.filter(e => e.bid && (e.text || '').toLowerCase().includes(name.toLowerCase())).slice(-12);
+  if (!bilder.length || zustand.innen !== ort) return;
+  let i = 0; const img = el.querySelector('img');
+  const url = (j) => 'api/ablage/' + bilder[j % bilder.length].bid + '?k=' + encodeURIComponent(KEY_K);
+  if (raum.figur === n) { const zeigenR = () => { raumBild(url(i), null); i++; }; zeigenR(); filmTimer = setInterval(zeigenR, 4500); return; }
+  const zeigen = () => { img.style.opacity = 0; setTimeout(() => { img.src = url(i); img.style.opacity = 1; i++; }, 400); };
+  el.querySelector('b').textContent = `🎬 ${name} in Tinkos Bildern`; el.hidden = false; zeigen(); filmTimer = setInterval(zeigen, 4500);
+}
+function appOeffnen(id, name) {
+  $('#appFenster iframe').src = 'apps/' + id + '/' + (KEY_K ? '?k=' + encodeURIComponent(KEY_K) : '');
+  $('#appTitel').textContent = name; $('#appFenster').hidden = false; erlebt(`öffnete die App ${name}`);
+}
+$('#appZu').onclick = () => { $('#appFenster').hidden = true; $('#appFenster iframe').src = 'about:blank'; };
+window.__kiverse = { sp, zustand, npc, sicht, gespraechOeffnen, reinGehen, ORTE };
+$('#reden').onclick = () => gespraechOeffnen(zustand.innen ? npc.find(x => x.ort === zustand.innen) : naechsteFigur());
+// ---------- Handy-Modus (Diego 18.10. 23:32): mitlaufen, sich selbst in der Welt sehen, KI-Blick durch die Kamera ----------
+// Kamera und Bewegungssensor bleiben im Gerät: kein Bild wird gespeichert oder gesendet.
+// Die KI-Welt ist ein Paralleluniversum: ein echter Schritt ist hier ein Stück Gasse (SCHRITT_WEG), echte Hindernisse zählen nicht.
+const SCHRITT_WEG = 2.2;
+const handy = { mitlaufen: false, ar: false, selfie: false, strom: null, ori: null, r0: null, basis: 0, weg: 0, schritte: 0, glatt: 9.81, oben: false, letzter: 0, qGlatt: new THREE.Quaternion(), selfieTex: null, alteKarte: null, video: null };
+const qZiel = new THREE.Quaternion(), qHilf = new THREE.Quaternion(), qVorne = new THREE.Quaternion(-Math.sqrt(.5), 0, 0, Math.sqrt(.5)), eulerH = new THREE.Euler(), achseZ = new THREE.Vector3(0, 0, 1), achseY = new THREE.Vector3(0, 1, 0), vorneV = new THREE.Vector3();
+const winkelLerp = (a, b, t) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
+function geraetQuaternion(q) {
+  const o = handy.ori; if (!o || o.alpha == null) return false;
+  const rad = Math.PI / 180, dreh = (screen.orientation?.angle ?? window.orientation ?? 0) * rad;
+  eulerH.set(o.beta * rad, o.alpha * rad, -o.gamma * rad, 'YXZ'); q.setFromEuler(eulerH); q.multiply(qVorne); q.multiply(qHilf.setFromAxisAngle(achseZ, -dreh));
+  return true;
+}
+// Blickrichtung des Handys als Spielrichtung (sin r, cos r); beim Einschalten zeigt das Handy dorthin, wo die Figur schaut
+function handyRichtung() {
+  if (!geraetQuaternion(qZiel)) return null;
+  vorneV.set(0, 0, -1).applyQuaternion(qZiel); const r = Math.atan2(vorneV.x, vorneV.z);
+  if (handy.r0 == null) { handy.r0 = r; handy.basis = sp.richtung; }
+  return handy.basis + (r - handy.r0);
+}
+function handyQuaternion(q) {
+  if (!geraetQuaternion(q)) return false;
+  if (handy.r0 == null) handyRichtung();
+  q.premultiply(qHilf.setFromAxisAngle(achseY, handy.basis - handy.r0)); return true;
+}
+addEventListener('deviceorientation', e => { if (e.alpha != null) handy.ori = e; });
+addEventListener('devicemotion', e => {
+  if (!handy.mitlaufen) return; const a = e.accelerationIncludingGravity; if (!a || a.x == null) return;
+  handy.glatt = lerp(handy.glatt, Math.hypot(a.x, a.y, a.z), .25);
+  const jetzt = performance.now();
+  if (!handy.oben && handy.glatt > 11.2 && jetzt - handy.letzter > 300) {
+    handy.oben = true; handy.letzter = jetzt; handy.schritte++; handy.weg = Math.min(handy.weg + SCHRITT_WEG, SCHRITT_WEG * 3);
+    $('#schrittAnzeige').textContent = '👣 ' + handy.schritte;
+  } else if (handy.glatt < 10.3) handy.oben = false;
+});
+async function sensorenErlauben() {
+  for (const E of [window.DeviceOrientationEvent, window.DeviceMotionEvent]) if (E && typeof E.requestPermission === 'function') {
+    if (await E.requestPermission() !== 'granted') throw new Error('Bewegung ist nicht erlaubt. In Safari: aA, dann Website-Einstellungen, Bewegung und Ausrichtung erlauben.');
+  }
+}
+function kameraAus() { handy.strom?.getTracks().forEach(t => t.stop()); handy.strom = null; $('#arVideo').srcObject = null; }
+async function kameraAn(seite) {
+  kameraAus();
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Dieser Browser kann die Kamera nicht öffnen.');
+  handy.strom = await navigator.mediaDevices.getUserMedia({ video: { facingMode: seite, width: { ideal: 1280 } }, audio: false });
+  const v = $('#arVideo'); v.srcObject = handy.strom; await v.play().catch(() => {}); return v;
+}
+async function mitlaufenSetzen(an) {
+  if (an) await sensorenErlauben();
+  handy.mitlaufen = an; handy.r0 = null; handy.weg = 0; $('#schrittAnzeige').hidden = !an;
+  // Beim Mitlaufen bleibt der Bildschirm an (sonst schläft das Handy beim Gehen ein)
+  try { if (an && navigator.wakeLock) handy.wach = await navigator.wakeLock.request('screen'); else if (!an) { handy.wach?.release(); handy.wach = null; } } catch {}
+  $('#stick').style.opacity = an ? .35 : '';
+}
+// Selfie: das eigene Gesicht live im goldenen Rahmen auf dem Kopf der Figur
+function selfieMalen() {
+  const v = $('#arVideo'), t = handy.selfieTex; if (!t || v.readyState < 2) return;
+  const c = t.image, g = c.getContext('2d'), w = c.width, m = Math.min(v.videoWidth, v.videoHeight);
+  g.clearRect(0, 0, w, w); g.save(); g.beginPath(); g.arc(w / 2, w / 2, w / 2 - 10, 0, Math.PI * 2); g.clip();
+  g.translate(w, 0); g.scale(-1, 1); g.drawImage(v, (v.videoWidth - m) / 2, (v.videoHeight - m) / 2, m, m, 0, 0, w, w); g.restore();
+  g.lineWidth = 12; g.strokeStyle = '#f2c25b'; g.beginPath(); g.arc(w / 2, w / 2, w / 2 - 8, 0, Math.PI * 2); g.stroke();
+  t.needsUpdate = true;
+}
+function kopfSprite() { return spieler?.children.find(c => c.isSprite); }
+async function selfieSetzen(an) {
+  const k = kopfSprite();
+  if (an) {
+    if (handy.ar) await kiBlickSetzen(false);
+    await kameraAn('user');
+    handy.selfieTex = handy.selfieTex || new THREE.CanvasTexture(Object.assign(document.createElement('canvas'), { width: 256, height: 256 }));
+    handy.selfieTex.colorSpace = THREE.SRGBColorSpace;
+    if (k) { handy.alteKarte = handy.alteKarte || k.material.map; k.material.map = handy.selfieTex; k.material.needsUpdate = true; }
+    $('#arVideo').style.visibility = 'hidden';
+  } else {
+    kameraAus(); if (k && handy.alteKarte) { k.material.map = handy.alteKarte; k.material.needsUpdate = true; }
+  }
+  handy.selfie = an;
+}
+async function kiBlickSetzen(an) {
+  if (an) {
+    if (handy.selfie) await selfieSetzen(false);
+    if (!handy.mitlaufen) await mitlaufenSetzen(true);
+    await kameraAn('environment'); $('#arVideo').style.visibility = '';
+    handyQuaternion(handy.qGlatt);
+  } else kameraAus();
+  handy.ar = an;
+  AR_WEG.forEach(m => { m.visible = !an; });
+  szene.fog = an ? null : new THREE.FogExp2(NEBEL_NACHT, 0.0075);
+  renderer.setClearColor(0x000000, an ? 0 : 1);
+  document.documentElement.classList.toggle('ar', an);
+}
+function handyKarte(fehler) {
+  const umschalten = (f) => async () => { try { await f(); handyKarte(); } catch (e) { handyKarte(e.message || 'Das ging nicht.'); } };
+  karte('Handy', (fehler ? '⚠ ' + fehler + '\n\n' : '') +
+    'Die KI-Welt ist wie ein Paralleluniversum: Sie folgt deinem Handy, ist aber kein Abbild deiner Strasse. Ein echter Schritt ist hier ein Stück Gasse, mal länger, mal kürzer. Pass draussen auf, wohin du gehst.\n\n' +
+    'Kamera und Bewegung bleiben in deinem Handy. Es wird nichts gespeichert oder gesendet.',
+    [[handy.mitlaufen ? '👣 Mitlaufen aus' : '👣 Mitlaufen: Handy drehen und gehen', umschalten(() => handy.ar ? kiBlickSetzen(false).then(() => mitlaufenSetzen(false)) : mitlaufenSetzen(!handy.mitlaufen)), !handy.mitlaufen],
+     [handy.selfie ? '🤳 Mich ausblenden' : '🤳 Mich in der Welt sehen (Selfie-Kamera)', umschalten(() => selfieSetzen(!handy.selfie))],
+     [handy.ar ? '🌍 KI-Blick aus' : '🌍 KI-Blick: die KI-Welt durch die Kamera', umschalten(() => kiBlickSetzen(!handy.ar))],
+     ...(handy.mitlaufen ? [['🧭 Neu ausrichten: geradeaus ist jetzt die Gasse', () => { handy.r0 = null; handyKarte(); }]] : []),
+     ['Weiter', () => { $('#karte').hidden = true; }, true]]);
+}
+$('#handyKnopf').onclick = () => handyKarte();
+
+window.__spiel = { sp, zustand, ORTE, FUNKEN, reinGehen, rausGehen, springen, anfangen, schritt, tasten, handy, kiBlickSetzen, mitlaufenSetzen, selfieSetzen };
+</script>
+<script>
+  // Falls die 3D-Bibliothek nicht lädt (kein Internet), freundlich Bescheid geben
+  setTimeout(() => { const l = document.getElementById('laden'); if (l && !l.hidden) l.textContent = 'Das 3D-Städtchen braucht Internet. Bitte später nochmals öffnen.'; }, 12000);
+</script>
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nova">
+<link rel="manifest" href="/nova.webmanifest">
+<meta name="theme-color" content="#070e24">
+<title>Nova</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<style>
+:root {
+  --nacht: #070e24; --nacht2: #0d1a3d; --tief: #050a1a;
+  --gold: #f3c969; --gold2: #ffe4a3; --glas: rgba(255,255,255,.06); --glas2: rgba(255,255,255,.1);
+  --linie: rgba(255,255,255,.12); --text: #eef2ff; --leise: #a9b4d6; --rot: #e0566a; --gruen: #6fdc9a;
+  --sicher-oben: env(safe-area-inset-top, 0px); --sicher-unten: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--tief); color: var(--text); }
+body { font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform .08s ease, filter .08s ease; }
+/* Diego 22.10.: «Knöpfe funktionieren immer noch schlecht»: sichtbares Drücken, grössere Trefferflächen, Reiter werden nicht mehr zusammengequetscht */
+button:active { transform: scale(.94); filter: brightness(1.25); }
+.app { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; overflow: hidden;
+  background: radial-gradient(120% 70% at 50% 0%, #1b2f6b 0%, var(--nacht2) 38%, var(--nacht) 70%, var(--tief) 100%); }
+.sterne { position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background-image: radial-gradient(1px 1px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 78% 12%, #fff, transparent),
+  radial-gradient(1.5px 1.5px at 62% 30%, #ffe9b8, transparent), radial-gradient(1px 1px at 30% 8%, #fff, transparent),
+  radial-gradient(1px 1px at 88% 34%, #fff, transparent), radial-gradient(1px 1px at 8% 40%, #cfe0ff, transparent),
+  radial-gradient(1.5px 1.5px at 45% 16%, #fff, transparent); }
+
+/* Kopf */
+.kopf { position: relative; z-index: 2; display: flex; align-items: center; gap: 8px; padding: calc(var(--sicher-oben) + 8px) 16px 4px; }
+.kopf h1 { margin: 0; flex: 1; text-align: center; font-size: 17px; font-weight: 600; letter-spacing: .02em; }
+.rund { width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--linie); background: var(--glas); display: grid; place-items: center; font-size: 18px; }
+.rund:active { transform: scale(.94); }
+.zurueck { min-width: 40px; color: var(--leise); text-decoration: none; font-size: 15px; display: flex; align-items: center; height: 40px; }
+.netz { position: relative; z-index: 2; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; padding: 2px 16px 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; background: var(--glas); border: 1px solid var(--linie); font-size: 12.5px; color: var(--leise); }
+.punkt { width: 7px; height: 7px; border-radius: 50%; background: #56607e; }
+.punkt.an { background: var(--gruen); box-shadow: 0 0 8px var(--gruen); }
+
+/* Bühne mit Nova */
+.inhalt { position: relative; min-height: 0; display: flex; flex-direction: column; }
+.buehne { flex: none; display: flex; flex-direction: column; align-items: center; padding-top: 4px; transition: height .5s ease; height: 300px; }
+.inhalt.klein .buehne { height: 168px; }
+#nova { width: 210px; height: 236px; transition: width .5s ease, height .5s ease; cursor: pointer; touch-action: manipulation; overflow: visible; }
+.inhalt.klein #nova { width: 118px; height: 132px; }
+.zustand { margin-top: 2px; min-height: 22px; font-size: 14px; color: var(--leise); text-align: center; padding: 0 24px; }
+.live { min-height: 0; max-width: 560px; margin: 2px 24px 0; text-align: center; font-size: 17px; color: var(--gold2); }
+
+/* Verlauf */
+.feed { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px 18px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 10px), transparent 100%); }
+.zug { max-width: 640px; margin: 0 auto 14px; display: flex; flex-direction: column; gap: 8px; animation: rein .35s ease both; }
+@keyframes rein { from { opacity: 0; transform: translateY(8px); } }
+.blase { padding: 10px 14px; border-radius: 20px; max-width: 86%; white-space: pre-wrap; word-wrap: break-word; }
+.du { align-self: flex-end; background: linear-gradient(180deg, #f6d27c, #e9b84f); color: #2a1d00; border-bottom-right-radius: 6px; }
+.nv { align-self: flex-start; background: var(--glas2); border: 1px solid var(--linie); border-bottom-left-radius: 6px; }
+.nv b.wer, .karte .wer { display: block; font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 2px; letter-spacing: .03em; }
+.fazit { border-color: rgba(243,201,105,.45); box-shadow: 0 0 0 1px rgba(243,201,105,.15) inset; }
+.karte { align-self: stretch; margin-left: 10px; padding: 10px 12px; border-radius: 16px; background: rgba(0,0,0,.22); border: 1px solid var(--linie); font-size: 15px; }
+.karte .kopfzeile { display: flex; align-items: center; gap: 8px; }
+.ava { width: 28px; height: 28px; border-radius: 14px; display: grid; place-items: center; font-size: 15px; flex: none; background: #22305a; }
+.karte .text { white-space: pre-wrap; margin-top: 6px; color: #dfe5fb; max-height: 9.5em; overflow: hidden; position: relative; }
+.karte.offen .text { max-height: none; }
+.karte .mehr, .karte .hoeren { margin-top: 6px; background: none; border: 0; color: var(--gold); font-size: 13.5px; padding: 4px 0; margin-right: 14px; }
+.karte img { width: 100%; max-width: 420px; border-radius: 12px; display: block; margin-top: 8px; }
+.karte.klein { font-size: 14px; color: var(--leise); padding: 8px 12px; }
+a.oeffnen { display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: var(--text); font-weight: 600; }
+a.oeffnen span:last-child { color: var(--gold); font-size: 20px; }
+.warte { align-self: flex-start; margin-left: 10px; font-size: 13.5px; color: var(--leise); display: flex; gap: 8px; align-items: center; }
+.warte i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: hop 1.2s infinite ease-in-out; }
+.warte i:nth-child(2) { animation-delay: .15s; } .warte i:nth-child(3) { animation-delay: .3s; }
+@keyframes hop { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+.zeit { text-align: center; font-size: 12px; color: #6f7aa0; margin: 6px 0 12px; }
+
+/* Unten */
+.unten { position: relative; z-index: 3; padding: 6px 12px calc(var(--sicher-unten) + 10px); background: linear-gradient(to top, rgba(5,10,26,.96) 60%, rgba(5,10,26,0)); }
+.vorschlaege { display: flex; gap: 8px; overflow-x: auto; padding: 2px 4px 10px; scrollbar-width: none; }
+.vorschlaege::-webkit-scrollbar { display: none; }
+.vorschlaege button { flex: none; padding: 8px 12px; border-radius: 99px; background: var(--glas); border: 1px solid var(--linie); font-size: 14px; color: #dbe2fb; }
+.zeile { display: flex; align-items: flex-end; gap: 10px; max-width: 680px; margin: 0 auto; }
+.feld { flex: 1; min-width: 0; display: flex; align-items: flex-end; background: var(--glas2); border: 1px solid var(--linie); border-radius: 24px; padding: 4px 4px 4px 14px; min-height: 48px; }
+.feld textarea { flex: 1; min-width: 0; resize: none; border: 0; background: none; outline: none; font-size: 16px; padding: 9px 0; max-height: 120px; line-height: 1.35; }
+.feld textarea::placeholder { color: #8a95ba; }
+.schicken { width: 38px; height: 38px; border-radius: 19px; border: 0; background: var(--gold); color: #2a1d00; font-weight: 700; font-size: 18px; margin: 1px; }
+.schicken:disabled { opacity: .3; }
+.mic { width: 64px; height: 64px; border-radius: 32px; border: 0; flex: none; position: relative;
+  background: radial-gradient(circle at 35% 30%, #ffeab8, var(--gold) 55%, #c98f22); color: #2a1d00; font-size: 26px;
+  box-shadow: 0 6px 24px rgba(243,201,105,.35), 0 0 0 6px rgba(243,201,105,.08); transition: transform .15s; }
+.mic:active { transform: scale(.94); }
+.mic.hoert { background: radial-gradient(circle at 35% 30%, #ffb3be, var(--rot) 60%, #a5283c); color: #fff; box-shadow: 0 0 0 0 rgba(224,86,106,.6); animation: puls 1.4s infinite; }
+@keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(224,86,106,.55); } 70% { box-shadow: 0 0 0 18px rgba(224,86,106,0); } 100% { box-shadow: 0 0 0 0 rgba(224,86,106,0); } }
+.mic svg { width: 28px; height: 28px; }
+.frei { width: 48px; height: 48px; border-radius: 24px; border: 1px solid var(--linie); background: var(--glas); flex: none; font-size: 24px; line-height: 1; color: var(--leise); }
+.frei[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(243,201,105,.12); }
+
+/* Blatt (Netz, Gedächtnis, Seele) */
+.decke { position: fixed; inset: 0; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 10; }
+.decke.an { opacity: 1; pointer-events: auto; }
+.blatt { position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; max-height: 86vh; display: flex; flex-direction: column;
+  background: #0c1633; border-top: 1px solid var(--linie); border-radius: 22px 22px 0 0; transform: translateY(105%); transition: transform .32s cubic-bezier(.2,.8,.2,1);
+  padding-bottom: var(--sicher-unten); box-shadow: 0 -20px 60px rgba(0,0,0,.5); }
+.blatt.an { transform: none; }
+.blattkopf { position: relative; min-height: 44px; }
+.blattzu { position: absolute; right: 12px; top: 6px; min-width: 64px; height: 38px; border-radius: 19px; border: 1px solid var(--gold); background: rgba(243,201,105,.14); color: var(--gold); font-size: 16px; font-weight: 700; cursor: pointer; }
+.griff { width: 40px; height: 5px; border-radius: 3px; background: #3a4670; margin: 8px auto 4px; }
+.reiter { flex: none; display: flex; gap: 6px; padding: 6px 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.reiter::-webkit-scrollbar { display: none; }
+.reiter button { flex: 1 0 auto; min-height: 40px; white-space: nowrap; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--linie); background: var(--glas); font-size: 14px; color: var(--leise); }
+.reiter button.an { background: rgba(243,201,105,.14); border-color: rgba(243,201,105,.5); color: var(--gold2); }
+.blattinhalt { overflow-y: auto; padding: 0 16px 20px; }
+.blattinhalt h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #8794bd; margin: 16px 2px 8px; font-weight: 600; }
+.raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.kachel { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 16px; background: var(--glas); border: 1px solid var(--linie); text-decoration: none; color: var(--text); font-size: 13px; text-align: center; }
+.kachel .ava { width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+.liste { display: flex; flex-direction: column; gap: 8px; }
+.eintrag { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: var(--glas); border: 1px solid var(--linie); font-size: 15px; }
+.eintrag span { flex: 1; }
+.eintrag button { border: 0; background: none; color: #8794bd; font-size: 18px; padding: 0 2px; }
+.knopfreihe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.knopf { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--linie); background: var(--glas2); font-size: 14.5px; }
+.knopf.gold { background: var(--gold); color: #2a1d00; border: 0; font-weight: 600; }
+.blattinhalt textarea, .blattinhalt input[type=text] { width: 100%; border-radius: 14px; border: 1px solid var(--linie); background: rgba(0,0,0,.25); padding: 12px; font-size: 16px; outline: none; }
+.blattinhalt textarea { min-height: 220px; line-height: 1.45; }
+.satz { display: block; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; background: var(--glas); border: 1px solid var(--linie); font-size: 15px; color: var(--text); }
+.satz small { display: block; color: var(--leise); font-size: 13px; margin-top: 2px; }
+.hinweis { font-size: 13.5px; color: var(--leise); margin: 6px 2px; }
+.toast { position: fixed; left: 50%; top: calc(var(--sicher-oben) + 12px); transform: translate(-50%, -140%); transition: transform .3s; z-index: 20;
+  background: #1a2752; border: 1px solid var(--linie); padding: 10px 16px; border-radius: 14px; font-size: 14px; max-width: 90vw; }
+.toast.an { transform: translate(-50%, 0); }
+/* Fenster Ergebnisse */
+.rund { position: relative; }
+.badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold); color: #2a1d00; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.badge[hidden] { display: none; }
+.fenster { position: fixed; inset: 0; z-index: 15; background: #0a1430; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.fenster.an { transform: none; }
+.fkopf { display: flex; align-items: center; gap: 8px; padding: calc(var(--sicher-oben) + 8px) 16px 8px; border-bottom: 1px solid var(--linie); }
+.fkopf h2 { flex: 1; margin: 0; font-size: 17px; font-weight: 600; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fleiste { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; border-bottom: 1px solid var(--linie); }
+.fleiste[hidden] { display: none; }
+.fleiste .knopf { flex: 1 1 auto; text-align: center; text-decoration: none; color: var(--text); }
+.finhalt { flex: 1; overflow-y: auto; padding: 14px 16px calc(var(--sicher-unten) + 24px); min-width: 0; }
+.ekarte { display: block; width: 100%; text-align: left; padding: 12px 14px; border-radius: 16px; background: var(--glas); border: 1px solid var(--linie); margin-bottom: 10px; color: var(--text); font-size: 15px; }
+.ekarte b { display: block; font-size: 16px; margin-bottom: 3px; }
+.ekarte small { color: var(--leise); display: block; line-height: 1.35; }
+.ekarte.neu { border-color: rgba(243,201,105,.6); }
+.ekarte.neu b::after { content: ' • neu'; color: var(--gold2); font-weight: 500; font-size: 13px; }
+.doku { font-size: 16px; line-height: 1.55; overflow-wrap: anywhere; }
+.doku h1, .doku h2, .doku h3 { font-size: 18px; margin: 18px 0 8px; color: var(--gold2); }
+.doku h1 { font-size: 21px; }
+.doku p { margin: 8px 0; }
+.doku ul, .doku ol { padding-left: 22px; margin: 6px 0; }
+.doku li { margin: 3px 0; }
+.doku a { color: #9cc3ff; }
+.doku blockquote { margin: 10px 0; padding: 8px 12px; border-left: 3px solid var(--gold); background: rgba(255,255,255,.04); border-radius: 0 10px 10px 0; }
+.doku hr { border: 0; border-top: 1px solid var(--linie); margin: 16px 0; }
+.code { position: relative; margin: 10px 0; border-radius: 14px; background: rgba(0,0,0,.35); border: 1px solid var(--linie); }
+.code pre { margin: 0; padding: 12px; padding-top: 44px; overflow-x: auto; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.code button { position: absolute; top: 6px; right: 6px; padding: 7px 12px; border-radius: 10px; border: 0; background: var(--gold); color: #2a1d00; font-weight: 600; font-size: 14px; }
+.doku table { border-collapse: collapse; display: block; overflow-x: auto; font-size: 14px; }
+.doku td, .doku th { border: 1px solid var(--linie); padding: 5px 8px; }
+@media (min-width: 900px) { .buehne { height: 340px; } #nova { width: 240px; height: 270px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.wuchs { position: fixed; inset: 0; z-index: 80; background: rgba(4,8,22,.72); display: grid; place-items: center; padding: 16px; }
+.wuchs .karte { width: min(420px, 100%); max-height: 80vh; overflow-y: auto; background: #101b44; border: 1px solid rgba(243,201,105,.4); border-radius: 22px; padding: 20px; color: #eef1fb; box-sizing: border-box; }
+.wuchs h2 { margin: 0 0 6px; color: #f3c969; font-size: 1.5rem; }
+.wuchs .zahlen { display: flex; gap: 10px; margin: 12px 0; }
+.wuchs .zahlen div { flex: 1; background: rgba(255,255,255,.06); border-radius: 14px; padding: 10px; text-align: center; }
+.wuchs .zahlen b { display: block; font-size: 1.8rem; color: #f3c969; }
+.wuchs ul { margin: 6px 0 14px; padding-left: 1.1em; line-height: 1.45; }
+.wuchs button { width: 100%; font-size: 1.05rem; padding: 14px; border-radius: 14px; border: 0; background: #f3c969; color: #0b1640; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sterne" aria-hidden="true"></div>
+  <header class="kopf">
+    <a class="zurueck" id="zurueck" href="/">‹ KI-Verse</a>
+    <h1>Nova</h1>
+    <button class="rund" id="wuchsKnopf" type="button" aria-label="Heute gewachsen">🌱</button>
+    <button class="rund" id="pushKnopf" type="button" aria-label="Push-Nachrichten einschalten">🔔</button>
+    <button class="rund" id="zentraleKnopf" type="button" aria-label="Schaltzentrale">🎛</button>
+    <button class="rund" id="ergKnopf" type="button" aria-label="Ergebnisse">📂<span class="badge" id="ergBadge" hidden></span></button>
+    <button class="rund" id="menuKnopf" type="button" aria-label="Netz, Gedächtnis und Seele">☰</button>
+  </header>
+  <div class="netz" id="netz" aria-live="polite"></div>
+  <div class="inhalt" id="inhalt">
+    <section class="buehne">
+      <svg id="nova" viewBox="0 0 200 224" role="img" aria-label="Nova, der kleine Leuchtturm. Tippen zum Sprechen.">
+        <defs>
+          <radialGradient id="schein" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".95"/><stop offset=".35" stop-color="#f3c969" stop-opacity=".45"/><stop offset="1" stop-color="#f3c969" stop-opacity="0"/></radialGradient>
+          <linearGradient id="strahl" x1="0" x2="1"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".55"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></linearGradient>
+          <linearGradient id="koerper" x1="0" x2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#e8edfb"/><stop offset="1" stop-color="#c7d0ec"/></linearGradient>
+          <linearGradient id="streifen" x1="0" x2="1"><stop offset="0" stop-color="#ef6b7d"/><stop offset="1" stop-color="#b93a50"/></linearGradient>
+          <radialGradient id="glas" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#fff8e1"/><stop offset=".6" stop-color="#ffe2a0"/><stop offset="1" stop-color="#f0b84a"/></radialGradient>
+          <linearGradient id="dach" x1="0" x2="1"><stop offset="0" stop-color="#3b5bb5"/><stop offset="1" stop-color="#22377a"/></linearGradient>
+        </defs>
+        <g id="strahlen" opacity=".0">
+          <path d="M100 70 L-120 10 L-120 130 Z" fill="url(#strahl)" transform="scale(-1,1) translate(-200,0)"/>
+          <path d="M100 70 L-120 10 L-120 130 Z" fill="url(#strahl)"/>
+        </g>
+        <ellipse cx="100" cy="214" rx="46" ry="7" fill="#000" opacity=".35" id="schatten"/>
+        <g id="ganz">
+          <circle id="aura" cx="100" cy="70" r="78" fill="url(#schein)"/>
+          <!-- Körper: kleiner Leuchtturm -->
+          <g id="rumpf">
+            <path d="M66 112 Q64 108 70 106 L130 106 Q136 108 134 112 L144 198 Q145 208 134 208 L66 208 Q55 208 56 198 Z" fill="url(#koerper)"/>
+            <path d="M68.6 132 L131.4 132 L133.6 152 L66.4 152 Z" fill="url(#streifen)"/>
+            <path d="M64.2 172 L135.8 172 L138 190 L62 190 Z" fill="url(#streifen)"/>
+            <path d="M92 208 L92 194 Q100 186 108 194 L108 208 Z" fill="#2a3f86"/>
+            <circle cx="105" cy="200" r="1.6" fill="#f3c969"/>
+            <!-- Ärmchen -->
+            <g id="armL"><path d="M68 140 Q52 146 50 160" stroke="#e8edfb" stroke-width="9" stroke-linecap="round" fill="none"/></g>
+            <g id="armR"><path d="M132 140 Q148 146 150 160" stroke="#e8edfb" stroke-width="9" stroke-linecap="round" fill="none"/></g>
+          </g>
+          <!-- Kopf: Laterne mit Gesicht -->
+          <g id="kopf">
+            <rect x="62" y="98" width="76" height="12" rx="6" fill="#2a3f86"/>
+            <rect x="58" y="94" width="84" height="7" rx="3.5" fill="#3b5bb5"/>
+            <path d="M64 96 Q62 52 100 44 Q138 52 136 96 Z" fill="url(#glas)"/>
+            <path d="M74 92 L74 60 M100 92 L100 46 M126 92 L126 60" stroke="#c99a3b" stroke-opacity=".35" stroke-width="2"/>
+            <path d="M58 52 Q100 14 142 52 Q100 40 58 52 Z" fill="url(#dach)"/>
+            <circle cx="100" cy="24" r="5" fill="#f3c969" id="spitze"/>
+            <line x1="100" y1="29" x2="100" y2="36" stroke="#2a3f86" stroke-width="3"/>
+            <!-- Gesicht -->
+            <g id="gesicht">
+              <ellipse cx="84" cy="70" rx="5.5" ry="7" fill="#1d2a55" id="augeL"/>
+              <ellipse cx="116" cy="70" rx="5.5" ry="7" fill="#1d2a55" id="augeR"/>
+              <circle cx="86" cy="67" r="2" fill="#fff" id="glanzL"/>
+              <circle cx="118" cy="67" r="2" fill="#fff" id="glanzR"/>
+              <ellipse cx="74" cy="82" rx="6" ry="3.5" fill="#ff8a8a" opacity=".45"/>
+              <ellipse cx="126" cy="82" rx="6" ry="3.5" fill="#ff8a8a" opacity=".45"/>
+              <path id="mund" d="M92 84 Q100 90 108 84" stroke="#1d2a55" stroke-width="3" stroke-linecap="round" fill="#7a2335"/>
+            </g>
+          </g>
+        </g>
+      </svg>
+      <div class="zustand" id="zustand">Tipp auf mich und sprich.</div>
+      <div class="live" id="live" aria-live="polite"></div>
+    </section>
+    <main class="feed" id="feed" aria-live="polite"></main>
+  </div>
+  <footer class="unten">
+    <div class="vorschlaege" id="vorschlaege"></div>
+    <form class="zeile" id="form" autocomplete="off">
+      <button class="frei" id="frei" type="button" aria-pressed="false" aria-label="Freihändig" title="Freihändig: nach jeder Antwort hört Nova wieder zu">∞</button>
+      <div class="feld">
+        <textarea id="eingabe" rows="1" placeholder="Schreib Nova …" enterkeyhint="send"></textarea>
+        <button class="schicken" id="schicken" type="submit" aria-label="Senden" disabled>↑</button>
+      </div>
+      <button class="mic" id="mic" type="button" aria-label="Sprechen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+    </form>
+  </footer>
+</div>
+
+<div class="decke" id="decke"></div>
+<div class="blatt" id="blatt" role="dialog" aria-modal="true" aria-label="Nova">
+  <div class="blattkopf"><div class="griff"></div><button class="blattzu" id="blattZu" type="button" aria-label="Menü schliessen">✕ Zu</button></div>
+  <div class="reiter" id="reiter">
+    <button type="button" data-r="hilfe">📘 So geht's</button>
+    <button type="button" data-r="netz" class="an">🕸 Netz</button>
+    <button type="button" data-r="gedaechtnis">🧠 Gedächtnis</button>
+    <button type="button" data-r="tinko">🔒 Tinko</button>
+    <button type="button" data-r="seele">✨ Seele</button>
+  </div>
+  <div class="blattinhalt" id="blattinhalt"></div>
+</div>
+<div class="fenster" id="fenster" role="dialog" aria-modal="true" aria-label="Ergebnisse">
+  <div class="fkopf"><button class="rund" id="fZurueck" type="button" aria-label="Zurück">‹</button><h2 id="fTitel">📂 Ergebnisse</h2><button class="rund" id="fZu" type="button" aria-label="Schliessen">✕</button></div>
+  <div class="fleiste" id="fLeiste" hidden></div>
+  <div class="finhalt" id="fInhalt"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const K = new URLSearchParams(location.search).get('k') || '';
+  const mitK = (p) => p + (p.includes('?') ? '&' : '?') + 'k=' + encodeURIComponent(K);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  async function api(p, daten, roh) {
+    const r = await fetch(mitK(p), daten === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(daten) });
+    if (roh) return r;
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.fehler || 'Fehler ' + r.status);
+    return d;
+  }
+  $('#zurueck').href = '/?welt=1&k=' + encodeURIComponent(K);
+  // Schaltzentrale mit Thread-Liste (Nova-Thread 22.10.): bekommt nur einen Lese-Schlüssel, nie den Besitzer-Schlüssel
+  $('#zentraleKnopf').onclick = async () => { const w = window.open('', '_blank'); try { const d = await api('api/zentrale/threads-link'); const u = 'https://diegorobert-code.github.io/DR_Lab/nova/zentrale.html#liste=' + encodeURIComponent(d.quelle); if (w) w.location = u; else location.href = u; } catch (e) { w?.close(); toast(e.message); } };
+  let stand = { verlauf: [], gedaechtnis: [], seele: '', netz: { apps: [], figuren: [], schleife: {} } };
+  const AVA = { lumo: ['🦉', '#2b3f7d'], tinko: ['🛠️', '#1f5a6b'], coinmaker: ['🪙', '#5a4720'], mamaaffe: ['🦧', '#6b3d1f'], sparky: ['🦊', '#7a3a1a'], otti: ['🦔', '#4d3b2b'],
+    fompa: ['🦁', '#6b5520'], kimo: ['🐨', '#4a4f5c'], jackie: ['👠', '#6b2a4d'], letti: ['🕊️', '#3d4f6b'], eulin: ['🦉', '#5a2433'], fia: ['🐦‍🔥', '#7a2a2a'],
+    waefwaef: ['🐶', '#4d5566'], ava: ['🎬', '#4a2b6b'], minky: ['🐱', '#3b4a6b'], brix: ['🧱', '#6b3b2b'], kay: ['👓', '#334455'], mrping: ['📈', '#1f4d3b'] };
+  const APP_AVA = { humanspark: '✨', fiasnest: '🐦‍🔥', mondschein: '🌙', otti: '🦔', jackie: '👠', kiki: '🐨', mamaaffe: '🦧', fompa: '🦁', transkript: '📝', foodflow: '🥗', tradeping: '📈' };
+  const ava = (id, gross) => { const a = AVA[id] || ['✦', '#2b3f7d']; return `<span class="ava" style="background:${a[1]}">${a[0]}</span>`; };
+
+  // ---------- Nova bewegt sich ----------
+  const N = { zustand: 'ruhig', pegel: 0, blinzeln: 0, naechstesBlinzeln: performance.now() + 2500, winken: 0, sprichtSeit: 0 };
+  const el = (id) => document.getElementById(id);
+  const ganz = el('ganz'), kopf = el('kopf'), aura = el('aura'), strahlen = el('strahlen'), mund = el('mund'), armL = el('armL'), armR = el('armR'),
+    augeL = el('augeL'), augeR = el('augeR'), glanzL = el('glanzL'), glanzR = el('glanzR'), schatten = el('schatten'), spitze = el('spitze');
+  function figur(t) {
+    const s = t / 1000, z = N.zustand;
+    const hub = z === 'spricht' ? 3.5 : z === 'hoert' ? 2 : 2.8;
+    const y = Math.sin(s * (z === 'denkt' ? 3.2 : 1.6)) * hub;
+    const neig = z === 'hoert' ? Math.sin(s * 1.3) * 2 + 5 : z === 'denkt' ? Math.sin(s * 2.4) * 3 : Math.sin(s * .9) * 1.5;
+    ganz.setAttribute('transform', `translate(0 ${y.toFixed(2)}) rotate(${(neig * .35).toFixed(2)} 100 160)`);
+    kopf.setAttribute('transform', `rotate(${neig.toFixed(2)} 100 100)`);
+    schatten.setAttribute('rx', (46 - y * 1.2).toFixed(1));
+    // Licht
+    const p = N.pegel;
+    const glanz = z === 'spricht' ? .78 + p * .5 : z === 'hoert' ? .85 + Math.sin(s * 4) * .1 : z === 'denkt' ? .7 + Math.sin(s * 6) * .15 : .55 + Math.sin(s * 1.6) * .1;
+    aura.setAttribute('opacity', Math.min(1, glanz).toFixed(3));
+    aura.setAttribute('r', (74 + p * 22 + (z === 'hoert' ? 6 : 0)).toFixed(1));
+    spitze.setAttribute('fill', z === 'hoert' ? '#ff8fa0' : '#f3c969');
+    strahlen.setAttribute('opacity', z === 'denkt' ? '.85' : z === 'spricht' ? (.25 + p * .5).toFixed(2) : '0');
+    strahlen.setAttribute('transform', `rotate(${z === 'denkt' ? (s * 70) % 360 : Math.sin(s) * 8} 100 70)`);
+    // Augen: blinzeln, im Denken nach oben schauen
+    if (t > N.naechstesBlinzeln) { N.blinzeln = t; N.naechstesBlinzeln = t + 2200 + Math.random() * 3200; }
+    const b = t - N.blinzeln < 140 ? Math.max(.08, Math.abs(1 - (t - N.blinzeln) / 70)) : 1;
+    const blick = z === 'denkt' ? -3 : z === 'hoert' ? 1 : 0, seit = z === 'denkt' ? Math.sin(s * 1.7) * 3 : 0;
+    for (const [a, g, x] of [[augeL, glanzL, 84], [augeR, glanzR, 116]]) {
+      a.setAttribute('ry', (7 * b).toFixed(2)); a.setAttribute('cy', 70 + blick); a.setAttribute('cx', x + seit);
+      g.setAttribute('cy', 67 + blick); g.setAttribute('cx', x + 2 + seit); g.setAttribute('opacity', b > .5 ? 1 : 0);
+    }
+    // Mund: beim Sprechen nach Lautstärke
+    const offen = z === 'spricht' ? Math.max(1.5, p * 14) : z === 'hoert' ? 2 : 0;
+    mund.setAttribute('d', offen > 1 ? `M91 83 Q100 ${(83 + offen * .25).toFixed(1)} 109 83 Q100 ${(85 + offen).toFixed(1)} 91 83 Z` : 'M92 84 Q100 90 108 84');
+    mund.setAttribute('stroke-width', offen > 1 ? 2 : 3);
+    // Arme: winken bei Begrüssung, leicht schwingen sonst
+    const w = t - N.winken < 1800 ? Math.sin((t - N.winken) / 90) * 28 - 40 : 0;
+    armR.setAttribute('transform', `rotate(${(w || Math.sin(s * 1.6) * 4 - (z === 'spricht' ? 8 + p * 20 : 0)).toFixed(1)} 132 140)`);
+    armL.setAttribute('transform', `rotate(${(Math.sin(s * 1.6 + 1) * -4 + (z === 'spricht' ? 6 + p * 14 : 0)).toFixed(1)} 68 140)`);
+    if (z !== 'spricht') N.pegel *= .85;
+    requestAnimationFrame(figur);
+  }
+  requestAnimationFrame(figur);
+  const setze = (z, text) => { N.zustand = z; if (text != null) $('#zustand').textContent = text; };
+
+  // ---------- Stimme ----------
+  let actx = null, analyser = null, audioEl = null;
+  function audioBereit() {
+    if (!audioEl) { audioEl = new Audio(); audioEl.playsInline = true; audioEl.preload = 'auto'; }
+    try {
+      if (!actx) { actx = new (window.AudioContext || window.webkitAudioContext)(); analyser = actx.createAnalyser(); analyser.fftSize = 512;
+        const q = actx.createMediaElementSource(audioEl); q.connect(analyser); analyser.connect(actx.destination); }
+      if (actx.state === 'suspended') actx.resume();
+    } catch {}
+  }
+  const puffer = new Uint8Array(512);
+  function pegelMessen() {
+    if (N.zustand !== 'spricht') return;
+    if (analyser && audioEl && !audioEl.paused) { analyser.getByteTimeDomainData(puffer); let m = 0; for (const v of puffer) m = Math.max(m, Math.abs(v - 128)); N.pegel = N.pegel * .5 + Math.min(1, m / 60) * .5; }
+    else N.pegel = .25 + Math.abs(Math.sin(performance.now() / 95)) * .45 * (Math.random() * .5 + .5);
+    requestAnimationFrame(pegelMessen);
+  }
+  function besteGeraetestimme() {
+    const v = speechSynthesis.getVoices().filter(x => /^de/i.test(x.lang));
+    return v.find(x => /premium|enhanced|erweitert|siri/i.test(x.name)) || v.find(x => /de-CH/i.test(x.lang)) || v.find(x => /anna|petra|helena|marlene/i.test(x.name)) || v[0] || null;
+  }
+  let kette = Promise.resolve(), stumm = false;
+  const sprechen = (text, figur = null) => (kette = kette.then(() => sprichJetzt(text, figur)).catch(() => {}));
+  // Push mit Novas Gesicht (23.10.): Tippen auf die Push → Nova sagt den Satz
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.sag) sprichJetzt(e.data.sag); });
+  if (location.hash.startsWith('#sag=')) { const t = decodeURIComponent(location.hash.slice(5)); history.replaceState(null, '', location.pathname + location.search); setTimeout(() => sprichJetzt(t), 800); }
+  async function sprichJetzt(text, figur) {
+    text = String(text || '').trim(); if (!text || stumm) return;
+    setze('spricht', 'Nova spricht …'); requestAnimationFrame(pegelMessen);
+    try {
+      const r = await api(figur ? 'api/stimme' : 'api/zentrale/stimme', figur ? { figur, text: text.slice(0, 600) } : { text: text.slice(0, 600) }, true);
+      if (r.status === 200) {
+        const url = URL.createObjectURL(await r.blob());
+        audioBereit();
+        await new Promise((ok) => { audioEl.onended = audioEl.onerror = ok; audioEl.src = url; audioEl.play().catch(ok); });
+        URL.revokeObjectURL(url);
+        return;
+      }
+    } catch {}
+    // Ersatz: beste deutsche Gerätestimme
+    if ('speechSynthesis' in window) await new Promise((ok) => {
+      const u = new SpeechSynthesisUtterance(text); const v = besteGeraetestimme(); if (v) u.voice = v; u.lang = v?.lang || 'de-CH'; u.rate = 1.03; u.pitch = 1.08;
+      u.onend = u.onerror = ok; speechSynthesis.cancel(); speechSynthesis.speak(u); setTimeout(ok, 30000);
+    });
+  }
+  const fertigGesprochen = () => kette.then(() => { if (N.zustand === 'spricht') setze('ruhig', 'Tipp auf mich und sprich.'); });
+
+  // ---------- Zuhören ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null, hoert = false, frei = false, gesagt = '', sprache = 'de-CH';
+  try { frei = localStorage.getItem('nova-frei') === '1'; } catch {}
+  $('#frei').setAttribute('aria-pressed', frei);
+  function zuhoeren() {
+    if (!SR) { toast('Dieses Gerät kann hier nicht zuhören. Bitte tippen.'); $('#eingabe').focus(); return; }
+    if (hoert) { rec?.stop(); return; }
+    audioBereit(); speechSynthesis?.cancel?.(); if (audioEl && !audioEl.paused) audioEl.pause();
+    gesagt = ''; rec = new SR(); rec.lang = sprache; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    rec.onstart = () => { hoert = true; $('#mic').classList.add('hoert'); setze('hoert', 'Ich höre zu …'); $('#live').textContent = ''; };
+    rec.onresult = (e) => { let f = '', z = ''; for (const r of e.results) (r.isFinal ? (f += r[0].transcript) : (z += r[0].transcript)); gesagt = (f || z).trim(); $('#live').textContent = gesagt; };
+    rec.onerror = (e) => { if (e.error === 'language-not-supported' && sprache === 'de-CH') { sprache = 'de-DE'; hoert = false; return setTimeout(zuhoeren, 50); }
+      if (e.error === 'not-allowed') { toast('Bitte Mikrofon erlauben (Einstellungen › Safari › Mikrofon).'); frei = false; $('#frei').setAttribute('aria-pressed', false); } };
+    rec.onend = () => { hoert = false; $('#mic').classList.remove('hoert'); const t = gesagt; $('#live').textContent = '';
+      if (t) senden(t); else if (N.zustand === 'hoert') setze('ruhig', 'Tipp auf mich und sprich.'); };
+    try { rec.start(); } catch { hoert = false; }
+  }
+  $('#mic').addEventListener('click', zuhoeren);
+  $('#nova').addEventListener('click', () => { if (N.zustand === 'spricht') { stumm = true; speechSynthesis?.cancel?.(); audioEl?.pause(); setTimeout(() => stumm = false, 300); setze('ruhig', 'Okay, ich bin still.'); return; } zuhoeren(); });
+  $('#frei').addEventListener('click', () => { frei = !frei; $('#frei').setAttribute('aria-pressed', frei); try { localStorage.setItem('nova-frei', frei ? '1' : '0'); } catch {}
+    toast(frei ? 'Freihändig: nach jeder Antwort höre ich wieder zu.' : 'Freihändig aus.'); });
+
+  // ---------- Gespräch ----------
+  const feed = $('#feed');
+  const gesprochen = new Set();
+  try { for (const x of JSON.parse(sessionStorage.getItem('nova-gesprochen') || '[]')) gesprochen.add(x); } catch {}
+  const merkGesprochen = (k) => { gesprochen.add(k); try { sessionStorage.setItem('nova-gesprochen', JSON.stringify([...gesprochen].slice(-80))); } catch {} };
+  function karte(e) {
+    if (e.art === 'frage') return `<div class="karte" data-figur="${esc(e.an)}"><div class="kopfzeile">${ava(e.an)}<div><span class="wer">${esc(e.name)}</span></div></div><div class="text">${esc(e.text)}</div>
+      <button class="hoeren" type="button">🔊 Vorlesen</button>${String(e.text).length > 320 ? '<button class="mehr" type="button">Mehr lesen</button>' : ''}</div>`;
+    if (e.art === 'male') return `<div class="karte"><div class="kopfzeile">${ava('tinko')}<span class="wer">Tinko malt</span></div>${e.bid ? `<a href="${esc(mitK('api/ablage/' + e.bid))}" target="_blank" rel="noopener"><img alt="${esc(e.text)}" loading="lazy" src="${esc(mitK('api/ablage/' + e.bid))}"></a>` : `<div class="text">${esc(e.text)}</div>`}</div>`;
+    if (e.art === 'oeffne' && e.link) return `<div class="karte"><a class="oeffnen" href="${esc(e.link)}"><span>${esc(APP_AVA[e.app] || '🧭')} ${esc(e.name)} öffnen</span><span>›</span></a></div>`;
+    const sym = { server: '🖥️', tinko_frei: '🔒', claude: '🦉', auftrag: '🔁', schleife: '🔁', merke: '📌', vergiss: '🗑️' }[e.art] || '•';
+    const vor = { server: 'Server: ', tinko_frei: 'Für Tinko freigegeben: ', claude: 'An Claude (DR-Lab-Projekt), Ergebnis kommt in 📂: ', merke: 'Gemerkt: ', auftrag: 'Auftrag an Lumo und Tinko: ', schleife: '' }[e.art] || '';
+    return `<div class="karte klein">${sym} ${esc(vor + (e.text || ''))}</div>`;
+  }
+  function zugHtml(z) {
+    const zeit = new Date(z.zeit);
+    return `<div class="blase du">${esc(z.du)}</div>` +
+      (z.sagen ? `<div class="blase nv"><b class="wer">Nova</b>${esc(z.sagen)}</div>` : '') +
+      (z.ergebnisse || []).map(karte).join('') +
+      (z.fazit ? `<div class="blase nv fazit"><b class="wer">Nova</b>${esc(z.fazit)}</div>` : '') +
+      (!z.fertig ? `<div class="warte"><i></i><i></i><i></i> ${z.sagen ? 'Nova vernetzt …' : 'Nova denkt …'}</div>` : '');
+  }
+  function zeigeZug(z, scroll = true) {
+    let d = feed.querySelector(`[data-id="${z.id}"]`);
+    if (!d) { d = document.createElement('div'); d.className = 'zug'; d.dataset.id = z.id; feed.appendChild(d); }
+    d.innerHTML = zugHtml(z);
+    d.querySelectorAll('.karte .mehr').forEach(b => b.onclick = () => { const k = b.closest('.karte'); k.classList.toggle('offen'); b.textContent = k.classList.contains('offen') ? 'Weniger' : 'Mehr lesen'; });
+    d.querySelectorAll('.karte .hoeren').forEach(b => b.onclick = () => { const k = b.closest('.karte'); const f = k.dataset.figur; audioBereit(); sprechen(k.querySelector('.text').textContent, f === 'lumo' ? 'lumo' : f); fertigGesprochen(); });
+    $('#inhalt').classList.toggle('klein', feed.children.length > 0);
+    vorschlaegeZeigen();
+    if (scroll) requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
+  }
+  let sendet = false;
+  async function senden(text) {
+    text = String(text || '').trim(); if (!text || sendet) return;
+    sendet = true; audioBereit();
+    const lokal = { id: 'lokal' + Date.now(), du: text, zeit: new Date().toISOString(), sagen: '', ergebnisse: [], fertig: false };
+    zeigeZug(lokal); setze('denkt', 'Nova denkt …');
+    try {
+      const z = await api('api/zentrale/sagen', { text });
+      feed.querySelector(`[data-id="${lokal.id}"]`)?.remove();
+      zeigeZug(z);
+      if (z.sagen) { merkGesprochen(z.id + ':s'); sprechen(z.sagen); }
+      if (!z.fertig) abholen(z.id); else nachher(z);
+    } catch (e) {
+      lokal.sagen = 'Ich komme gerade nicht durch: ' + e.message; lokal.fertig = true; zeigeZug(lokal); setze('ruhig', 'Tipp auf mich und sprich.');
+    } finally { sendet = false; }
+  }
+  async function abholen(zid) {
+    for (let i = 0; i < 120; i++) {
+      await new Promise(r => setTimeout(r, i < 10 ? 1500 : 3000));
+      const z = await api('api/zentrale/zug?id=' + encodeURIComponent(zid)).catch(() => null);
+      if (!z) continue;
+      zeigeZug(z);
+      if (z.sagen && !gesprochen.has(z.id + ':s')) { merkGesprochen(z.id + ':s'); sprechen(z.sagen); }
+      if (z.fertig) return nachher(z);
+      if (N.zustand !== 'spricht') setze('denkt', 'Nova vernetzt …');
+    }
+  }
+  function nachher(z) {
+    if (z.fazit && !gesprochen.has(z.id + ':f')) { merkGesprochen(z.id + ':f'); sprechen(z.fazit); }
+    if ((z.ergebnisse || []).some(e => ['auftrag', 'schleife', 'merke', 'vergiss'].includes(e.art))) laden(false);
+    fertigGesprochen().then(() => { if (frei && !hoert) setTimeout(zuhoeren, 350); });
+  }
+  const eingabe = $('#eingabe');
+  eingabe.addEventListener('input', () => { eingabe.style.height = 'auto'; eingabe.style.height = Math.min(120, eingabe.scrollHeight) + 'px'; $('#schicken').disabled = !eingabe.value.trim(); });
+  eingabe.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form').requestSubmit(); } });
+  $('#form').addEventListener('submit', (e) => { e.preventDefault(); const t = eingabe.value; eingabe.value = ''; eingabe.style.height = 'auto'; $('#schicken').disabled = true; senden(t); });
+
+  const VORSCHLAEGE = ['📘 Wie arbeite ich mit dir?', 'Lumo und Tinko: was braucht ihr von mir, damit ihr mich sofort richtig versteht?', 'Was läuft gerade?', 'Was hast du dir über mich gemerkt?', 'Lumo und Tinko: arbeitet heute Nacht an Körperkosmos', 'Tinko, mal mir Nova als kleinen Leuchtturm', 'Öffne Otti', 'Frag Mama Affe, wie es ihr geht'];
+  function vorschlaegeZeigen() {
+    const v = $('#vorschlaege'); if (feed.children.length > 2) { v.innerHTML = ''; return; }
+    v.innerHTML = VORSCHLAEGE.map(t => `<button type="button">${esc(t)}</button>`).join('');
+    v.querySelectorAll('button').forEach(b => b.onclick = () => b.textContent.startsWith('📘') ? auf('hilfe') : senden(b.textContent));
+  }
+
+  // ---------- Netz, Gedächtnis, Seele ----------
+  function netzZeigen() {
+    const n = stand.netz || {}, s = n.schleife || {};
+    $('#netz').innerHTML = `<span class="chip"><i class="punkt ${n.lumo ? 'an' : ''}"></i>Lumo</span><span class="chip"><i class="punkt ${n.tinko ? 'an' : ''}"></i>Tinko</span>` +
+      `<span class="chip"><i class="punkt ${s.aktiv ? 'an' : ''}"></i>Schleife ${s.aktiv ? 'läuft' : 'steht'}${s.offen ? ' · ' + s.offen + ' offen' : ''}</span>`;
+  }
+  let reiter = 'netz';
+  function blattZeigen(r) {
+    reiter = r || reiter;
+    document.querySelectorAll('#reiter button').forEach(b => b.classList.toggle('an', b.dataset.r === reiter));
+    const n = stand.netz || {}, s = n.schleife || {}, h = $('#blattinhalt');
+    if (reiter === 'hilfe') {
+      const S = [
+        ['Frag Lumo, wie weit Otti ist.', 'Nova fragt Lumo (Claude) und sagt dir die Antwort.'],
+        ['Frag Mama Affe, was sie heute gelernt hat.', 'Jede Figur geht: Otti, Sparky, Fompa, Kiki …'],
+        ['Tinko, mal mir Nova als kleinen Leuchtturm.', 'Das Bild erscheint hier im Gespräch.'],
+        ['Öffne Otti.', 'Nova öffnet die App für dich.'],
+        ['Gib ans Claude-Projekt: Otti, Ziel: Spiele spannender. Stand: live. Was stört: zu langsam.', 'Claude arbeitet es ab. Das Ergebnis kommt in 📂 oben rechts.'],
+        ['Lumo und Tinko, arbeitet heute Nacht an Körperkosmos.', 'Geht in die Schleife, sie arbeiten selbständig.'],
+        ['Merk dir: Ich mag kurze Antworten.', 'Steht danach unter 🧠 Gedächtnis.'],
+        ['Wie geht es deinem Server?', 'Nova schaut nach: Speicher, Platz, Verbindungen.'],
+        ['Sichere deine Daten.', 'Kopie von Novas Daten auf dem Server.'],
+        ['Hol das neuste Update.', 'Nova lädt die neue Version und startet kurz neu.'],
+        ['Für Tinko frei: unsere Farben sind Nachtblau und Gold.', 'Nur das bekommt Tinko (ChatGPT) von dir.'],
+        ['Was läuft gerade?', 'Nova sagt dir den Stand von allem.']];
+      h.innerHTML = `<h3>Nova als eigene App aufs Handy</h3>
+        <button class="knopf" id="novaLink" type="button" style="width:100%">🔗 Nova-Link kopieren</button>
+        <p class="hinweis">Dann Safari öffnen, oben einfügen und öffnen. Unten Teilen → «Zum Home-Bildschirm» → Name «Nova». Den Link niemandem schicken, er ist dein Schlüssel.</p>
+        <h3>Schlüssel für Filme</h3>
+        <button class="knopf" id="falKnopf" type="button" style="width:100%">🔑 fal.ai-Schlüssel eintragen</button>
+        <div id="falFeld" hidden style="margin-top:8px">
+          <input id="falEin" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Schlüssel hier einfügen" style="width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid #3a4a7a;background:#0d1838;color:#fff;font-size:16px">
+          <div style="display:flex;gap:8px;margin-top:8px"><button class="knopf" id="falSpeichern" type="button" style="flex:1">Speichern</button><button class="knopf" id="falPruefen" type="button" style="flex:1">Prüfen</button></div>
+        </div>
+        <p class="hinweis" id="falStand">Der Schlüssel bleibt nur auf deinem Server. Niemand sieht ihn, auch Tinko nicht.</p>
+        <h3>So sprichst du mit Nova</h3>
+        <div class="liste"><div class="eintrag"><span>1. Tipp auf Nova oder auf 🎤 und sprich ganz normal, Schweizerdeutsch geht auch.</span></div>
+        <div class="eintrag"><span>2. Nova antwortet kurz und erledigt den Rest im Hintergrund.</span></div>
+        <div class="eintrag"><span>3. ∞ unten links: Nova hört nach jeder Antwort wieder zu (freihändig).</span></div></div>
+        <h3>Sätze, die funktionieren (antippen = ausprobieren)</h3>
+        ${S.map(([t, e]) => `<button class="satz" type="button" data-satz="${esc(t)}">«${esc(t)}»<small>${esc(e)}</small></button>`).join('')}
+        <h3>Für die Apps</h3>
+        <p class="hinweis">Pro App immer drei Dinge sagen: welche App, was das Ziel ist, was stört. Beispiel: «Gib ans Claude-Projekt: Fias Nest, Ziel: Stimme ruhiger, stört: zu schnell.» Fertiges findest du unter 📂.</p>
+        <h3>Sicher</h3>
+        <p class="hinweis">Nova gibt kein Geld aus, sendet nichts an andere und veröffentlicht nichts ohne dein Ja. Schlüssel und Passwörter sagst du ihr nie.</p>`;
+      h.querySelectorAll('[data-satz]').forEach(b => b.onclick = () => { zu(); senden(b.dataset.satz); });
+      const falStand = (d) => { if (d && d.gesetzt) $('#falStand').textContent = 'Gespeichert, endet auf …' + d.ende + '. Nur auf deinem Server.'; };
+      api('api/fal-schluessel').then(falStand).catch(() => {});
+      $('#falKnopf').onclick = () => { $('#falFeld').hidden = false; $('#falEin').focus(); };
+      $('#falSpeichern').onclick = async () => {
+        const k = $('#falEin').value.trim(); if (!k) return toast('Bitte zuerst den Schlüssel einfügen.');
+        try { const d = await api('api/fal-schluessel', { schluessel: k }); $('#falEin').value = ''; falStand(d); toast('Gespeichert.'); }
+        catch (e) { toast(e.message); }
+      };
+      $('#falPruefen').onclick = async () => { try { const d = await api('api/fal-pruefen', {}); toast(d.text); } catch (e) { toast(e.message); } };
+      $('#novaLink').onclick = async () => { await kopieren(location.origin + '/nova?k=' + encodeURIComponent(K)); toast('Nova-Link kopiert. Jetzt in Safari einfügen.'); };
+    } else if (reiter === 'tinko') {
+      const l = stand.tinkoFrei || [];
+      h.innerHTML = `<p class="hinweis">Tinko (ChatGPT) bekommt nur, was hier steht. Dein internes Wissen, Novas Gedächtnis und eure Gespräche sieht er nicht. Nie hierher: Klienten, Gesundheit, Geld, Passwörter.</p>
+        <div class="liste">${l.slice().reverse().map(f => `<div class="eintrag"><span>${esc(f.text)}</span><button type="button" data-tweg="${esc(f.id)}" aria-label="Entfernen">×</button></div>`).join('') || '<p class="hinweis">Noch nichts freigegeben.</p>'}</div>
+        <h3>Freigeben</h3><input type="text" id="neuTinko" placeholder="z. B. Stil: Pixar-3D, Nachtblau und Gold, warm">
+        <div class="knopfreihe"><button class="knopf gold" id="tinkoKnopf" type="button">Für Tinko freigeben</button></div>`;
+      h.querySelectorAll('[data-tweg]').forEach(b => b.onclick = async () => { const r = await api('api/zentrale/tinko-frei', { weg: b.dataset.tweg }).catch(e => toast(e.message)); if (r) { stand.tinkoFrei = r.tinkoFrei; blattZeigen(); } });
+      $('#tinkoKnopf').onclick = async () => { const t = $('#neuTinko').value.trim(); if (!t) return; const r = await api('api/zentrale/tinko-frei', { text: t }).catch(e => toast(e.message)); if (r) { stand.tinkoFrei = r.tinkoFrei; toast('Für Tinko freigegeben.'); blattZeigen(); } };
+    } else if (reiter === 'netz') {
+      h.innerHTML = `<h3>Schleife (Lumo und Tinko arbeiten selbständig)</h3>
+        <div class="eintrag"><span>${s.aktiv ? 'Läuft' : 'Steht'} · ${s.offen || 0} offen · ${s.fertig || 0} fertig${s.naechste ? '<br><small style="color:var(--leise)">Als Nächstes: ' + esc(s.naechste) + '</small>' : ''}</span></div>
+        <div class="knopfreihe"><button class="knopf ${s.aktiv ? '' : 'gold'}" id="schleifeAn" type="button">${s.aktiv ? '⏸ Pausieren' : '▶︎ Starten'}</button></div>
+        <h3>Apps</h3><div class="raster">${(n.apps || []).map(a => `<a class="kachel" href="${esc(mitK('/apps/' + a.id + '/'))}"><span class="ava">${APP_AVA[a.id] || '📱'}</span>${esc(a.name)}</a>`).join('')}</div>
+        <h3>Figuren (tippen = Nova fragt sie)</h3><div class="raster">${(n.figuren || []).map(f => `<button class="kachel" type="button" data-name="${esc(f.name)}">${ava(f.id)}${esc(f.name)}</button>`).join('')}</div>
+        <h3>Orte</h3><div class="knopfreihe"><a class="knopf" href="${esc(mitK('/'))}">Plaça</a><a class="knopf" href="${esc(mitK('/spiel'))}">3D-Städtchen</a></div>
+        <p class="hinweis">Heute ${stand.heute?.zahl || 0} von ${stand.heute?.max || 0} Gesprächen mit Nova.</p>`;
+      $('#schleifeAn').onclick = async () => { try { await api('api/schleife', { aktiv: !s.aktiv }); await laden(false); blattZeigen(); } catch (e) { toast(e.message); } };
+      h.querySelectorAll('button.kachel').forEach(b => b.onclick = () => { zu(); eingabe.value = `Frag ${b.dataset.name}: `; eingabe.dispatchEvent(new Event('input')); eingabe.focus(); });
+    } else if (reiter === 'gedaechtnis') {
+      h.innerHTML = `<p class="hinweis">Das merkt sich Nova über dich und deine Projekte. Sie lernt auch selbst dazu, wenn du sagst «merk dir …».</p>
+        <div class="liste">${stand.gedaechtnis.slice().reverse().map(g => `<div class="eintrag"><span>${esc(g.text)}</span><button type="button" data-weg="${esc(g.id)}" aria-label="Vergessen">×</button></div>`).join('') || '<p class="hinweis">Noch nichts gemerkt.</p>'}</div>
+        <h3>Neu merken</h3><input type="text" id="neuMerk" placeholder="z. B. Ich mag kurze Antworten in Stichworten">
+        <div class="knopfreihe"><button class="knopf gold" id="merkKnopf" type="button">Merken</button></div>`;
+      h.querySelectorAll('[data-weg]').forEach(b => b.onclick = async () => { const r = await api('api/zentrale/gedaechtnis', { weg: b.dataset.weg }).catch(e => toast(e.message)); if (r) { stand.gedaechtnis = r.gedaechtnis; blattZeigen(); } });
+      $('#merkKnopf').onclick = async () => { const t = $('#neuMerk').value.trim(); if (!t) return; const r = await api('api/zentrale/gedaechtnis', { text: t }).catch(e => toast(e.message)); if (r) { stand.gedaechtnis = r.gedaechtnis; blattZeigen(); } };
+    } else {
+      h.innerHTML = `<p class="hinweis">Hier baust du deine eigene Nova: Schreib, wie sie sein soll, wie sie redet, was ihr wichtig ist. Das ist ihre Seele, sie gilt ab dem nächsten Satz.</p>
+        <textarea id="seele">${esc(stand.seele)}</textarea>
+        <div class="knopfreihe"><button class="knopf gold" id="seeleKnopf" type="button">Seele speichern</button></div>
+        <h3>Novas Kern (für deine kleine Nova)</h3>
+        <p class="hinweis">Seele und Gedächtnis als eine Datei. Damit speist du später deine eigene kleine Nova ein oder holst sie zurück auf den Server.</p>
+        <div class="knopfreihe"><button class="knopf" id="kernRaus" type="button">⬇︎ Kern sichern</button><label class="knopf" style="cursor:pointer">⬆︎ Kern einspeisen<input type="file" id="kernRein" accept="application/json,.json" hidden></label></div>
+        <h3>Gespräch</h3><div class="knopfreihe"><button class="knopf" id="leeren" type="button">Verlauf leeren</button></div>`;
+      $('#seeleKnopf').onclick = async () => { const r = await api('api/zentrale/seele', { seele: $('#seele').value }).catch(e => toast(e.message)); if (r) { stand.seele = r.seele; toast('Seele gespeichert. Nova ist jetzt so.'); } };
+      $('#kernRaus').onclick = () => { const b = new Blob([JSON.stringify({ art: 'nova-kern', version: 1, gesichert: new Date().toISOString(), seele: stand.seele, gedaechtnis: stand.gedaechtnis.map(g => g.text) }, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'nova-kern-' + new Date().toISOString().slice(0, 10) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); };
+      $('#kernRein').onchange = async (e) => { const f = e.target.files[0]; if (!f) return;
+        try { const k = JSON.parse(await f.text()); if (k.art !== 'nova-kern') throw new Error('Das ist kein Nova-Kern.');
+          if (!confirm('Seele ersetzen und ' + (k.gedaechtnis || []).length + ' Erinnerungen dazunehmen?')) return;
+          if (k.seele) await api('api/zentrale/seele', { seele: k.seele });
+          const da = new Set(stand.gedaechtnis.map(g => g.text));
+          for (const t of (k.gedaechtnis || []).slice(0, 200)) if (!da.has(t)) await api('api/zentrale/gedaechtnis', { text: t });
+          await laden(false); blattZeigen(); toast('Kern eingespeist.');
+        } catch (er) { toast(er.message); } };
+      $('#leeren').onclick = async () => { if (!confirm('Den ganzen Gesprächsverlauf löschen? Gedächtnis und Seele bleiben.')) return; await api('api/zentrale/leeren', {}).catch(e => toast(e.message)); feed.innerHTML = ''; zu(); laden(false); };
+    }
+  }
+  const auf = (r) => { blattZeigen(r); $('#blatt').classList.add('an'); $('#decke').classList.add('an'); };
+  const zu = () => { $('#blatt').classList.remove('an'); $('#decke').classList.remove('an'); };
+  $('#menuKnopf').onclick = () => auf();
+  $('#decke').onclick = zu;
+  // Diego 21.10.: im Menü stecken geblieben. Jetzt: grosser ✕-Knopf, nach unten wischen, Esc
+  $('#blattZu').onclick = zu;
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') zu(); });
+  { let y0 = null; const bk = $('.blattkopf'); bk.addEventListener('touchstart', (e) => { y0 = e.touches[0].clientY; }, { passive: true }); bk.addEventListener('touchend', (e) => { if (y0 != null && e.changedTouches[0].clientY - y0 > 40) zu(); y0 = null; }); }
+  document.querySelectorAll('#reiter button').forEach(b => b.onclick = () => blattZeigen(b.dataset.r));
+  $('#netz').onclick = () => auf('netz');
+  let toastZeit = 0;
+  function toast(t) { const x = $('#toast'); x.textContent = t; x.classList.add('an'); clearTimeout(toastZeit); toastZeit = setTimeout(() => x.classList.remove('an'), 3200); }
+
+
+  // ---------- Fenster «Ergebnisse»: alles direkt hier lesen, kopieren, öffnen ----------
+  async function kopieren(t) {
+    try { await navigator.clipboard.writeText(t); }
+    catch { const a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;top:-1000px'; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); }
+    toast('Kopiert ✓');
+  }
+  const linkArt = (u) => /^https?:\/\//.test(u) ? u : '#';
+  function inline(t) {
+    return esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')
+      .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, a, u) => `<a href="${linkArt(u.replace(/&amp;/g, '&'))}" target="_blank" rel="noopener">${a}</a>`)
+      .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (m, v, u) => `${v}<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+  }
+  let codeTeile = [];
+  function markdown(md) {
+    codeTeile = [];
+    const z = md.split('\n'), out = []; let i = 0, liste = '';
+    const listeZu = () => { if (liste) { out.push(`</${liste}>`); liste = ''; } };
+    while (i < z.length) {
+      const l = z[i];
+      if (/^\s*```/.test(l)) {
+        listeZu(); const teil = []; i++;
+        while (i < z.length && !/^\s*```/.test(z[i])) teil.push(z[i++]);
+        i++; codeTeile.push(teil.join('\n'));
+        out.push(`<div class="code"><button type="button" data-kopie="${codeTeile.length - 1}">Kopieren</button><pre>${esc(teil.join('\n'))}</pre></div>`); continue;
+      }
+      if (/^\s*\|.*\|\s*$/.test(l)) {
+        listeZu(); const rows = [];
+        while (i < z.length && /^\s*\|.*\|\s*$/.test(z[i])) { if (!/^\s*\|[\s:|-]+\|\s*$/.test(z[i])) rows.push(z[i].trim().slice(1, -1).split('|').map(c => `<td>${inline(c.trim())}</td>`).join('')); i++; }
+        out.push(`<table>${rows.map(r => `<tr>${r}</tr>`).join('')}</table>`); continue;
+      }
+      let m;
+      if ((m = l.match(/^(#{1,3})\s+(.*)/))) { listeZu(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); }
+      else if (/^\s*([-*_])\s*\1\s*\1[\s\-*_]*$/.test(l)) { listeZu(); out.push('<hr>'); }
+      else if ((m = l.match(/^\s*[-*•]\s+(.*)/))) { if (liste !== 'ul') { listeZu(); out.push('<ul>'); liste = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = l.match(/^\s*\d+[.)]\s+(.*)/))) { if (liste !== 'ol') { listeZu(); out.push('<ol>'); liste = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); }
+      else if ((m = l.match(/^\s*>\s?(.*)/))) { listeZu(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); }
+      else if (!l.trim()) listeZu();
+      else { listeZu(); out.push(`<p>${inline(l)}</p>`); }
+      i++;
+    }
+    listeZu(); return out.join('');
+  }
+  const F = { offen: null, liste: [] };
+  function ergBadge(n) { const b = $('#ergBadge'); b.hidden = !n; b.textContent = n > 9 ? '9+' : n || ''; }
+  async function ergListe() {
+    F.offen = null; $('#fTitel').textContent = '📂 Ergebnisse'; $('#fLeiste').hidden = true; $('#fZurueck').style.visibility = 'hidden';
+    const h = $('#fInhalt'); h.innerHTML = '<p class="hinweis">Lädt …</p>';
+    try {
+      F.liste = (await api('api/zentrale/ergebnisse')).ergebnisse;
+      ergBadge(F.liste.filter(e => e.neu).length);
+      h.innerHTML = F.liste.length ? F.liste.map(e => `<button class="ekarte ${e.neu ? 'neu' : ''}" type="button" data-e="${esc(e.id)}"><b>${esc(e.titel)}</b><small>${esc(e.von)} · ${new Date(e.zeit).toLocaleString('de-CH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small><small>${esc(e.vorschau)}</small></button>`).join('')
+        : '<p class="hinweis">Noch nichts da. Hier landen alle fertigen Ergebnisse, Briefe und Texte zum Kopieren, direkt in Nova, ohne fremde Links.</p>';
+      h.querySelectorAll('[data-e]').forEach(b => b.onclick = () => ergZeigen(b.dataset.e));
+    } catch (e) { h.innerHTML = `<p class="hinweis">${esc(e.message)}</p>`; }
+  }
+  async function ergZeigen(eid) {
+    const h = $('#fInhalt'); h.innerHTML = '<p class="hinweis">Lädt …</p>'; $('#fZurueck').style.visibility = 'visible';
+    try {
+      const e = await api('api/zentrale/ergebnis?id=' + encodeURIComponent(eid)); F.offen = e;
+      $('#fTitel').textContent = e.titel;
+      const l = $('#fLeiste'); l.hidden = false;
+      l.innerHTML = `<button class="knopf gold" type="button" id="fAlles">📋 Alles kopieren</button>${e.link ? `<a class="knopf" href="${esc(e.link)}" target="_blank" rel="noopener">↗︎ Öffnen</a>` : ''}${navigator.share ? '<button class="knopf" type="button" id="fTeilen">Teilen</button>' : ''}<button class="knopf" type="button" id="fWeg">🗑</button>`;
+      h.innerHTML = `<p class="hinweis">${esc(e.von)} · ${new Date(e.zeit).toLocaleString('de-CH')}</p><div class="doku">${markdown(e.text)}</div>`;
+      h.scrollTop = 0;
+      h.querySelectorAll('[data-kopie]').forEach(b => b.onclick = () => kopieren(codeTeile[+b.dataset.kopie]));
+      $('#fAlles').onclick = () => kopieren(e.text);
+      if ($('#fTeilen')) $('#fTeilen').onclick = () => navigator.share({ title: e.titel, text: e.text }).catch(() => {});
+      $('#fWeg').onclick = async () => { if (!confirm('Dieses Ergebnis löschen?')) return; await api('api/zentrale/ergebnis-weg', { id: e.id }).catch(x => toast(x.message)); ergListe(); };
+      history.replaceState(null, '', '#e=' + e.id);
+    } catch (x) { h.innerHTML = `<p class="hinweis">${esc(x.message)}</p>`; }
+  }
+  const fensterAuf = (eid) => { $('#fenster').classList.add('an'); eid ? ergZeigen(eid) : ergListe(); };
+  const fensterZu = () => { $('#fenster').classList.remove('an'); history.replaceState(null, '', location.pathname + location.search); laden(false); };
+  $('#ergKnopf').onclick = () => fensterAuf();
+  $('#fZu').onclick = fensterZu;
+  $('#fZurueck').onclick = () => ergListe();
+  { const m = location.hash.match(/^#e=([a-z0-9_]+)/); if (m) fensterAuf(m[1]); }
+
+  async function laden(alles = true) {
+    try {
+      stand = await api('api/zentrale');
+      netzZeigen(); ergBadge(stand.ergebnisse?.neu || 0);
+      if (alles) {
+        feed.innerHTML = '';
+        let tag = '';
+        for (const z of stand.verlauf) {
+          const t = new Date(z.zeit).toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+          if (t !== tag) { tag = t; const d = document.createElement('div'); d.className = 'zeit'; d.textContent = t; feed.appendChild(d); }
+          zeigeZug(z, false);
+          if (!z.fertig) abholen(z.id);
+        }
+        $('#inhalt').classList.toggle('klein', stand.verlauf.length > 0);
+        feed.scrollTop = feed.scrollHeight;
+        vorschlaegeZeigen();
+        if (!stand.verlauf.length) { N.winken = performance.now() + 400; setze('ruhig', 'Hallo Diego. Tipp auf mich und sprich.'); }
+      }
+      if ($('#blatt').classList.contains('an')) blattZeigen();
+    } catch (e) { setze('ruhig', e.message); }
+  }
+  laden();
+  setInterval(() => { if (document.visibilityState === 'visible' && !sendet) api('api/zentrale').then(s => { stand = s; netzZeigen(); ergBadge(s.ergebnisse?.neu || 0); }).catch(() => {}); }, 30000);
+  if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
+  // Begrüssung winkt beim Öffnen
+  setTimeout(() => { N.winken = performance.now(); }, 600);
+  // Push-Nachrichten (Diego 21.10.): einmal 🔔 tippen, dann meldet sich Nova, wenn etwas fertig ist
+  (function push() {
+    const k = $('#pushKnopf');
+    const an = () => { k.style.opacity = '.45'; k.setAttribute('aria-label', 'Push ist an'); };
+    if ('serviceWorker' in navigator && 'PushManager' in window && Notification.permission === 'granted') navigator.serviceWorker.getRegistration('/').then(r => r && r.pushManager.getSubscription()).then(s => { if (s) an(); }).catch(() => {});
+    k.addEventListener('click', async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return toast('Push geht nur aus dem Nova-Symbol auf dem Home-Bildschirm (Teilen → «Zum Home-Bildschirm»).');
+      try {
+        const reg = await navigator.serviceWorker.register('/nova-sw.js', { scope: '/' });
+        if (await Notification.requestPermission() !== 'granted') return toast('Mitteilungen sind nicht erlaubt. Einstellungen → Mitteilungen → Nova.');
+        const { schluessel } = await api('api/push/schluessel');
+        const roh = atob(schluessel.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - schluessel.length % 4) % 4));
+        const s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(roh, c => c.charCodeAt(0)) });
+        const r = await api('api/push/abo', s.toJSON());
+        an(); toast(r.text || 'Push ist an.');
+      } catch (e) { toast('Push ging nicht: ' + e.message); }
+    });
+  })();
+  // 🌱 Heute gewachsen (Diego 21.10.): was Nova heute dazugelernt hat
+  $('#wuchsKnopf').addEventListener('click', async () => {
+    const d = await api('api/zentrale/gewachsen').catch(e => { toast(e.message); return null; }); if (!d) return;
+    const w = document.createElement('div'); w.className = 'wuchs';
+    const esc2 = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    w.innerHTML = `<div class="karte"><h2>🌱 Heute gewachsen</h2><p>So viel hat Nova heute dazugelernt.</p>
+      <div class="zahlen"><div><b>${d.wissen}</b>Wissen</div><div><b>${d.erlebnisse}</b>Erlebnisse</div></div>
+      ${d.stichworte.length ? '<ul>' + d.stichworte.map(s => `<li>${esc2(s)}</li>`).join('') + '</ul>' : '<p>Heute noch nichts Neues. Erzähl Claude etwas, dann wächst sie.</p>'}
+      ${d.figuren.length ? `<p>Erlebt mit: ${d.figuren.map(esc2).join(', ')}</p>` : ''}<button type="button">Schliessen</button></div>`;
+    w.addEventListener('click', (e) => { if (e.target === w || e.target.tagName === 'BUTTON') w.remove(); });
+    document.body.append(w);
+  });
+})();
+</script>
+</body>
+</html>
