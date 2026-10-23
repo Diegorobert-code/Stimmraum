@@ -12,7 +12,7 @@
 (function () {
   var base = "/Stimmraum/";
   var p = location.pathname.toLowerCase();
-  var ziel = /sense|nova|engine/.test(p) ? base + "sense/" : base;
+  var ziel = /nova/.test(p) && !/sense|engine/.test(p) ? base + "nova/" : /sense|nova|engine/.test(p) ? base + "sense/" : base;
   location.replace(ziel + location.search + location.hash);
 })();
 </script>

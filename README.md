@@ -28,3 +28,12 @@ Drei Reiter: **Zentrale** (Projekte mit Prozent, Meine Apps, HumanSpark «Jetzt 
 - `docs/404.html` – leitet falsche oder alte Adressen weiter (alles mit «sense», «nova» oder «engine» zur Sense Engine), statt eine 404-Seite zu zeigen
 
 Der Index im Klartext und der Schlüssel gehören nie in dieses Repository. Sobald es ein eigenes Repository für Sense Engine gibt, zieht dieser Ordner dorthin um.
+
+## Nova (Testversion 0.1)
+
+Unter `docs/nova/` liegt Nova als eigene Bildschirm-App: https://diegorobert-code.github.io/Stimmraum/nova/
+
+Nova ist Diegos Mitte: sprechen oder schreiben, Nova merkt sich, was man ihr mit «Merk dir …» sagt (Erinnerungsbuch, nur auf dem Gerät), und gibt Fragen mit einem Tipp an Fia (Claude) oder Tinko (ChatGPT) weiter. Der Text wird dabei auch kopiert, falls die andere App ihn nicht übernimmt. «Fia …» oder «Tinko …» am Anfang geht direkt hin. Sobald Brix' Lagerhalle (Hermes-Server) steht, antwortet Nova selbst über dieselbe Verbindung wie die Sense Engine (`drlab-hermes-adresse`, `drlab-hermes-passwort`, Header `X-Nova-App: Nova-App`). Verlauf und Erinnerungsbuch bleiben im Browser des Geräts.
+
+- `docs/nova/index.html` – die App (eine Datei, ohne Zusatzpakete)
+- `docs/nova/manifest.webmanifest`, `icon-*.png`, `apple-touch-icon.png` – Nova-Gesicht als App-Symbol
