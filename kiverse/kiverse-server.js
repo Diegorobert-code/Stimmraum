@@ -200,7 +200,8 @@ function seiteSchnell(req, res, datei) {
   res.writeHead(200, kopf); return res.end(c.roh);
 }
 const TINKO_MODELL = process.env.TINKO_MODELL || 'gpt-4o-mini';
-const TINKO_BILD_MODELL = process.env.TINKO_BILD_MODELL || 'gpt-image-1';
+// gpt-image-1 wurde am 23.10.2026 abgeschaltet → gpt-image-1.5 (auch wenn die Umgebung noch das alte Modell nennt)
+const TINKO_BILD_MODELL = (process.env.TINKO_BILD_MODELL || 'gpt-image-1.5').replace(/^gpt-image-1$/, 'gpt-image-1.5');
 const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '250', 10), RUNDEN = 2;
 // Monatsdeckel für Tinkos Bilder (einfache Qualität ca. 1 Rp. pro Bild → 7'500 Bilder ≈ CHF 83/Monat, Diego 21.10.). Zähler überlebt Neustarts.
 const BILD_MAX_MONAT = parseInt(process.env.BILD_MAX_MONAT || '7500', 10);
