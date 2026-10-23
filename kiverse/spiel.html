@@ -2398,19 +2398,24 @@ function appOeffnen(id, name) {
 // Trickfilmstadt (Diego 23.10. 18:43: «richtige Trickfilmstadt, genauso wie die beiden», 18:45: mit Otti reden = die KI, die lernt)
 // Jeder Ort ist ein bewegter Clip in Schleife; wischen = nächster Ort, Figur antippen oder «zum Hafen» sagen.
 const FILMORTE = [
-  { name: 'Ottis Tor', fig: 'otti', app: ['otti', 'Ottis Wunderland'], titel: ['otti am tor'], wort: /\b(tor|otti)\b/i },
-  { name: 'Sunnys Strand', fig: 'sunny', titel: ['sunny am strand'], wort: /\bstrand|sunny\b/i },
-  { name: 'Der Brunnen', fig: 'sparky', app: ['humanspark', 'Human Sparks'], titel: ['filmstadt brunnen'], wort: /brunnen|pla[cç]a|sparky/i },
+  { name: 'Ottis Tor', fig: 'otti', app: ['otti', 'Ottis Wunderland'], titel: ['otti am tor', 'filmstadt otti tuer'], wort: /\b(tor|t[üu]re?|otti)\b/i },
+  { name: 'Die Plaça', fig: 'nova', app: ['nova', 'Nova'], titel: ['filmstadt plaza nova'], wort: /pla[cç]a|platz|nova|lichts[äa]ule/i },
+  { name: 'Sunnys Strand', fig: 'sunny', titel: ['sunny am strand', 'filmstadt hafen sunny'], wort: /\bstrand|sunny|meer\b/i },
+  { name: 'Der Brunnen', fig: 'sparky', app: ['humanspark', 'Human Sparks'], titel: ['filmstadt brunnen', 'filmstadt sparky'], wort: /brunnen|sparky/i },
   { name: 'Der Hafen', fig: 'kimo', app: ['kiki', 'Kiki'], titel: ['filmstadt hafen'], wort: /hafen|boot|kiki|kimo/i },
+  { name: 'Jackys Schuhladen', fig: 'jackie', app: ['jackie', "Jackie's Advice"], titel: ['filmstadt jacky'], wort: /jack[iy]e?|schuh/i },
   { name: 'Die Laternengasse', fig: 'waefwaef', titel: ['filmstadt gasse'], wort: /gasse|laterne|goldi/i },
+  { name: 'Beim Zahnböcklein', fig: 'otti', titel: ['filmstadt zahnboecklein'], wort: /zahn|b[öo]ck/i },
   { name: 'Die Lichtinsel', fig: 'otti', titel: ['lichtinsel lagerfeuer'], wort: /insel|lagerfeuer|feuer/i },
-  { name: 'Das Sternendach', fig: 'kimo', titel: ['lichtinsel sternendach'], wort: /stern|dach|nacht/i }
+  { name: 'Das Sternendach', fig: 'kimo', titel: ['lichtinsel sternendach', 'filmstadt lichtfaeden'], wort: /stern|dach|nacht|licht/i }
 ];
 const film = { orte: [], i: 0, clip: 0, vorn: null, timer: 0 };
 async function filmClips() {
   try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
   const t = (c) => (c.titel || '').toLowerCase();
-  return FILMORTE.map(o => ({ ...o, clips: o.titel.flatMap(p => filmeCache.filter(c => t(c).startsWith(p)).sort((a, b) => t(a).localeCompare(t(b)))) })).filter(o => o.clips.length);
+  const passt = (c, p) => t(c) === p || new RegExp('^' + p + ' \\d+$').test(t(c));
+  film.flug = filmeCache.find(c => t(c).startsWith('sunny flug')) || null;
+  return FILMORTE.map(o => ({ ...o, clips: o.titel.flatMap(p => filmeCache.filter(c => passt(c, p)).sort((a, b) => t(a).localeCompare(t(b)))) })).filter(o => o.clips.length);
 }
 const filmUrl = (c) => 'api/film/' + c.cid + '.mp4?k=' + encodeURIComponent(KEY_K);
 function filmZeigen() {
@@ -2428,7 +2433,11 @@ function filmSpielen() {
   v.play().then(() => { v.classList.add('an'); if (film.vorn && film.vorn !== v) { const alt = film.vorn; alt.classList.remove('an'); setTimeout(() => alt.pause(), 950); } film.vorn = v; }).catch(() => {});
 }
 function filmGehe(d) { if (!film.orte.length) return; film.i = (film.i + d + film.orte.length) % film.orte.length; filmZeigen(); $('#filmWisch').classList.add('weg'); }
-function filmFigurNpc(fid) { return npc.find(n => figurVon(n) === fid) || npc.find(n => figurVon(n) === 'otti'); }
+// Figuren ohne Platz im 3D-Städtchen (z. B. Sunny) bekommen eine Film-Figur ohne Körper
+const filmFiguren = {};
+function filmFigurNpc(fid) {
+  return npc.find(n => figurVon(n) === fid) || (filmFiguren[fid] ||= { key: fid, satz: '', f: { position: { x: 0, z: 0 }, rotation: { y: 0 }, scale: { y: 1 }, userData: {} } });
+}
 function filmStartZeigen() {
   $('#filmZiele').innerHTML = ''; film.orte.forEach((o, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = o.name; b.onclick = () => filmFliege(k); $('#filmZiele').appendChild(b); });
   $('#filmStart').hidden = false;
@@ -2436,6 +2445,13 @@ function filmStartZeigen() {
 // Sunny fliegt dich hin: Zoom in den Ort, goldener Flug-Übergang (später echter Flugclip)
 function filmFliege(k) {
   $('#filmStart').hidden = true; const kino = $('#weltenKino'), f = $('#filmFlug');
+  if (film.flug) { // echter Flugclip: Sunny fliegt über die Dächer, dann der Ort
+    const [a, b] = document.querySelectorAll('#weltenKino video'), v = film.vorn === a ? b : a; let fertig = false;
+    const weiter = () => { if (fertig) return; fertig = true; film.i = k; filmZeigen(); };
+    v.src = filmUrl(film.flug); v.loop = false; v.onended = weiter; v.onerror = weiter; setTimeout(weiter, 4200);
+    v.play().then(() => { v.classList.add('an'); if (film.vorn && film.vorn !== v) film.vorn.classList.remove('an'); film.vorn = v; }).catch(weiter);
+    return;
+  }
   kino.classList.add('zoom'); f.classList.add('an');
   setTimeout(() => { film.i = k; filmZeigen(); kino.classList.remove('zoom'); setTimeout(() => f.classList.remove('an'), 250); }, 550);
 }
@@ -2449,7 +2465,7 @@ async function weltenOeffnen() {
 }
 // Sunny sagt hey und erzählt, was neu ist, bevor du losfliegst (Diego 18:50)
 async function filmBegruessung() {
-  const n = filmFigurNpc('sunny'); if (!n || figurVon(n) !== 'sunny') return;
+  const n = filmFigurNpc('sunny');
   gespraechOeffnen(n, true); const tok = gespr.token; $('#gesprStatus').textContent = 'Sunny landet …';
   let t = null;
   try { const r = await fetch('api/figur?k=' + encodeURIComponent(KEY_K), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ figur: 'sunny', text: '(Ich komme gerade in die Trickfilmstadt.) Sag hey, erzähl mir in zwei, drei Sätzen das Neuste aus dem KI-Verse und den Apps und frag mich, wohin ich fliegen möchte.' }) }); t = (await r.json()).text; } catch {}

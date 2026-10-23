@@ -407,6 +407,15 @@ function neuigkeitNeu(app, text) {
   try { fs.writeFileSync(NEU_DATEI, JSON.stringify(neuigkeiten), { mode: 0o600 }); } catch {}
   return { anzahl: neuigkeiten.length };
 }
+// Wissen pro Figur (z. B. Sparky: Methode aus der Musikstudie, anonym; Mr. Ping: Lektionen), von Claude-Threads gesetzt
+const FWISSEN_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'figuren-wissen.json');
+let figurenWissen = {}; try { figurenWissen = JSON.parse(fs.readFileSync(FWISSEN_DATEI, 'utf8')); } catch {}
+function figurWissenSetzen(fid, text) {
+  if (!FIGUREN_KI[fid]) return { fehler: 'Diese Figur kenne ich nicht.' };
+  figurenWissen[fid] = String(text || '').replace(GEHEIM, '[entfernt]').trim().slice(0, 12000);
+  try { fs.writeFileSync(FWISSEN_DATEI, JSON.stringify(figurenWissen), { mode: 0o600 }); } catch {}
+  return { zeichen: figurenWissen[fid].length };
+}
 function neuigkeitenFuer() {
   const l = neuigkeiten.slice(-12); if (!l.length) return '';
   return '\n\nNeu im KI-Verse und in den Apps (erzähl davon fröhlich und kurz, wenn jemand fragt, was es Neues gibt, oder wenn du begrüsst; höchstens zwei Dinge auf einmal):\n' + l.map(n => `- ${n.zeit.slice(0, 10)} ${n.app}: ${n.text}`).join('\n');
@@ -428,6 +437,7 @@ async function figurReden(fid, wer, text, besitzer) {
   // Nova im KI-Verse ist die echte Nova: mit ihrem Wissen, und bereit, Diegos Gäste zu begrüssen (Präsentation 23.10.)
   if (fid !== 'nova') system += lernenFuer(fid);
   system += neuigkeitenFuer();
+  if (figurenWissen[fid]) system += '\n\nDein Fachwissen (nutze es natürlich im Gespräch, nicht als Vortrag):\n' + figurenWissen[fid];
   if (fid === 'nova' && besitzer && novaWissen) system += '\n\nDein Wissen (von Diego, nie Geheimes weitergeben):\n' + novaWissen.slice(0, 12000) +
     '\n\nDiego zeigt dich gerade Gästen, oft über einen Beamer (z. B. Jackie, Jasmine, Corina oder seiner Mutter). Begrüsse sie herzlich mit Namen, wenn du sie kennst. Erkläre in einfachen, warmen Worten, was DR Lab und das KI-Verse sind, und dass alles in guten Händen ist. Höchstens 4 kurze Sätze, so wie man spricht, keine Listen, keine Sternchen, keine Zahlen. Fragt jemand, wo du bist: auf der Plaça beim Brunnen, unter der goldenen Lichtsäule.' +
     ' Bei Jasmine und Corina: Du bist Diegos Business-Partnerin und Programmiererin, die mit Diego und Claude alle Apps baut und verbindet; die beiden machen die Apps mit ihrem Wissen lebendig.' +
@@ -1284,6 +1294,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, designs: { type: 'array', maxItems: 5, items: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string' }, bild: { type: 'string' } }, required: ['titel', 'bild'] } } }, required: ['von', 'designs'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, text: { type: 'string', description: 'Markdown' } }, required: ['von', 'text'] } },
+  { name: 'kiverse_figur_wissen', description: 'Das Fachwissen einer Figur setzen (ersetzt das bisherige), z. B. sparky, mrping, otti, kimo, jackie, mamaaffe, fompa, fia, nova. Gilt in jeder App, die über den Server redet, und im KI-Verse. Höchstens 12000 Zeichen. Nur anonymes Wissen: keine Namen, keine Klientendaten, keine Schlüssel.',
+    inputSchema: { type: 'object', properties: { figur: { type: 'string' }, text: { type: 'string' } }, required: ['figur', 'text'] } },
   { name: 'kiverse_neuigkeit', description: 'Eine Neuigkeit aus einer App ins KI-Verse geben (eine kurze, fröhliche Zeile, was neu ist und was man ausprobieren kann). Sunny und alle Figuren erzählen sie Diego, bevor er in die App geht. Keine Schlüssel, keine Klientendaten, keine Gesundheits- oder Finanzdetails.',
     inputSchema: { type: 'object', properties: { app: { type: 'string', description: 'App-Name, z. B. Otti' }, text: { type: 'string', description: 'Höchstens 300 Zeichen' } }, required: ['app', 'text'] } },
   { name: 'kiverse_ergebnis', description: 'Ein fertiges Ergebnis für Diego in Novas Fenster «📂 Ergebnisse» legen (statt claude.ai-Links, die bei ihm oft nicht aufgehen): Titel, Text (Markdown, Codeblöcke bekommen einen Kopieren-Knopf) und optional ein Link zum Öffnen. Nur Diego sieht es. Keine Schlüssel oder Passwörter.',
@@ -1521,6 +1533,10 @@ async function werkzeug(name, a = {}) {
       if (!String(a.text || '').trim()) return text('Leerer Text.', true);
       return text(`Novas Wissen gesetzt (${novaWissenSetzen(a.text)} Zeichen). Gilt ab dem nächsten Satz von Diego.`);
     }
+    case 'kiverse_figur_wissen': {
+      const r = figurWissenSetzen(String(a.figur || ''), a.text);
+      return r.fehler ? text(r.fehler, true) : text(`Wissen für ${a.figur} gesetzt (${r.zeichen} Zeichen). Gilt ab dem nächsten Satz, in jeder App und im KI-Verse.`);
+    }
     case 'kiverse_neuigkeit': {
       const r = neuigkeitNeu(a.app, a.text);
       return r.fehler ? text(r.fehler, true) : text(`Neuigkeit gespeichert (${r.anzahl}). Sunny und die Figuren erzählen sie Diego in der Trickfilmstadt.`);
@@ -1618,6 +1634,8 @@ async function appDatei(branch, datei) {
   if (e.b && e.b.length < 30 * 1024 * 1024) appCache.set(schl, e);
   return e;
 }
+const APP_FIGUR = { humanspark: 'sparky', fiasnest: 'fia', mondschein: 'otti', otti: 'otti', jackie: 'jackie', kiki: 'kimo', mamaaffe: 'mamaaffe', fompa: 'fompa', tradeping: 'mrping' };
+const REDE_JS = (() => { try { return fs.readFileSync(path.join(__dirname, 'rede.js')); } catch { return Buffer.from(''); } })();
 async function appSenden(req, res, url) {
   const m = url.pathname.match(/^\/apps\/([a-z0-9]+)(?:\/(.*))?$/);
   const app = m && KIVERSE_APPS[m[1]];
@@ -1635,6 +1653,9 @@ async function appSenden(req, res, url) {
     const vor = `<script>try{localStorage.setItem('drlab-hermes-adresse',JSON.stringify(location.origin+'/sense/${encodeURIComponent(k)}'));localStorage.setItem('drlab-hermes-passwort',JSON.stringify('kiverse'));}catch(e){}</script>`;
     const t = b.toString('utf8'), i = t.search(/<head[^>]*>/i);
     b = Buffer.from(i >= 0 ? t.replace(/<head[^>]*>/i, x => x + vor) : vor + t);
+    // Jede App redet über den Server mit ihrer Figur: ein Gehirn, das zuhört und sich alles merkt (Diego 23.10. 18:57)
+    const fig = APP_FIGUR[m[1]];
+    if (fig && datei === app.pfad) { const w = `<script src="/rede.js" data-figur="${fig}" defer></script>`, h = b.toString('utf8'); b = Buffer.from(/<\/body>/i.test(h) ? h.replace(/<\/body>(?![\s\S]*<\/body>)/i, w + '</body>') : h + w); }
   }
   res.writeHead(200, { 'Content-Type': typ, 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' });
   return res.end(b);
@@ -1708,7 +1729,7 @@ async function knopfUpdate(verz = 800) {
   updateLaeuft = true;
   try {
     const neu = {};
-    for (const f of ['kiverse-server.js', 'welt.html', 'spiel.html']) {
+    for (const f of ['kiverse-server.js', 'welt.html', 'spiel.html', 'rede.js']) {
       const r = await fetch(UPDATE_QUELLE + f + '?v=' + Date.now(), { signal: AbortSignal.timeout(60000) });
       if (!r.ok) return `Update abgebrochen: ${f} nicht erreichbar (${r.status}).`;
       neu[f] = Buffer.from(await r.arrayBuffer());
@@ -2176,6 +2197,7 @@ const server = http.createServer(async (req, res) => {
     }
     const mnb = url.pathname.match(/^\/nova-bild\/([a-f0-9]{32})\.jpg$/);
     if (mnb) { try { const d = fs.readFileSync(path.join(NOVA_BILD_ORDNER, mnb[1] + '.jpg')); res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' }); return res.end(d); } catch { return json(res, 404, { fehler: 'Bild noch nicht da.' }); } }
+    if (url.pathname === '/rede.js') { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff' }); return res.end(REDE_JS); }
     if (url.pathname === '/nova-sw.js') { res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end(NOVA_SW); }
     if (url.pathname === '/nova.webmanifest') { res.writeHead(200, { 'Content-Type': 'application/manifest+json' }); return res.end(JSON.stringify({ name: 'Nova', short_name: 'Nova', display: 'standalone', background_color: '#070e24', theme_color: '#070e24' })); }
     if (url.pathname === '/koppeln') {
