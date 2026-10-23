@@ -247,9 +247,15 @@ if (!/^[A-Za-z0-9_-]{24,}$/.test(THREADS_LESEN)) { THREADS_LESEN = crypto.random
 function threadsSetzen(liste) {
   if (!Array.isArray(liste)) return { fehler: 'threads muss eine Liste sein.' };
   const sauber = (t, n) => String(t || '').replace(/[\r\n]+/g, ' ').trim().slice(0, n);
+  // Zusammenfassung + To-dos pro Thread (Nova-Thread 23.10.); «neu» rechnet der Server selbst aus, wenn es fehlt
+  const vorher = new Map((threadStand.threads || []).map(t => [t.titel, new Set((t.todos || []).map(x => x.text))]));
   const threads = liste.slice(0, 40).map(t => {
     let link = sauber(t.link, 400); if (!/^https:\/\//.test(link) || /[?&]k=/.test(link)) link = '';
-    return { titel: sauber(t.titel, 80), status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
+    const titel = sauber(t.titel, 80), alt = vorher.get(titel);
+    const todos = (Array.isArray(t.todos) ? t.todos : []).slice(0, 12).map(x => ({ text: sauber(x && x.text, 140), erledigt: !!(x && x.erledigt), neu: typeof (x && x.neu) === 'boolean' ? x.neu : !!alt && !alt.has(sauber(x && x.text, 140)) })).filter(x => x.text);
+    const z = { titel, status: THREAD_STATUS.includes(t.status) ? t.status : 'läuft', wichtig: !!t.wichtig, was: sauber(t.was, 160), link };
+    const zf = sauber(t.zusammenfassung, 400); if (zf) z.zusammenfassung = zf; if (todos.length) z.todos = todos;
+    return z;
   }).filter(t => t.titel);
   threadStand = { stand: new Date().toISOString(), threads };
   try { fs.writeFileSync(THREADS_DATEI, JSON.stringify(threadStand), { mode: 0o600 }); } catch (e) { console.error('Threads nicht gespeichert:', e.message); }
@@ -1208,8 +1214,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
   { name: 'kiverse_update', description: 'Holt die neuste KI-Verse-Version von GitHub (Branch kiverse-server), prüft sie und startet neu, wie Diegos Knopf «🔄 Update». Nur auf Diegos Wunsch.',
     inputSchema: { type: 'object', properties: { von: { type: 'string' } }, required: ['von'] } },
-  { name: 'kiverse_threads_setzen', description: 'Threads-Übersicht für Diegos Nova-Schaltzentrale setzen (ersetzt die ganze Liste, höchstens 40). Pro Thread: titel, status («läuft», «wartet auf Diego», «fertig»), wichtig (true = wichtig, false = hat noch Zeit), was (ein kurzer Satz), link (optional https, nie mit ?k=). Keine Gesundheits-, Klienten- oder Finanzdetails.',
-    inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
+  { name: 'kiverse_threads_setzen', description: 'Threads-Übersicht für Diegos Nova-Schaltzentrale setzen (ersetzt die ganze Liste, höchstens 40). Pro Thread: titel, status («läuft», «wartet auf Diego», «fertig»), wichtig (true = wichtig, false = hat noch Zeit), was (ein kurzer Satz), link (optional https, nie mit ?k=), zusammenfassung (optional, 1–3 Sätze), todos (optional [{text, erledigt, neu}]). Keine Gesundheits-, Klienten- oder Finanzdetails.',
+    inputSchema: { type: 'object', properties: { von: { type: 'string' }, threads: { type: 'array', items: { type: 'object', properties: { titel: { type: 'string' }, status: { type: 'string', enum: ['läuft', 'wartet auf Diego', 'fertig'] }, wichtig: { type: 'boolean' }, was: { type: 'string' }, link: { type: 'string' }, zusammenfassung: { type: 'string', description: 'letzte Zusammenfassung, 1–3 Sätze' }, todos: { type: 'array', description: 'höchstens 12; neu weglassen = Server vergleicht mit letzter Liste', items: { type: 'object', properties: { text: { type: 'string' }, erledigt: { type: 'boolean' }, neu: { type: 'boolean' } }, required: ['text'] } } }, required: ['titel', 'status'] } } }, required: ['von', 'threads'] } },
   { name: 'kiverse_designs_setzen', description: 'Die 5 Designvorschläge des Tages für Novas Ansicht «Designvorschläge» setzen (ersetzt alle). Pro Design: titel, app, bild (https-Bild-URL, nie mit ?k=).',
     inputSchema: { type: 'object', properties: { von: { type: 'string' }, designs: { type: 'array', maxItems: 5, items: { type: 'object', properties: { titel: { type: 'string' }, app: { type: 'string' }, bild: { type: 'string' } }, required: ['titel', 'bild'] } } }, required: ['von', 'designs'] } },
   { name: 'kiverse_nova_wissen', description: 'Novas eigenes DR-Lab-Wissen setzen (Figuren, Geschichten, Apps, Regeln), ersetzt den ganzen Text, höchstens 24000 Zeichen. Nur auf Diegos Wunsch. Nichts über Gesundheit, Klienten oder Geld. Kann nur geschrieben, nicht gelesen werden.',
