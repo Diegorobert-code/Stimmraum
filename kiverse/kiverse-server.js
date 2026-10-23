@@ -439,7 +439,7 @@ async function figurStimme(fid, text) {
   return b.length > 200 ? { b, typ: r.headers.get('content-type') || 'audio/mpeg' } : null;
 }
 const KI_TAG = { tag: '', proPerson: new Map(), total: new Map(), bilder: 0 };
-function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: 0 }); return KI_TAG; }
+function kiTag() { const heute = jetzt().slice(0, 10); if (KI_TAG.tag !== heute) Object.assign(KI_TAG, { tag: heute, proPerson: new Map(), total: new Map(), bilder: BILD_MONAT.tag === heute ? (BILD_MONAT.tagBilder || 0) : 0 }); return KI_TAG; }
 const BILD_MONAT_DATEI = path.join(process.env.KIVERSE_DATEN || __dirname, 'bilder-monat.json');
 let BILD_MONAT = { monat: '', zahl: 0 };
 try { BILD_MONAT = JSON.parse(fs.readFileSync(BILD_MONAT_DATEI, 'utf8')); } catch {}
@@ -457,7 +457,8 @@ function bildStand() {
     + (anteil >= 1 ? ' – DECKEL ERREICHT, Tinko malt erst nächsten Monat wieder.' : anteil >= .8 ? ' – WARNUNG: über 80 % des Monatsdeckels.' : '');
 }
 function bildZaehlen() {
-  kiTag().bilder++; bildMonat().zahl++;
+  const t = kiTag(); t.bilder++; bildMonat().zahl++;
+  BILD_MONAT.tag = t.tag; BILD_MONAT.tagBilder = t.bilder; // Tageszähler übersteht Neustarts
   try { fs.writeFileSync(BILD_MONAT_DATEI, JSON.stringify(BILD_MONAT)); } catch {}
 }
 async function kiFrage(kid, system, inhalt) {
@@ -479,9 +480,16 @@ async function tinkoBild(wunsch, hoch = false, stil = 'Stil: 3D-Animationsfilm, 
     body: JSON.stringify({ model: modell, n: 1, size: hoch ? '1024x1536' : '1024x1024', quality: 'low', output_format: 'jpeg',
       prompt: stil + ' Motiv: ' + wunsch }) });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) console.error('Tinko malt nicht:', r.status, d?.error?.message || '');
+  if (!r.ok) { tinkoFehler = `${new Date().toISOString()} ${modell} ${r.status} ${sauber(d?.error?.code || '', 60)} ${sauber(d?.error?.message || '', 200)}`; console.error('Tinko malt nicht:', tinkoFehler); }
   const b64 = d?.data?.[0]?.b64_json;
+  if (!b64) bildZurueck();
   return b64 ? 'data:image/jpeg;base64,' + b64 : null;
+}
+// Fehlversuche zählen nicht (Tinko-Thread 23.10.)
+let tinkoFehler = '';
+function bildZurueck() {
+  const t = kiTag(), m = bildMonat(); t.bilder = Math.max(0, t.bilder - 1); m.zahl = Math.max(0, m.zahl - 1); BILD_MONAT.tag = t.tag; BILD_MONAT.tagBilder = t.bilder;
+  try { fs.writeFileSync(BILD_MONAT_DATEI, JSON.stringify(BILD_MONAT)); } catch {}
 }
 // Eine Antwort von Lumo oder Tinko. text = was der Mensch gesagt hat; ohne text redet die Figur im Gespräch weiter.
 async function kiAntwort(kid, ich, text, mitWissen = false) {
@@ -1444,6 +1452,8 @@ async function werkzeug(name, a = {}) {
       if (!TINKO_KEY) return text('Kein OpenAI-Schlüssel.', true);
       const h = { Authorization: 'Bearer ' + TINKO_KEY }, aus = [];
       const probe = async (name, url, opt = {}) => { try { const r = await fetch(url, { ...opt, headers: { ...h, ...(opt.headers || {}) }, signal: AbortSignal.timeout(30000) }); const t = (await r.text()).replace(/\s+/g, ' ').slice(0, 160); aus.push(`${name}: ${r.status} ${r.headers.get('x-request-id') ? '(req)' : '(ohne req)'} ${t}`); } catch (e) { aus.push(`${name}: Fehler ${e.message}`); } };
+      await probe('GET /v1/models/' + TINKO_BILD_MODELL, TINKO_BASIS + '/v1/models/' + TINKO_BILD_MODELL);
+      aus.push('Letzter Bildfehler: ' + (tinkoFehler || 'keiner seit Neustart'));
       await probe('GET /v1/models/sora-2', TINKO_BASIS + '/v1/models/sora-2');
       await probe('GET /v1/videos', TINKO_BASIS + '/v1/videos?limit=1');
       await probe('GET /v1/videos/', TINKO_BASIS + '/v1/videos/');
