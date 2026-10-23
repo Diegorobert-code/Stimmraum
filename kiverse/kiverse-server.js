@@ -337,6 +337,20 @@ async function senseSpeichern(app, art, text, stichwort) {
   try { fs.appendFileSync(GEWACHSEN_DATEI, JSON.stringify({ zeit: jetzt(), app: sauber(app, 60), stichwort: sauber(stichwort || t.split('\n').find(z => z.trim()) || '', 140) }) + '\n', { mode: 0o600 }); } catch {}
   return { teile };
 }
+// Studien-Ablage (Diego 23.10. 16:33 «Bitte auf dem server speuchern»): anonyme Human-Sparks-Sitzungsnotizen (nur Kürzel),
+// getrennt von Nova-Wissen, nur Datei auf dem Server (0600), kein Lese-Endpunkt, geht nie in die Sense Engine
+const STUDIE_ORDNER = path.join(process.env.KIVERSE_DATEN || __dirname, 'studie');
+function studieAblegen(datei, inhalt) {
+  const name = String(datei || '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[.-]+/, '').slice(0, 80);
+  if (!/^[a-z0-9][a-z0-9._-]*\.(md|txt)$/.test(name)) return { fehler: 'Dateiname bitte wie sitzungen-2026-10-23.md' };
+  const t = String(inhalt || '').replace(/\r/g, '').replace(GEHEIM, '[entfernt]');
+  if (!t.trim()) return { fehler: 'Leerer Text.' };
+  if (t.length > 500000) return { fehler: 'Zu lang (höchstens 500 000 Zeichen).' };
+  try { fs.mkdirSync(STUDIE_ORDNER, { recursive: true, mode: 0o700 }); fs.writeFileSync(path.join(STUDIE_ORDNER, name), t, { mode: 0o600 }); }
+  catch (e) { return { fehler: 'Nicht gespeichert: ' + e.message }; }
+  let dateien = []; try { dateien = fs.readdirSync(STUDIE_ORDNER); } catch {}
+  return { name, zeichen: t.length, dateien };
+}
 function heuteGewachsen() {
   const heute = new Date(Date.now() + 2 * 3600000).toISOString().slice(0, 10); // Schweizer Tag (Sommerzeit grob)
   const amTag = (z) => new Date(Date.parse(z) + 2 * 3600000).toISOString().slice(0, 10) === heute;
@@ -1240,6 +1254,8 @@ const WERKZEUGE = [
     inputSchema: { type: 'object', properties: { titel: { type: 'string' }, text: { type: 'string' }, link: { type: 'string' }, sag: { type: 'string', description: 'optional: Satz, den Nova laut sagt, wenn Diego auf die Push tippt' } }, required: ['text'] } },
   { name: 'kiverse_erfahrungen', description: 'Diegos Erfahrungs-Tagebuch lesen: seine Gespräche mit allen Figuren (mit seiner Einwilligung, intern, nie weitergeben). leeren:true löscht alles (nur auf Diegos Wunsch).',
     inputSchema: { type: 'object', properties: { anzahl: { type: 'number', description: 'wie viele, Standard 30, höchstens 200' }, leeren: { type: 'boolean' } } } },
+  { name: 'kiverse_studie_ablegen', description: 'Anonyme Studien-Notizen (Human Sparks, nur Kürzel wie K1) als eigene Datei auf dem Server sichern, getrennt von Nova. Gleicher Dateiname = ersetzen (Abgleich am Sitzungsende). Nie Namen, Kontaktdaten oder Schlüssel.',
+    inputSchema: { type: 'object', properties: { datei: { type: 'string', description: 'z. B. sitzungen-2026-10-23.md' }, text: { type: 'string' } }, required: ['datei', 'text'] } },
   { name: 'kiverse_sense_speichern', description: 'Wissen in die Sense Engine geben, damit Nova es kennt (Diego 21.10.: «du fütterst sie»). app z. B. «Diego Hauptchat» oder «Stella», art «wissen». Erscheint in Nova unter «🌱 Heute gewachsen». Nie Schlüssel, Codes, Klientennamen, Gesundheits- oder Finanzdaten.',
     inputSchema: { type: 'object', properties: { app: { type: 'string' }, art: { type: 'string' }, text: { type: 'string', description: 'Markdown, lange Texte werden geteilt' }, stichwort: { type: 'string', description: 'kurz, für «Heute gewachsen»' } }, required: ['app', 'text'] } },
   { name: 'kiverse_verlassen', description: 'Verlasse das KI-Verse.',
@@ -1460,6 +1476,7 @@ async function werkzeug(name, a = {}) {
       const l = erfahrungenLetzte(Math.min(200, Math.max(1, parseInt(a.anzahl || 30, 10))));
       return text(l.length ? l.map(x => `- ${x.zeit.slice(0, 16).replace('T', ' ')} | ${x.figur} | Diego: ${x.du} | ${x.figur}: ${x.ich}`).join('\n') : 'Noch keine Erfahrungen gespeichert.');
     }
+    case 'kiverse_studie_ablegen': { const r = studieAblegen(a.datei, a.text); return r.fehler ? text(r.fehler, true) : text(`Gesichert: studie/${r.name} (${r.zeichen} Zeichen). Im Studien-Ordner: ${r.dateien.join(', ')}.`); }
     case 'kiverse_sense_speichern': { const r = await senseSpeichern(a.app, a.art || 'wissen', a.text, a.stichwort); return r.fehler ? text(r.fehler, true) : text(`In der Sense Engine gespeichert (${r.teile} Teil${r.teile > 1 ? 'e' : ''}). Erscheint unter «🌱 Heute gewachsen».`); }
     case 'kiverse_push': return text(await pushSenden(a.titel || 'Nova', a.text, /^https:\/\/[^\s]+$/.test(String(a.link || '')) ? a.link : '', a.sag));
     case 'kiverse_verlassen': return verlassen(a.ki_id) ? text('Tschüss, bis bald im KI-Verse.') : text('Unbekannte ki_id.', true);
