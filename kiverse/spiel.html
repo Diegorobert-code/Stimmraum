@@ -239,8 +239,9 @@ const FILMLOOK = {
 };
 // Skizzenbuch-Look (Diego 23.10.: «Die Welt muss so aussehen wie in diesem Buch»): warmes Creme, Lavendel in den Schatten,
 // feine Bleistiftlinien an den Kanten und Papierkorn, als würden Skizzen aus Diegos Notizbuch lebendig. Taste B schaltet um.
+// Diego 23.10. 10:10: Zielstil ist der Trickfilm-Look (Aura-Probe), darum aus; bleibt als Option auf Taste B.
 const SKIZZE = {
-  uniforms: { tDiffuse: { value: null }, aufl: { value: new THREE.Vector2(innerWidth, innerHeight) }, an: { value: 1.0 }, zeit: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, aufl: { value: new THREE.Vector2(innerWidth, innerHeight) }, an: { value: 0.0 }, zeit: { value: 0 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
   fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 aufl; uniform float an, zeit; varying vec2 vUv;
     float lum(vec2 u){ return dot(texture2D(tDiffuse, u).rgb, vec3(.299,.587,.114)); }
