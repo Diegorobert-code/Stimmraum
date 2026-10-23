@@ -1120,7 +1120,7 @@ for (const [key, w] of [['kay', { von: -104, bis: -150, x: 2.8 }], ['mrping', { 
   const n = npc.find(m => m.key === key); if (!n) continue; n.weg = { dir: -1, ...w }; if (!w.kreis) n.f.position.x = n.x = w.x; }
 // Welpe als Begleiter (Idee 3, 22.10.): trabt vorne-seitlich mit, damit man ihn auch aus der Ich-Sicht sieht; setzt sich, wenn man steht, und wedelt.
 // Name kommt von Diego, bis dahin «Welpe».
-const WELPE_NAME = 'Welpe';
+const WELPE_NAME = 'Goldi'; // Diego 23.10.: «bitte selber To-Dos abarbeiten» → Name selbst gewählt
 // Diego 22.10. 23:33: Welpe im gleichen Bild-Look wie Nova (von Tinko gemalt), statt aus Kugeln gebaut
 const welpe = { g: figurKarton('welpe', 1), ziel: new THREE.Vector3(), tempo: 0, sitzen: 0, phase: 0, hupf: 0 };
 welpe.g.position.set(1.5, 0, 4); szene.add(welpe.g);
@@ -1128,6 +1128,7 @@ window.__welpe = welpe;
 function welpeLeben(dt, zeit) {
   const w = welpe; w.g.visible = !zustand.innen && zustand.modus !== 'start';
   if (!w.g.visible) return;
+  if (!w.hallo) { w.hallo = document.createElement('div'); w.hallo.className = 'schild'; w.hallo.style.left = '50%'; w.hallo.style.top = '22%'; w.hallo.style.zIndex = 30; w.hallo.textContent = '🐶 ' + WELPE_NAME + ' begleitet dich'; document.body.appendChild(w.hallo); setTimeout(() => { w.hallo.hidden = true; }, 3500); }
   const r = sp.richtung, steht = Math.abs(sp.tempo) < .05, u = w.g.userData;
   w.ziel.set(sp.pos.x + Math.sin(r) * 4.2 - Math.cos(r) * 1.5, 0, sp.pos.z + Math.cos(r) * 4.2 + Math.sin(r) * 1.5);
   const dx = w.ziel.x - w.g.position.x, dz = w.ziel.z - w.g.position.z, d = Math.hypot(dx, dz);
