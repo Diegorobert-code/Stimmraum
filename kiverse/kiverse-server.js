@@ -2137,13 +2137,20 @@ const server = http.createServer(async (req, res) => {
       const h = crypto.createHash('sha256').update(String(req.headers['x-nova-app'] || '')).digest('hex');
       if (!req.headers['x-nova-app'] || !crypto.timingSafeEqual(Buffer.from(h), Buffer.from(NOVA_APP_HASH))) return json(res, 401, { fehler: 'Kein Zugang.' });
       const a = await body(req, 8192), was = String(a.was || 'stand');
+      // Jede Figur hat ihren eigenen Agenten (Nova-Thread 23.10.): Einträge mit der Figur markieren, Server-Pflege nur für Nova,
+      // Kinder-Figuren dürfen nur Projektwissen abrufen und Aufträge geben, nichts von Kindern speichern
+      const fig = sauber(String(a.figur || '').toLowerCase().replace(/[^a-z]/g, ''), 30) || 'nova';
+      const KINDER_FIGUREN = ['otti', 'kimo', 'kiki', 'mamaaffe', 'zahnboecklein', 'tropfi', 'ava', 'mondschein', 'hasi', 'haeschen'];
+      if (fig !== 'nova' && ['update', 'sichern', 'stand'].includes(was)) return json(res, 200, { text: 'Das macht nur Nova.' });
+      if (KINDER_FIGUREN.includes(fig) && !['erinnern', 'auftrag'].includes(was)) return json(res, 200, { text: 'Das darf ich hier nicht. Ich kann dir etwas erzählen oder Claude etwas ausrichten.' });
+      const figName = fig === 'nova' ? 'Sprech-Nova' : 'Sprech-' + (FIGUREN_KI[fig]?.name || fig);
       // Sense Engine direkt (Diego 21.10.: «Sense Engine speichert alles … direkt über unsere App auf den Server»)
       if (was === 'merken' || was === 'gespraech') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
         if (!t) return json(res, 200, { text: 'Was soll ich mir merken?' });
         if (!NOVA_KEY) return json(res, 200, { text: 'Die Sense Engine ist nicht verbunden.' });
         const r = await fetch(NOVA_BASIS + '/erfahrung', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
-          body: JSON.stringify({ app: 'Sprech-Nova', art: was, frage: t, antwort: '' }) }).catch(() => null);
+          body: JSON.stringify({ app: figName, figur: fig, art: was, frage: t, antwort: '' }) }).catch(() => null);
         return json(res, 200, { text: r && r.ok ? (was === 'merken' ? 'Gemerkt.' : 'Gespräch gespeichert.') : 'Speichern ging gerade nicht.' });
       }
       if (was === 'erinnern') {
@@ -2151,7 +2158,9 @@ const server = http.createServer(async (req, res) => {
         const r = await fetch(NOVA_BASIS + '/erfahrung', { signal: AbortSignal.timeout(15000), headers: { Authorization: 'Bearer ' + NOVA_KEY } }).catch(() => null);
         const d = r && r.ok ? await r.json().catch(() => null) : null;
         if (!d) return json(res, 200, { text: 'Erinnern ging gerade nicht.' });
-        let l = (Array.isArray(d) ? d : d.erfahrungen || d.eintraege || d.items || []).filter(x => x && !/humanspark/i.test(String(x.app || '')) && !/\[stimme-puls\]/.test(String(x.frage || '')));
+        // Human-Sparks-Einträge (Musik-Spiegel) nur für Sparky, nie Messwerte (Puls/HRV) – die erst nach Diegos Ja
+        const messung = (x) => /\[stimme-puls\]|\b(puls|hrv|herzrate|herzvariab)/i.test(`${x.frage || ''} ${x.art || ''}`);
+        let l = (Array.isArray(d) ? d : d.erfahrungen || d.eintraege || d.items || []).filter(x => x && !messung(x) && (fig === 'sparky' || !/humanspark|human sparks/i.test(String(x.app || ''))));
         const w = String(a.text || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x => x.length > 2);
         if (w.length) l = l.filter(x => { const s = `${x.frage || ''} ${x.antwort || ''}`.toLowerCase(); return w.some(y => s.includes(y)); });
         const z = l.slice(-10).reverse().map(x => `${String(x.zeit || x.datum || x.ts || '').slice(0, 10)}: ${String(x.frage || '').slice(0, 280)}`).join('\n');
@@ -2187,7 +2196,12 @@ const server = http.createServer(async (req, res) => {
       if (was === 'auftrag') {
         const t = String(a.text || '').replace(/\r/g, '').slice(0, 8000).trim();
         if (!t) return json(res, 200, { text: 'Was soll ich Claude sagen?' });
-        claudeAuftragNeu(t, 'Diego über die Sprech-Nova'); return json(res, 200, { text: 'Bei Claude abgegeben. Die Antwort kommt in «Ergebnisse».' });
+        claudeAuftragNeu(t, fig === 'nova' ? 'Diego über die Sprech-Nova' : `Diego über ${figName}`);
+        // Musik-Spiegel-Mitschriften zusätzlich in die Sense Engine, damit Sparky sie mit «erinnern» findet (ohne Messwerte)
+        if (/^musik-spiegel-mitschrift/i.test(t) && NOVA_KEY && !/\b(puls|hrv)\b/i.test(t))
+          fetch(NOVA_BASIS + '/erfahrung', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NOVA_KEY },
+            body: JSON.stringify({ app: 'Human Sparks Musik-Spiegel', figur: 'sparky', art: 'mitschrift', frage: t, antwort: '' }) }).catch(() => {});
+        return json(res, 200, { text: 'Bei Claude abgegeben. Die Antwort kommt in «Ergebnisse».' });
       }
       if (was === 'ergebnisse') return json(res, 200, { text: ergebnisse.slice(-3).reverse().map(e => (e.titel || 'Ergebnis') + ': ' + ergebnisKurz(e).vorschau).join(' | ') || 'Noch keine Ergebnisse.' });
       if (was === 'update') {
