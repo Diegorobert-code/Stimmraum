@@ -972,7 +972,9 @@ async function falStart(a) {
   const kosten = sek * (FAL_USD_SEKUNDE[modell] || 0.30) * CHF_PRO_USD, m = falMonat();
   if (m.falChf + kosten > FAL_DECKEL_CHF) { if (!m.falPushDeckel) { m.falPushDeckel = true; soraSpeichern(); pushSenden('Sunny', `fal.ai-Deckel erreicht: CHF ${m.falChf.toFixed(0)} von ${FAL_DECKEL_CHF.toFixed(0)}. Mehr nur mit deinem Go.`).catch(() => {}); } return { fehler: `Monatsdeckel erreicht (${falStand()}). Nächsten Monat wieder.` }; }
   const heute = jetzt().slice(0, 10), clipsHeute = Object.values(m.clips).filter(c => c.fal && String(c.zeit).startsWith(heute)).length;
-  if (clipsHeute >= FAL_MAX_TAG) return { fehler: `Heute schon ${FAL_MAX_TAG} Clips bewegt. Morgen wieder.` };
+  // Diego 23.10. 11:32: «wir weiter mit dem Ganzen. Mit nochmal 20 Clips.» → nur heute 40, Monatsdeckel bleibt
+  const tagMax = heute === '2026-10-23' ? Math.max(FAL_MAX_TAG, 40) : FAL_MAX_TAG;
+  if (clipsHeute >= tagMax) return { fehler: `Heute schon ${tagMax} Clips bewegt. Morgen wieder.` };
   let bild = String(a.bild || '');
   const ae = ablage.find(e => e.id === bild || e.bid === bild), wd = weltbildDatei(bild);
   if (ae && ae.bid) { const typ = { png: 'png', jpg: 'jpeg', webp: 'webp', gif: 'gif' }[ae.bid.split('.').pop()]; bild = `data:image/${typ};base64,` + fs.readFileSync(path.join(ABLAGE_ORDNER, ae.bid)).toString('base64'); }
