@@ -1454,6 +1454,7 @@ async function werkzeug(name, a = {}) {
       const probe = async (name, url, opt = {}) => { try { const r = await fetch(url, { ...opt, headers: { ...h, ...(opt.headers || {}) }, signal: AbortSignal.timeout(30000) }); const t = (await r.text()).replace(/\s+/g, ' ').slice(0, 160); aus.push(`${name}: ${r.status} ${r.headers.get('x-request-id') ? '(req)' : '(ohne req)'} ${t}`); } catch (e) { aus.push(`${name}: Fehler ${e.message}`); } };
       await probe('GET /v1/models/' + TINKO_BILD_MODELL, TINKO_BASIS + '/v1/models/' + TINKO_BILD_MODELL);
       aus.push('Letzter Bildfehler: ' + (tinkoFehler || 'keiner seit Neustart'));
+      try { const r = await fetch(TINKO_BASIS + '/v1/models', { headers: h, signal: AbortSignal.timeout(30000) }); const d = await r.json(); aus.push('Bildmodelle: ' + (d.data || []).filter(m => /image/.test(m.id)).map(m => m.id + (m.shutdown_date ? ' (Ende ' + m.shutdown_date + ')' : '')).join(', ')); } catch (e) { aus.push('Modelle: Fehler ' + e.message); }
       await probe('GET /v1/models/sora-2', TINKO_BASIS + '/v1/models/sora-2');
       await probe('GET /v1/videos', TINKO_BASIS + '/v1/videos?limit=1');
       await probe('GET /v1/videos/', TINKO_BASIS + '/v1/videos/');
