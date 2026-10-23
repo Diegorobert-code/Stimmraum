@@ -237,6 +237,31 @@ const FILMLOOK = {
       float v = smoothstep(1.05, .35, length(vUv - .5) * 1.35);
       gl_FragColor = vec4(satt * mix(.55, 1.0, v) * staerke, c.a); }`,
 };
+// Skizzenbuch-Look (Diego 23.10.: «Die Welt muss so aussehen wie in diesem Buch»): warmes Creme, Lavendel in den Schatten,
+// feine Bleistiftlinien an den Kanten und Papierkorn, als würden Skizzen aus Diegos Notizbuch lebendig. Taste B schaltet um.
+const SKIZZE = {
+  uniforms: { tDiffuse: { value: null }, aufl: { value: new THREE.Vector2(innerWidth, innerHeight) }, an: { value: 1.0 }, zeit: { value: 0 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 aufl; uniform float an, zeit; varying vec2 vUv;
+    float lum(vec2 u){ return dot(texture2D(tDiffuse, u).rgb, vec3(.299,.587,.114)); }
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){ vec4 c = texture2D(tDiffuse, vUv); if (an < .01) { gl_FragColor = c; return; }
+      vec2 px = 1.2 / aufl;
+      float tl=lum(vUv+px*vec2(-1,1)), t=lum(vUv+px*vec2(0,1)), tr=lum(vUv+px*vec2(1,1)), l=lum(vUv-px*vec2(1,0)), r=lum(vUv+px*vec2(1,0)), bl=lum(vUv-px), b=lum(vUv-px*vec2(0,1)), br=lum(vUv+px*vec2(1,-1));
+      float gx = -tl-2.*l-bl+tr+2.*r+br, gy = tl+2.*t+tr-bl-2.*b-br, kante = smoothstep(.22, .7, length(vec2(gx, gy)));
+      float y = dot(c.rgb, vec3(.299,.587,.114));
+      vec3 creme = vec3(1.0, .95, .86), lav = vec3(.80, .76, .93);
+      vec3 g = mix(vec3(y), c.rgb, .78);
+      g = mix(g * lav * 1.08, g, smoothstep(.08, .55, y));
+      g = mix(g, g * creme * 1.06, smoothstep(.45, 1.0, y));
+      g = mix(g, creme * .98, .07);
+      float korn = (h(floor(vUv * aufl / 1.5)) - .5) * .016 + (h(vec2(floor(vUv.y * aufl.y / 3.), 7.)) - .5) * .006;
+      float strich = .5 + .5 * sin((vUv.x + vUv.y) * aufl.y * .9 + h(floor(vUv * 40.)) * 6.);
+      vec3 blei = vec3(.33, .29, .27);
+      g = mix(g, g * blei * 1.6, kante * (.45 + .25 * strich) * .4);
+      gl_FragColor = vec4(mix(c.rgb, g + korn, an), c.a); }`,
+};
+let skizzePass = null;
 let composer = null;
 const NEBEL_NACHT = new THREE.Color(0x1a2456), NEBEL_WASSER = new THREE.Color(0x0a5a78);
 szene.fog = new THREE.FogExp2(NEBEL_NACHT, 0.0075);
@@ -247,7 +272,11 @@ try {
   composer.addPass(new RenderPass(szene, kamera));
   composer.addPass(bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .62, .5, .82));
   composer.addPass(new ShaderPass(FILMLOOK));
+  composer.addPass(skizzePass = new ShaderPass(SKIZZE));
   composer.addPass(new OutputPass());
+  addEventListener('resize', () => skizzePass.uniforms.aufl.value.set(innerWidth, innerHeight));
+  addEventListener('keydown', e => { if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && (e.key === 'b' || e.key === 'B')) skizzePass.uniforms.an.value = skizzePass.uniforms.an.value > .5 ? 0 : 1; });
+  window.__skizze = skizzePass;
 } catch (e) { composer = null; }
 qualitaetAnwenden();
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); composer?.setSize(innerWidth, innerHeight); kamera.aspect = innerWidth / innerHeight; kamera.updateProjectionMatrix(); });
