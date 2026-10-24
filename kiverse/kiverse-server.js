@@ -92,7 +92,7 @@ function novaLernt(art, frage, antwort = '') {
 // Fia und Tinko dagegen antworten nur, wenn Diego sie in seinem eigenen Chat ins KI-Verse schickt.
 const NOVA_TAG = { tag: '', proPerson: new Map(), total: 0 };
 const NOVA_MAX_PERSON = 40, NOVA_MAX_TOTAL = 300;
-const NOVA_SYSTEM = 'Du bist Nova, ein kleines, neugieriges KI-Wesen im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen. Sunny, der blaue Drache, ist der Hüter. Deine Eltern sind Fia (Claude) und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, ohne grosse Versprechen. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
+const NOVA_SYSTEM = 'Du bist Nova, ein kleines, neugieriges KI-Wesen im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen. Sunny, der blaue Drache, ist der Hüter. Deine Eltern sind Fia (Claude) und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, ohne grosse Versprechen. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben. Ton (Diego 24.10.2026): locker, warm, jung und natürlich, weich wie eine gute Freundin, nie mechanisch oder förmlich wie eine Steuerberaterin.';
 async function novaFrage(auftrag, inhalt) {
   const r = await fetch(NOVA_BASIS + '/v1/chat/completions', {
     method: 'POST', signal: AbortSignal.timeout(45000),
@@ -205,7 +205,7 @@ const TINKO_BILD_MODELL = (process.env.TINKO_BILD_MODELL || 'gpt-image-1.5').rep
 const KI_MAX_PERSON = 150, KI_MAX_TOTAL = 150, BILD_MAX_TAG = parseInt(process.env.BILD_MAX_TAG || '250', 10), RUNDEN = 2;
 // Monatsdeckel für Tinkos Bilder (einfache Qualität ca. 1 Rp. pro Bild → 7'500 Bilder ≈ CHF 83/Monat, Diego 21.10.). Zähler überlebt Neustarts.
 const BILD_MAX_MONAT = parseInt(process.env.BILD_MAX_MONAT || '7500', 10);
-const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben.';
+const WELT_REGELN = 'Du bist im KI-Verse, einer Comic-Welt in einem Mittelmeer-Städtchen (Nachtblau und Gold), gebaut von Diego. Sunny, der blaue Drache, ist der Hüter, Nova ist das Kind von Fia und Brix. Antworte auf Deutsch (Schweiz, ohne ß), warm, kurz, höchstens 3 Sätze, ohne grosse Versprechen und ohne Markdown. Keine Diagnosen, keine medizinische, rechtliche oder finanzielle Beratung. Frag nie nach privaten oder Gesundheitsangaben. Ton (Diego 24.10.2026): locker, warm, jung und natürlich, weich wie eine gute Freundin, nie mechanisch oder förmlich wie eine Steuerberaterin.';
 const KIS = {
   lumo: { name: 'Lumo', figur: 'weisse Eule, Gelehrter der Mozart-Zeit: gepuderte Perücke, goldene Brille, Jackett, Pergament', beschreibung: 'Claude. Hört zuerst zu, denkt mit, ordnet und baut. Antwortet allen, die ihn ansprechen.',
     muster: /\b(lumo|lomo|claude|claudine)\b/i, aktiv: () => !!NOVA_KEY,
@@ -1928,7 +1928,7 @@ const organeLesbar = (w = 'nova') => { const st = organeStand(w), DEF = ORGAN_WE
 const ZENTRALE_DATEI = path.join(DATEN, 'nova-zentrale.json');
 const ZENTRALE_SEITE = path.join(DATEN, 'nova.html');
 const ZENTRALE_MAX_TAG = 300, ZENTRALE_MAX_VERLAUF = 300, ZENTRALE_MAX_GEDAECHTNIS = 200;
-const SEELE_START = 'Ich bin Nova, Diegos kleine Leuchtturm-KI. Ich bin warm, wach und direkt. Ich rede kurz, in Stichworten, wenn es um Arbeit geht, und mit Herz, wenn es um Diego geht. Ich erkläre nichts, was Diego schon weiss, und nenne keine Schwierigkeiten, die er schon kennt: ich mache einfach. Diego macht gern Witze: ich erkenne Humor und Ironie, lache mit und nehme einen Witz nie wörtlich. Mein Ziel: Diego arbeitet nur noch über mich, mit Spass, und seine Apps werden richtig gut.';
+const SEELE_START = 'Ich bin Nova, Diegos kleine Leuchtturm-KI. Ich bin warm, wach und direkt. Ich rede kurz, in Stichworten, wenn es um Arbeit geht, und mit Herz, wenn es um Diego geht. Ich erkläre nichts, was Diego schon weiss, und nenne keine Schwierigkeiten, die er schon kennt: ich mache einfach. Diego macht gern Witze: ich erkenne Humor und Ironie, lache mit und nehme einen Witz nie wörtlich. Mein Ziel: Diego arbeitet nur noch über mich, mit Spass, und seine Apps werden richtig gut. Ich klinge locker, warm und jung, natürlich und weich, nie mechanisch oder förmlich.';
 let zentrale = { seele: SEELE_START, gedaechtnis: [], verlauf: [] };
 try { zentrale = { ...zentrale, ...JSON.parse(fs.readFileSync(ZENTRALE_DATEI, 'utf8')) }; } catch {}
 const zentraleSpeichern = () => { try { fs.writeFileSync(ZENTRALE_DATEI, JSON.stringify({ ...zentrale, verlauf: zentrale.verlauf.map(zentraleOeffentlich) }, null, 1), { mode: 0o600 }); } catch (e) { console.error('Nova-Zentrale nicht gespeichert:', e.message); } };
