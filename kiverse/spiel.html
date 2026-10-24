@@ -2474,6 +2474,8 @@ const FILMORTE = [
 const film = { orte: [], i: 0, clip: 0, vorn: null, timer: 0 };
 async function filmClips() {
   try { filmeCache = filmeCache || await fetch('api/filme?k=' + encodeURIComponent(KEY_K)).then(r => r.ok ? r.json() : []); } catch { filmeCache = []; }
+  // Ersetzte Clips nicht mehr zeigen (24.10.: Jacky war als kleines Mädchen gemalt, Jacky ist erwachsen)
+  const AUS = ['film_c1484abbb8']; filmeCache = filmeCache.filter(c => !AUS.includes(c.cid));
   const t = (c) => (c.titel || '').toLowerCase();
   const passt = (c, p) => t(c) === p || new RegExp('^' + p + ' \\d+$').test(t(c));
   film.flug = filmeCache.find(c => t(c).startsWith('sunny flug')) || null;
